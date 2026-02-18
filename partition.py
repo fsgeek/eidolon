@@ -18,6 +18,7 @@ from network import Network, NetworkConfig
 from server import Server as VmtpServer
 from client import Client as VmtpClient
 from tcp_baseline import TcpServer, TcpClient
+from quic_baseline import QuicServer, QuicClient
 from metrics import MetricsCollector
 
 
@@ -301,8 +302,102 @@ def run_tcp_partition(
     )
 
 
+def run_quic_partition(
+    partition_start: float,
+    partition_duration: float,
+    transactions_before: int = 10,
+    transactions_during: int = 10,
+    transactions_after: int = 10,
+    seed: int = 42,
+) -> PartitionScenarioResult:
+    """Run QUIC through the partition scenario."""
+    env = simpy.Environment()
+    registry = EntityRegistry()
+    network = PartitionableNetwork(
+        env,
+        NetworkConfig(base_delay=0.010, loss_probability=0.0, seed=seed)
+    )
+
+    server_entity = registry.create(name="server")
+    client_entity = registry.create(name="client")
+
+    server = QuicServer(env, server_entity, network, None, process_time=0.005, connection_timeout=2.0)
+    client = QuicClient(env, client_entity, network, None, default_timeout=0.100, default_max_retries=3)
+
+    results = {
+        "pre": [],
+        "during": [],
+        "post": [],
+        "first_success_after_heal": None,
+        "heal_time": partition_start + partition_duration,
+    }
+
+    def workload():
+        # Phase 1: Before partition - establishes connection
+        for i in range(transactions_before):
+            response = yield from client.transact(server_entity.id, f"pre-{i}")
+            results["pre"].append(response is not None)
+            yield env.timeout(0.020)
+
+        # Wait for partition
+        if env.now < partition_start:
+            yield env.timeout(partition_start - env.now)
+
+        # Phase 2: During partition
+        for i in range(transactions_during):
+            response = yield from client.transact(server_entity.id, f"during-{i}")
+            results["during"].append(response is not None)
+            yield env.timeout(0.050)
+
+        # Wait for heal
+        heal_time = partition_start + partition_duration
+        if env.now < heal_time:
+            yield env.timeout(heal_time - env.now + 0.010)
+
+        # Phase 3: After heal
+        for i in range(transactions_after):
+            response = yield from client.transact(server_entity.id, f"post-{i}")
+            success = response is not None
+            results["post"].append(success)
+            if success and results["first_success_after_heal"] is None:
+                results["first_success_after_heal"] = env.now - results["heal_time"]
+            yield env.timeout(0.020)
+
+    def partition_controller():
+        yield env.timeout(partition_start)
+        network.partition(client_entity.id, server_entity.id)
+        yield env.timeout(partition_duration)
+        network.heal_all()
+
+    env.process(workload())
+    env.process(partition_controller())
+    env.run(until=60.0)
+
+    # QUIC reconnections: if 0-RTT was used after partition, that's a "reconnection"
+    reconnections = server.stats.get("zero_rtt_accepted", 0)
+    # Also count fresh connections beyond the first
+    reconnections += max(0, server.stats.get("connections_accepted", 1) - 1)
+
+    return PartitionScenarioResult(
+        protocol="QUIC",
+        partition_start=partition_start,
+        partition_duration=partition_duration,
+        pre_partition_success=sum(results["pre"]),
+        pre_partition_total=len(results["pre"]),
+        during_partition_success=sum(results["during"]),
+        during_partition_total=len(results["during"]),
+        post_heal_success=sum(results["post"]),
+        post_heal_total=len(results["post"]),
+        first_success_after_heal=results["first_success_after_heal"],
+        packets_during_partition=network.partition_stats["packets_dropped_by_partition"],
+        total_packets_sent=network.stats["sent"],
+        reconnections=reconnections,
+        duplicate_executions=0,
+    )
+
+
 def compare_partition_scenarios(verbose: bool = True) -> list[tuple]:
-    """Compare VMTP and TCP under various partition scenarios."""
+    """Compare VMTP, TCP, and QUIC under various partition scenarios."""
 
     scenarios = [
         ("short_partition", 0.5, 0.2),   # 200ms partition
@@ -312,7 +407,7 @@ def compare_partition_scenarios(verbose: bool = True) -> list[tuple]:
 
     if verbose:
         print("=" * 80)
-        print("NETWORK PARTITION COMPARISON: VMTP vs TCP")
+        print("NETWORK PARTITION COMPARISON: VMTP vs QUIC vs TCP")
         print("=" * 80)
         print()
         print("Scenario: 10 transactions before, 10 during, 10 after partition")
@@ -322,24 +417,26 @@ def compare_partition_scenarios(verbose: bool = True) -> list[tuple]:
 
     for name, start, duration in scenarios:
         vmtp = run_vmtp_partition(start, duration)
+        quic = run_quic_partition(start, duration)
         tcp = run_tcp_partition(start, duration)
-        results.append((name, vmtp, tcp))
+        results.append((name, vmtp, quic, tcp))
 
         if verbose:
             print(f"─── {name} (partition duration: {duration}s) ───")
             print()
-            print(f"{'Phase':<20} {'VMTP':>15} {'TCP':>15}")
-            print(f"{'─'*20} {'─'*15} {'─'*15}")
-            print(f"{'Before partition':<20} {vmtp.pre_partition_success}/{vmtp.pre_partition_total:>12} {tcp.pre_partition_success}/{tcp.pre_partition_total:>12}")
-            print(f"{'During partition':<20} {vmtp.during_partition_success}/{vmtp.during_partition_total:>12} {tcp.during_partition_success}/{tcp.during_partition_total:>12}")
-            print(f"{'After heal':<20} {vmtp.post_heal_success}/{vmtp.post_heal_total:>12} {tcp.post_heal_success}/{tcp.post_heal_total:>12}")
+            print(f"{'Phase':<20} {'VMTP':>12} {'QUIC':>12} {'TCP':>12}")
+            print(f"{'─'*20} {'─'*12} {'─'*12} {'─'*12}")
+            print(f"{'Before partition':<20} {vmtp.pre_partition_success}/{vmtp.pre_partition_total:>9} {quic.pre_partition_success}/{quic.pre_partition_total:>9} {tcp.pre_partition_success}/{tcp.pre_partition_total:>9}")
+            print(f"{'During partition':<20} {vmtp.during_partition_success}/{vmtp.during_partition_total:>9} {quic.during_partition_success}/{quic.during_partition_total:>9} {tcp.during_partition_success}/{tcp.during_partition_total:>9}")
+            print(f"{'After heal':<20} {vmtp.post_heal_success}/{vmtp.post_heal_total:>9} {quic.post_heal_success}/{quic.post_heal_total:>9} {tcp.post_heal_success}/{tcp.post_heal_total:>9}")
             print()
 
             vmtp_recovery = f"{vmtp.first_success_after_heal*1000:.0f}ms" if vmtp.first_success_after_heal else "N/A"
+            quic_recovery = f"{quic.first_success_after_heal*1000:.0f}ms" if quic.first_success_after_heal else "N/A"
             tcp_recovery = f"{tcp.first_success_after_heal*1000:.0f}ms" if tcp.first_success_after_heal else "N/A"
-            print(f"{'Recovery time':<20} {vmtp_recovery:>15} {tcp_recovery:>15}")
-            print(f"{'Total packets':<20} {vmtp.total_packets_sent:>15} {tcp.total_packets_sent:>15}")
-            print(f"{'Reconnections':<20} {vmtp.reconnections:>15} {tcp.reconnections:>15}")
+            print(f"{'Recovery time':<20} {vmtp_recovery:>12} {quic_recovery:>12} {tcp_recovery:>12}")
+            print(f"{'Total packets':<20} {vmtp.total_packets_sent:>12} {quic.total_packets_sent:>12} {tcp.total_packets_sent:>12}")
+            print(f"{'Reconnections':<20} {vmtp.reconnections:>12} {quic.reconnections:>12} {tcp.reconnections:>12}")
             print()
 
     if verbose:
@@ -347,17 +444,21 @@ def compare_partition_scenarios(verbose: bool = True) -> list[tuple]:
         print("KEY FINDINGS:")
         print()
         total_vmtp_pkts = sum(r[1].total_packets_sent for r in results)
-        total_tcp_pkts = sum(r[2].total_packets_sent for r in results)
-        total_tcp_reconn = sum(r[2].reconnections for r in results)
-        print(f"Total packets:    VMTP={total_vmtp_pkts}, TCP={total_tcp_pkts} (+{total_tcp_pkts-total_vmtp_pkts})")
-        print(f"TCP reconnections needed: {total_tcp_reconn}")
+        total_quic_pkts = sum(r[2].total_packets_sent for r in results)
+        total_tcp_pkts = sum(r[3].total_packets_sent for r in results)
+        total_quic_reconn = sum(r[2].reconnections for r in results)
+        total_tcp_reconn = sum(r[3].reconnections for r in results)
+        print(f"Total packets:  VMTP={total_vmtp_pkts}, QUIC={total_quic_pkts}, TCP={total_tcp_pkts}")
+        print(f"Reconnections:  VMTP=0, QUIC={total_quic_reconn}, TCP={total_tcp_reconn}")
         print()
         print("VMTP: Partition = 'packets don't arrive'. No state corruption.")
         print("      Recovery is immediate - just send next transaction.")
         print()
+        print("QUIC: Connection ID helps, but connection still times out.")
+        print("      0-RTT resumption helps recovery, but still costs packets.")
+        print()
         print("TCP:  Server times out idle connection during partition.")
-        print("      Client must detect dead connection + 3-way handshake to reconnect.")
-        print("      Extra latency and packets on recovery path.")
+        print("      Full 3-way handshake to reconnect.")
         print("=" * 80)
 
     return results
@@ -369,37 +470,40 @@ def sweep_partition_durations(verbose: bool = True) -> dict:
 
     if verbose:
         print("=" * 80)
-        print("PARTITION DURATION SWEEP")
+        print("PARTITION DURATION SWEEP: VMTP vs QUIC vs TCP")
         print("=" * 80)
         print()
-        print(f"{'Duration':>10} │ {'VMTP pkts':>10} {'TCP pkts':>10} {'Δ pkts':>8} │ {'VMTP rec':>10} {'TCP rec':>10} {'TCP reconn':>10}")
-        print("─" * 10 + "─┼─" + "─" * 10 + "─" * 11 + "─" * 9 + "─┼─" + "─" * 10 + "─" * 11 + "─" * 11)
+        print(f"{'Duration':>10} │ {'VMTP':>8} {'QUIC':>8} {'TCP':>8} │ {'VMTP rec':>10} {'QUIC rec':>10} {'TCP rec':>10}")
+        print("─" * 10 + "─┼─" + "─" * 8 + "─" * 9 + "─" * 9 + "─┼─" + "─" * 10 + "─" * 11 + "─" * 11)
 
     data = []
     for duration in durations:
         vmtp = run_vmtp_partition(0.5, duration, transactions_before=5, transactions_during=5, transactions_after=5)
+        quic = run_quic_partition(0.5, duration, transactions_before=5, transactions_during=5, transactions_after=5)
         tcp = run_tcp_partition(0.5, duration, transactions_before=5, transactions_during=5, transactions_after=5)
 
         vmtp_rec = f"{vmtp.first_success_after_heal*1000:.0f}ms" if vmtp.first_success_after_heal else "N/A"
+        quic_rec = f"{quic.first_success_after_heal*1000:.0f}ms" if quic.first_success_after_heal else "N/A"
         tcp_rec = f"{tcp.first_success_after_heal*1000:.0f}ms" if tcp.first_success_after_heal else "N/A"
-        delta = tcp.total_packets_sent - vmtp.total_packets_sent
 
         data.append({
             "duration": duration,
             "vmtp_packets": vmtp.total_packets_sent,
+            "quic_packets": quic.total_packets_sent,
             "tcp_packets": tcp.total_packets_sent,
             "vmtp_recovery_ms": vmtp.first_success_after_heal * 1000 if vmtp.first_success_after_heal else None,
+            "quic_recovery_ms": quic.first_success_after_heal * 1000 if quic.first_success_after_heal else None,
             "tcp_recovery_ms": tcp.first_success_after_heal * 1000 if tcp.first_success_after_heal else None,
-            "tcp_reconnections": tcp.reconnections,
         })
 
         if verbose:
-            print(f"{duration:>9.1f}s │ {vmtp.total_packets_sent:>10} {tcp.total_packets_sent:>10} {delta:>+8} │ {vmtp_rec:>10} {tcp_rec:>10} {tcp.reconnections:>10}")
+            print(f"{duration:>9.1f}s │ {vmtp.total_packets_sent:>8} {quic.total_packets_sent:>8} {tcp.total_packets_sent:>8} │ {vmtp_rec:>10} {quic_rec:>10} {tcp_rec:>10}")
 
     if verbose:
         print()
-        print("Observation: TCP reconnection cost is fixed (~3 packets + latency)")
-        print("             VMTP has no such cost regardless of partition duration")
+        print("Observation: VMTP recovery is always immediate (no reconnection)")
+        print("             QUIC 0-RTT helps but still has overhead vs VMTP")
+        print("             TCP has highest recovery cost")
 
     return data
 
