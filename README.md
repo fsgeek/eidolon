@@ -1,5 +1,7 @@
 # VMTPsim
 
+Note: this README file is out-of-date. (2026/03/10)
+
 A discrete-event simulator for exploring transaction-oriented transport.
 
 ## The Question
