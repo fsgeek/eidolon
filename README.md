@@ -1,39 +1,101 @@
-# VMTPsim
+# Eidolon (formerly VMTPsim)
 
-Note: this README file is out-of-date. (2026/03/10)
+Discrete-event simulation framework for studying quorum-based consensus under
+extreme latency and intermittent disconnection.
 
-A discrete-event simulator for exploring transaction-oriented transport.
+## Current Focus
 
-## The Question
+This project now centers on Paxos and quorum-system design in topology-aware,
+high-latency environments (Earth, Moon, LEO, Mars).
 
-Does transaction-as-primitive behave meaningfully differently from transaction-on-connection when things go wrong? If yes, build the real thing. If no, stop.
+Core thesis:
+Paxos safety depends on quorum intersection properties, not simplistic
+"majority voting." Quorum *shape* can encode physical topology.
 
-## Background
+## What Is Implemented
 
-Modern datacenter RPC layers transactions on streaming transports (TCP, QUIC). When failures occur, the impedance mismatch manifests as ambiguous states and tail latency pathology.
+- Paxos acceptor/proposer/learner simulation (`paxos.py`)
+- Quorum system variants:
+  - Majority
+  - Flexible Paxos (`q1 + q2 > n`)
+  - Grid quorum variants
+  - Crumbling wall quorum (`quorums.py`)
+- Topology-aware network model with location links and partitions (`datacenter.py`)
+- Interplanetary progression demos (`demo_step_1.py` ... `demo_step_9.py`)
+- Step 9 conjunction experiment:
+  - Hard blackout model
+  - Lagrange repeater refinement
+  - CSV outputs and sweep/plot tooling
 
-VMTP (RFC 1045, 1988) offered transactions as the native primitive. A request-response is atomic. No connection to half-open, no stream to reset. The transport completes the transaction or it doesn't.
+## Recent Status (March 10, 2026)
 
-## What We Simulate
+- Structured quorum semantics are enforced in the proposer path:
+  - quorum checks use `is_phase1_quorum` / `is_phase2_quorum`
+  - crumbling-wall phase constraints are active in execution
+- Step 9 artifact pipeline is operational:
+  - single-run CSV export
+  - parameter sweep over Mars latency and blackout duration
+  - SVG figure generation without external plotting dependencies
 
-- **VMTP model**: Request-response as atomic unit, CSR-based duplicate suppression
-- **Connection model**: Transaction layered on streams (simplified gRPC-like)
-- **Failure injection**: Packet loss, node crash, partition
-- **CWlog quorums**: O(log n) consensus over multicast vs majority quorum baseline
+## Repository Layout
 
-## What We Measure
+- Core simulation:
+  - `paxos.py`
+  - `quorums.py`
+  - `datacenter.py`
+  - `network.py`
+- Interplanetary demos:
+  - `demo_step_7.py` (hierarchical Earth/Mars)
+  - `demo_step_8.py` (crumbling wall full topology)
+  - `demo_step_9.py` (conjunction blackout vs repeater)
+- Experiment tooling:
+  - `experiments/step9_sweep.py`
+  - `experiments/plot_step9.py`
+- Research docs:
+  - `docs/workshop-paper-roadmap.md`
+  - `docs/step9-repro.md`
+  - `docs/papers/224964.224978.pdf` (Peleg & Wool)
 
-- Packets per transaction (happy path and recovery)
-- Time to failure detection
-- State footprint per transaction
-- Failure propagation in call chains (A → B → C)
+## Quick Start
 
-## Status
+```bash
+uv sync
+```
 
-Early exploration. Building the simulator to validate hypotheses before writing real protocol code.
+Run Step 9 baseline/repeater comparison:
+
+```bash
+uv run python demo_step_9.py \
+  --mars-latency-s 186 \
+  --blackout-start-s 600 \
+  --blackout-duration-s 900 \
+  --sim-end-s 3000 \
+  --reconcile-interval-s 120 \
+  --seed 42 \
+  --csv results/step9/single_run.csv
+```
+
+Run the sweep and generate plots:
+
+```bash
+uv run python experiments/step9_sweep.py \
+  --mars-latencies-s "186,750,1342" \
+  --blackout-durations-s "300,900,1800" \
+  --output results/step9/step9_sweep.csv
+
+uv run python experiments/plot_step9.py \
+  --input results/step9/step9_sweep.csv \
+  --output-dir results/step9/plots
+```
+
+## Outputs
+
+- Sweep CSV: `results/step9/step9_sweep.csv`
+- Single-run CSV: `results/step9/single_run.csv`
+- Plots: `results/step9/plots/*.svg`
 
 ## References
 
-- RFC 1045: VMTP Specification (docs/rfc1045.txt)
-- Peleg & Wool 1995: Crumbling Walls quorum systems (docs/papers/)
-- Minimal spec extraction: docs/vmtp-minimal-spec.md
+- RFC 1045: VMTP Specification (`docs/rfc1045.txt`)
+- Peleg & Wool (1995): Crumbling Walls (`docs/papers/224964.224978.pdf`)
+- Repro commands: `docs/step9-repro.md`
