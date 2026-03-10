@@ -194,6 +194,8 @@ class CrumblingWallQuorum(QuorumSystem):
         self.tier_sizes = [len(t) for t in tiers]
         self.num_tiers = len(tiers)
         self.fast_tier = tiers[-1]  # Last tier = fastest
+        self._tier_sets = [set(t) for t in tiers]
+        self._fast_tier_set = set(self.fast_tier)
 
         # Phase 2: all of the fast tier
         self._phase2_size = len(self.fast_tier)
@@ -216,6 +218,21 @@ class CrumblingWallQuorum(QuorumSystem):
 
     def phase2_quorum_size(self) -> int:
         return self._phase2_size
+
+    def is_phase1_quorum(self, respondents: set[int]) -> bool:
+        """Phase 1 must span all tiers and meet minimum size."""
+        covered_tiers = 0
+        for tier in self._tier_sets:
+            if respondents & tier:
+                covered_tiers += 1
+        return (
+            covered_tiers == self.num_tiers
+            and len(respondents & set(self.nodes)) >= self._phase1_size
+        )
+
+    def is_phase2_quorum(self, respondents: set[int]) -> bool:
+        """Phase 2 is the full fast tier (Earth in our examples)."""
+        return self._fast_tier_set.issubset(respondents)
 
     def describe(self) -> str:
         tier_desc = " / ".join(f"{len(t)}" for t in self.tiers)

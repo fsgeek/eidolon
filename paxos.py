@@ -373,17 +373,34 @@ class Proposer:
         self.network.send(request, acceptor_id)
         return txn_id
 
-    def _collect_responses(self, txn_ids: list[int], needed: int,
-                           timeout: float) -> list[Response]:
-        """Wait for enough responses or timeout. Returns collected responses."""
+    def _collect_responses(
+        self,
+        txn_ids: list[int],
+        quorum_check,
+        timeout: float,
+        count_response,
+    ) -> tuple[list[Response], set[int]]:
+        """Wait for quorum-bearing responses or timeout.
+
+        Args:
+            txn_ids: Outstanding request transaction IDs.
+            quorum_check: Callable(set[int]) -> bool.
+            timeout: Max wait time in simulation seconds.
+            count_response: Callable(Response) -> bool; True if this response
+                contributes toward quorum.
+
+        Returns:
+            (all_responses, quorum_respondents)
+        """
         # Create events for each pending transaction
         for txn_id in txn_ids:
             self._pending[txn_id] = self.env.event()
 
         responses = []
+        respondents = set()
         deadline = self.env.now + timeout
 
-        while len(responses) < needed and self.env.now < deadline:
+        while not quorum_check(respondents) and self.env.now < deadline:
             # Wait for any pending event or timeout
             remaining = deadline - self.env.now
             if remaining <= 0:
@@ -403,7 +420,10 @@ class Proposer:
             # Collect any responses that arrived
             for txn_id in list(txn_ids):
                 if txn_id in self._responses:
-                    responses.append(self._responses.pop(txn_id))
+                    response = self._responses.pop(txn_id)
+                    responses.append(response)
+                    if count_response(response):
+                        respondents.add(response.server_id)
                     self._pending.pop(txn_id, None)
 
         # Cleanup remaining pending
@@ -411,7 +431,7 @@ class Proposer:
             self._pending.pop(txn_id, None)
             self._responses.pop(txn_id, None)
 
-        return responses
+        return responses, respondents
 
     def propose(self, slot: int, value: Any) -> simpy.Process:
         """Run Paxos to achieve consensus on a value for a slot.
@@ -444,8 +464,15 @@ class Proposer:
                 packets += 1
 
             # Collect Phase 1 responses
-            needed = self.quorum.phase1_quorum_size()
-            responses = yield from self._collect_responses(txn_ids, needed, self.timeout)
+            responses, phase1_respondents = yield from self._collect_responses(
+                txn_ids,
+                self.quorum.is_phase1_quorum,
+                self.timeout,
+                lambda r: (
+                    isinstance(r.payload, PaxosPayload) and
+                    r.payload.phase == PaxosPhase.PROMISE
+                ),
+            )
 
             # Parse responses
             promises = []
@@ -460,7 +487,7 @@ class Proposer:
             total_phase1 += len(promises)
             total_nacks += phase1_nacks
 
-            if len(promises) < needed:
+            if not self.quorum.is_phase1_quorum(phase1_respondents):
                 # Didn't get quorum - retry with higher proposal
                 yield self.env.timeout(0.010 * (round_num + 1))  # Backoff
                 continue
@@ -491,8 +518,15 @@ class Proposer:
                 packets += 1
 
             # Collect Phase 2 responses
-            needed = self.quorum.phase2_quorum_size()
-            responses = yield from self._collect_responses(txn_ids, needed, self.timeout)
+            responses, phase2_respondents = yield from self._collect_responses(
+                txn_ids,
+                self.quorum.is_phase2_quorum,
+                self.timeout,
+                lambda r: (
+                    isinstance(r.payload, PaxosPayload) and
+                    r.payload.phase == PaxosPhase.ACCEPTED
+                ),
+            )
 
             # Parse responses
             accepteds = []
@@ -507,7 +541,7 @@ class Proposer:
             total_phase2 += len(accepteds)
             total_nacks += phase2_nacks
 
-            if len(accepteds) >= needed:
+            if self.quorum.is_phase2_quorum(phase2_respondents):
                 # Consensus achieved!
                 self._stats["proposals_succeeded"] += 1
                 return ConsensusResult(
