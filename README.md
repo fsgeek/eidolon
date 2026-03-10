@@ -81,7 +81,9 @@ Run the sweep and generate plots:
 uv run python experiments/step9_sweep.py \
   --mars-latencies-s "186,750,1342" \
   --blackout-durations-s "300,900,1800" \
-  --output results/step9/step9_sweep.csv
+  --seeds "40,41,42,43,44" \
+  --output results/step9/step9_sweep.csv \
+  --aggregate-output results/step9/step9_sweep_ci.csv
 
 uv run python experiments/plot_step9.py \
   --input results/step9/step9_sweep.csv \
@@ -91,6 +93,7 @@ uv run python experiments/plot_step9.py \
 ## Outputs
 
 - Sweep CSV: `results/step9/step9_sweep.csv`
+- Sweep CI CSV: `results/step9/step9_sweep_ci.csv`
 - Single-run CSV: `results/step9/single_run.csv`
 - Plots: `results/step9/plots/*.svg`
 

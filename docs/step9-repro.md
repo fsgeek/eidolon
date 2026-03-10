@@ -30,8 +30,9 @@ uv run python experiments/step9_sweep.py \
   --blackout-start-s 600 \
   --sim-end-s 4000 \
   --reconcile-interval-s 120 \
-  --seed 42 \
-  --output results/step9/step9_sweep.csv
+  --seeds "40,41,42,43,44" \
+  --output results/step9/step9_sweep.csv \
+  --aggregate-output results/step9/step9_sweep_ci.csv
 ```
 
 ## Plot Generation (SVG)
@@ -48,6 +49,7 @@ uv run python experiments/plot_step9.py \
   - `results/step9/single_run.csv`
 - Sweep data:
   - `results/step9/step9_sweep.csv`
+  - `results/step9/step9_sweep_ci.csv`
 - Plots:
   - `results/step9/plots/during_success_latency_*.svg`
   - `results/step9/plots/recovery_lag_latency_*.svg`
@@ -57,3 +59,4 @@ uv run python experiments/plot_step9.py \
 - All timings are in simulation seconds.
 - `scenario=blackout_only` models hard conjunction blackout.
 - `scenario=with_repeater` models degraded continuity via repeater.
+- `step9_sweep_ci.csv` reports means and 95% CI over the specified seed set.

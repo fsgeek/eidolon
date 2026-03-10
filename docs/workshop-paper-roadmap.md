@@ -67,7 +67,7 @@ This prevents topology-aware quorums from silently collapsing to size-only quoru
 
 ## Immediate Next Build Tasks
 
-1. Add confidence intervals by running multiple seeds per sweep point.
-2. Add fairness/load metrics (messages and wait time by tier).
-3. Add a liveness envelope plot over timeout and blackout parameters.
-4. Draft the methods/results sections directly against generated figures.
+1. Add fairness/load metrics (messages and wait time by tier).
+2. Add a liveness envelope plot over timeout and blackout parameters.
+3. Draft the methods/results sections directly against generated figures.
+4. Add hypothesis-to-result traceability table for the paper narrative.
