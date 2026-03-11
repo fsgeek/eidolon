@@ -200,7 +200,7 @@ The 300~s blackout line in the timeout sweep deserves care: the aggregated CSV c
 \section{Related Work}
 Paxos established the standard safety argument for replicated state machines under asynchronous messaging and crash failures \cite{lamport1998}. Flexible Paxos relaxed the ``every quorum is a majority'' intuition by showing that safety only requires Phase~1/Phase~2 cross-intersection, not universal pairwise intersection among all quorums \cite{howard2016}. Our construction follows that line directly: the hot path is made small and local, while the slower election path is made larger and topology-spanning.
 
-The broader quorum-systems literature provides the combinatorial foundation for moving beyond majority quorums. Grid-style and crumbling-wall constructions show that quorum geometry can be engineered around availability and structure rather than simple counts \cite{cheung1990,peleg1995}. What this paper adds is a concrete mapping from that literature to a tiered Earth/LEO/Moon/Mars deployment, together with an explicit distinction between the conceptual structural family and the more conservative implemented family used in the simulator.
+The broader quorum-systems literature provides the combinatorial foundation for moving beyond majority quorums. Grid-style and crumbling-wall constructions show that quorum geometry can be engineered around availability and structure rather than simple counts \cite{cheung1992,peleg1995}. What this paper adds is a concrete mapping from that literature to a tiered Earth/LEO/Moon/Mars deployment, together with an explicit distinction between the conceptual structural family and the more conservative implemented family used in the simulator.
 
 Space-networking and delay-tolerant networking work motivates the operating regime but addresses a different layer of the problem. DTN research studies intermittent connectivity, long propagation delay, and store-and-forward delivery across challenged links \cite{cerf2007}. Our simulator borrows that disruption-oriented perspective for the network model, but the contribution here is not a routing protocol. It is a consensus-layer argument about how quorum shape changes the commit critical path and the liveness envelope under scheduled disconnection.
 
@@ -244,31 +244,7 @@ The implemented global quorum family is topology-aware rather than size-only. & 
 \bottomrule
 \end{longtable}
 
-\begin{thebibliography}{9}
-\bibitem{lamport1998}
-Leslie Lamport.
-\newblock The part-time parliament.
-\newblock {\em ACM Transactions on Computer Systems}, 16(2):133--169, 1998.
-
-\bibitem{howard2016}
-Heidi Howard, Dahlia Malkhi, and Alexander Spiegelman.
-\newblock Flexible Paxos: Quorum intersection revisited.
-\newblock In {\em OPODIS}, 2016.
-
-\bibitem{cheung1990}
-S.~Y. Cheung, M.~H. Ammar, and M.~Ahamad.
-\newblock The grid protocol: A high performance scheme for maintaining replicated data.
-\newblock In {\em Proceedings of the Sixth International Conference on Data Engineering}, 1990.
-
-\bibitem{peleg1995}
-David Peleg and Avishai Wool.
-\newblock The availability of quorum systems.
-\newblock {\em Information and Computation}, 123(2):210--223, 1995.
-
-\bibitem{cerf2007}
-Vinton Cerf, Scott Burleigh, Adrian Hooke, Leigh Torgerson, Robert Durst, Keith Scott, Kevin Fall, and Howard Weiss.
-\newblock Delay-tolerant networking architecture.
-\newblock RFC 4838, 2007.
-\end{thebibliography}
+\bibliographystyle{plain}
+\bibliography{references}
 
 \end{document}

@@ -8,6 +8,14 @@ This document captures exact commands for the conjunction/repeater experiments.
 uv sync
 ```
 
+## Paper Build
+
+Build the manuscript from `docs/paper/` with `latexmk`:
+
+```bash
+latexmk -pdf main.tex
+```
+
 ## Single Run (Baseline + Repeater)
 
 ```bash
