@@ -43,6 +43,26 @@ uv run python experiments/plot_step9.py \
   --output-dir results/step9/plots
 ```
 
+## Liveness Envelope Sweep
+
+```bash
+uv run python experiments/step9_liveness.py \
+  --mars-latency-s 186 \
+  --timeout-s "120,240,360,500,720" \
+  --blackout-durations-s "300,900,1800" \
+  --blackout-start-s 600 \
+  --sim-end-s 4000 \
+  --reconcile-interval-s 120 \
+  --global-max-rounds 1 \
+  --seeds "40,41,42,43,44" \
+  --output results/step9/step9_liveness.csv \
+  --aggregate-output results/step9/step9_liveness_ci.csv
+
+uv run python experiments/plot_step9_liveness.py \
+  --input results/step9/step9_liveness_ci.csv \
+  --output-dir results/step9/plots
+```
+
 ## Outputs
 
 - CSV summary:
@@ -50,9 +70,13 @@ uv run python experiments/plot_step9.py \
 - Sweep data:
   - `results/step9/step9_sweep.csv`
   - `results/step9/step9_sweep_ci.csv`
+- Liveness envelope:
+  - `results/step9/step9_liveness.csv`
+  - `results/step9/step9_liveness_ci.csv`
 - Plots:
   - `results/step9/plots/during_success_latency_*.svg`
   - `results/step9/plots/recovery_lag_latency_*.svg`
+  - `results/step9/plots/liveness_envelope_*.svg`
 
 ## Notes
 

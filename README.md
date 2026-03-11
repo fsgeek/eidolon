@@ -51,6 +51,8 @@ Paxos safety depends on quorum intersection properties, not simplistic
 - Experiment tooling:
   - `experiments/step9_sweep.py`
   - `experiments/plot_step9.py`
+  - `experiments/step9_liveness.py`
+  - `experiments/plot_step9_liveness.py`
 - Research docs:
   - `docs/workshop-paper-roadmap.md`
   - `docs/step9-repro.md`
@@ -88,12 +90,26 @@ uv run python experiments/step9_sweep.py \
 uv run python experiments/plot_step9.py \
   --input results/step9/step9_sweep.csv \
   --output-dir results/step9/plots
+
+uv run python experiments/step9_liveness.py \
+  --mars-latency-s 186 \
+  --timeout-s "120,240,360,500,720" \
+  --blackout-durations-s "300,900,1800" \
+  --seeds "40,41,42,43,44" \
+  --output results/step9/step9_liveness.csv \
+  --aggregate-output results/step9/step9_liveness_ci.csv
+
+uv run python experiments/plot_step9_liveness.py \
+  --input results/step9/step9_liveness_ci.csv \
+  --output-dir results/step9/plots
 ```
 
 ## Outputs
 
 - Sweep CSV: `results/step9/step9_sweep.csv`
 - Sweep CI CSV: `results/step9/step9_sweep_ci.csv`
+- Liveness CSV: `results/step9/step9_liveness.csv`
+- Liveness CI CSV: `results/step9/step9_liveness_ci.csv`
 - Single-run CSV: `results/step9/single_run.csv`
 - Plots: `results/step9/plots/*.svg`
 

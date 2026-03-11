@@ -46,6 +46,8 @@ def _parse_args():
     parser.add_argument("--blackout-start-s", type=float, default=600.0)
     parser.add_argument("--sim-end-s", type=float, default=4000.0)
     parser.add_argument("--reconcile-interval-s", type=float, default=120.0)
+    parser.add_argument("--global-timeout-s", type=float, default=500.0)
+    parser.add_argument("--global-max-rounds", type=int, default=1)
     parser.add_argument("--seeds", type=str, default="40,41,42,43,44")
     parser.add_argument(
         "--output",
@@ -78,6 +80,8 @@ def main():
         "blackout_duration_s",
         "sim_end_s",
         "reconcile_interval_s",
+        "global_timeout_s",
+        "global_max_rounds",
         "seed",
         "earth_success",
         "earth_total",
@@ -91,6 +95,26 @@ def main():
         "global_post_total",
         "first_success_after_blackout_s",
         "avg_global_latency_s",
+        "earth_local_avg_latency_s",
+        "earth_local_p95_latency_s",
+        "mars_local_avg_latency_s",
+        "mars_local_p95_latency_s",
+        "global_phase1_responses_earth",
+        "global_phase1_responses_leo",
+        "global_phase1_responses_moon",
+        "global_phase1_responses_mars",
+        "global_phase2_responses_earth",
+        "global_phase2_responses_leo",
+        "global_phase2_responses_moon",
+        "global_phase2_responses_mars",
+        "network_src_sent_earth",
+        "network_src_sent_leo",
+        "network_src_sent_moon",
+        "network_src_sent_mars",
+        "network_src_avg_oneway_s_earth",
+        "network_src_avg_oneway_s_leo",
+        "network_src_avg_oneway_s_moon",
+        "network_src_avg_oneway_s_mars",
     ]
 
     rows = []
@@ -104,6 +128,8 @@ def main():
                     blackout_duration_s=blackout_duration,
                     sim_end_s=args.sim_end_s,
                     reconcile_interval_s=args.reconcile_interval_s,
+                    global_timeout_s=args.global_timeout_s,
+                    global_max_rounds=args.global_max_rounds,
                     seed=seed,
                 )
                 baseline, repeater = compare_blackout_vs_repeater(cfg, verbose=False)
@@ -116,6 +142,8 @@ def main():
                             cfg.blackout_duration_s,
                             cfg.sim_end_s,
                             cfg.reconcile_interval_s,
+                            cfg.global_timeout_s,
+                            cfg.global_max_rounds,
                             cfg.seed,
                             r.earth_success,
                             r.earth_total,
@@ -133,6 +161,26 @@ def main():
                                 else ""
                             ),
                             f"{r.avg_global_latency_s:.6f}" if r.avg_global_latency_s is not None else "",
+                            f"{r.earth_local_avg_latency_s:.6f}" if r.earth_local_avg_latency_s is not None else "",
+                            f"{r.earth_local_p95_latency_s:.6f}" if r.earth_local_p95_latency_s is not None else "",
+                            f"{r.mars_local_avg_latency_s:.6f}" if r.mars_local_avg_latency_s is not None else "",
+                            f"{r.mars_local_p95_latency_s:.6f}" if r.mars_local_p95_latency_s is not None else "",
+                            r.global_phase1_responses_earth,
+                            r.global_phase1_responses_leo,
+                            r.global_phase1_responses_moon,
+                            r.global_phase1_responses_mars,
+                            r.global_phase2_responses_earth,
+                            r.global_phase2_responses_leo,
+                            r.global_phase2_responses_moon,
+                            r.global_phase2_responses_mars,
+                            r.network_src_sent_earth,
+                            r.network_src_sent_leo,
+                            r.network_src_sent_moon,
+                            r.network_src_sent_mars,
+                            f"{r.network_src_avg_oneway_s_earth:.6f}" if r.network_src_avg_oneway_s_earth is not None else "",
+                            f"{r.network_src_avg_oneway_s_leo:.6f}" if r.network_src_avg_oneway_s_leo is not None else "",
+                            f"{r.network_src_avg_oneway_s_moon:.6f}" if r.network_src_avg_oneway_s_moon is not None else "",
+                            f"{r.network_src_avg_oneway_s_mars:.6f}" if r.network_src_avg_oneway_s_mars is not None else "",
                         ]
                     )
 
@@ -171,18 +219,53 @@ def main():
         "avg_global_latency_s_mean",
         "avg_global_latency_s_ci95",
         "avg_global_latency_s_n",
+        "earth_local_avg_latency_s_mean",
+        "earth_local_avg_latency_s_ci95",
+        "earth_local_p95_latency_s_mean",
+        "earth_local_p95_latency_s_ci95",
+        "mars_local_avg_latency_s_mean",
+        "mars_local_avg_latency_s_ci95",
+        "mars_local_p95_latency_s_mean",
+        "mars_local_p95_latency_s_ci95",
+        "global_phase1_earth_share_mean",
+        "global_phase1_earth_share_ci95",
+        "global_phase2_earth_share_mean",
+        "global_phase2_earth_share_ci95",
+        "network_src_sent_earth_share_mean",
+        "network_src_sent_earth_share_ci95",
     ]
 
     aggregate_rows = []
     for (scenario, mars_latency, blackout_duration), bucket in sorted(grouped.items()):
-        earth_rates = [int(r[7]) / max(1, int(r[8])) for r in bucket]
-        mars_rates = [int(r[9]) / max(1, int(r[10])) for r in bucket]
-        pre_rates = [int(r[11]) / max(1, int(r[12])) for r in bucket]
-        during_rates = [int(r[13]) / max(1, int(r[14])) for r in bucket]
-        post_rates = [int(r[15]) / max(1, int(r[16])) for r in bucket]
+        earth_rates = [int(r[9]) / max(1, int(r[10])) for r in bucket]
+        mars_rates = [int(r[11]) / max(1, int(r[12])) for r in bucket]
+        pre_rates = [int(r[13]) / max(1, int(r[14])) for r in bucket]
+        during_rates = [int(r[15]) / max(1, int(r[16])) for r in bucket]
+        post_rates = [int(r[17]) / max(1, int(r[18])) for r in bucket]
 
-        recovery_vals = [float(r[17]) for r in bucket if r[17] != ""]
-        latency_vals = [float(r[18]) for r in bucket if r[18] != ""]
+        recovery_vals = [float(r[19]) for r in bucket if r[19] != ""]
+        latency_vals = [float(r[20]) for r in bucket if r[20] != ""]
+        earth_avg_lat_vals = [float(r[21]) for r in bucket if r[21] != ""]
+        earth_p95_lat_vals = [float(r[22]) for r in bucket if r[22] != ""]
+        mars_avg_lat_vals = [float(r[23]) for r in bucket if r[23] != ""]
+        mars_p95_lat_vals = [float(r[24]) for r in bucket if r[24] != ""]
+
+        p1_earth_share_vals = []
+        p2_earth_share_vals = []
+        src_earth_share_vals = []
+        for r in bucket:
+            p1_earth = int(r[25]); p1_leo = int(r[26]); p1_moon = int(r[27]); p1_mars = int(r[28])
+            p2_earth = int(r[29]); p2_leo = int(r[30]); p2_moon = int(r[31]); p2_mars = int(r[32])
+            src_earth = int(r[33]); src_leo = int(r[34]); src_moon = int(r[35]); src_mars = int(r[36])
+            p1_total = p1_earth + p1_leo + p1_moon + p1_mars
+            p2_total = p2_earth + p2_leo + p2_moon + p2_mars
+            src_total = src_earth + src_leo + src_moon + src_mars
+            if p1_total > 0:
+                p1_earth_share_vals.append(p1_earth / p1_total)
+            if p2_total > 0:
+                p2_earth_share_vals.append(p2_earth / p2_total)
+            if src_total > 0:
+                src_earth_share_vals.append(src_earth / src_total)
 
         earth_mu, earth_ci = _mean_ci95(earth_rates)
         mars_mu, mars_ci = _mean_ci95(mars_rates)
@@ -191,6 +274,13 @@ def main():
         post_mu, post_ci = _mean_ci95(post_rates)
         recovery_mu, recovery_ci = _mean_ci95(recovery_vals)
         latency_mu, latency_ci = _mean_ci95(latency_vals)
+        earth_avg_mu, earth_avg_ci = _mean_ci95(earth_avg_lat_vals)
+        earth_p95_mu, earth_p95_ci = _mean_ci95(earth_p95_lat_vals)
+        mars_avg_mu, mars_avg_ci = _mean_ci95(mars_avg_lat_vals)
+        mars_p95_mu, mars_p95_ci = _mean_ci95(mars_p95_lat_vals)
+        p1_share_mu, p1_share_ci = _mean_ci95(p1_earth_share_vals)
+        p2_share_mu, p2_share_ci = _mean_ci95(p2_earth_share_vals)
+        src_share_mu, src_share_ci = _mean_ci95(src_earth_share_vals)
 
         aggregate_rows.append(
             [
@@ -214,6 +304,20 @@ def main():
                 f"{latency_mu:.6f}" if latency_mu is not None else "",
                 f"{latency_ci:.6f}" if latency_ci is not None else "",
                 len(latency_vals),
+                f"{earth_avg_mu:.6f}" if earth_avg_mu is not None else "",
+                f"{earth_avg_ci:.6f}" if earth_avg_ci is not None else "",
+                f"{earth_p95_mu:.6f}" if earth_p95_mu is not None else "",
+                f"{earth_p95_ci:.6f}" if earth_p95_ci is not None else "",
+                f"{mars_avg_mu:.6f}" if mars_avg_mu is not None else "",
+                f"{mars_avg_ci:.6f}" if mars_avg_ci is not None else "",
+                f"{mars_p95_mu:.6f}" if mars_p95_mu is not None else "",
+                f"{mars_p95_ci:.6f}" if mars_p95_ci is not None else "",
+                f"{p1_share_mu:.6f}" if p1_share_mu is not None else "",
+                f"{p1_share_ci:.6f}" if p1_share_ci is not None else "",
+                f"{p2_share_mu:.6f}" if p2_share_mu is not None else "",
+                f"{p2_share_ci:.6f}" if p2_share_ci is not None else "",
+                f"{src_share_mu:.6f}" if src_share_mu is not None else "",
+                f"{src_share_ci:.6f}" if src_share_ci is not None else "",
             ]
         )
 

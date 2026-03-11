@@ -11,6 +11,7 @@ import argparse
 import csv
 from dataclasses import dataclass
 from pathlib import Path
+from statistics import mean
 
 import simpy
 
@@ -27,6 +28,8 @@ class ExperimentConfig:
     blackout_duration_s: float = 900.0
     sim_end_s: float = 3000.0
     reconcile_interval_s: float = 120.0
+    global_timeout_s: float = 500.0
+    global_max_rounds: int = 1
     seed: int = 42
 
 
@@ -48,6 +51,118 @@ class ExperimentResult:
     post_blackout: ReconciliationStats
     first_success_after_blackout_s: float | None
     avg_global_latency_s: float | None
+    earth_local_avg_latency_s: float | None
+    earth_local_p95_latency_s: float | None
+    mars_local_avg_latency_s: float | None
+    mars_local_p95_latency_s: float | None
+    global_phase1_responses_earth: int
+    global_phase1_responses_leo: int
+    global_phase1_responses_moon: int
+    global_phase1_responses_mars: int
+    global_phase2_responses_earth: int
+    global_phase2_responses_leo: int
+    global_phase2_responses_moon: int
+    global_phase2_responses_mars: int
+    network_src_sent_earth: int
+    network_src_sent_leo: int
+    network_src_sent_moon: int
+    network_src_sent_mars: int
+    network_src_avg_oneway_s_earth: float | None
+    network_src_avg_oneway_s_leo: float | None
+    network_src_avg_oneway_s_moon: float | None
+    network_src_avg_oneway_s_mars: float | None
+
+
+def _p95(values: list[float]) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    idx = max(0, int(0.95 * (len(ordered) - 1)))
+    return ordered[idx]
+
+
+def _tier_from_location(location: str | None) -> str:
+    if location is None:
+        return "unknown"
+    if location.startswith("mars-"):
+        return "mars"
+    if location == "moon":
+        return "moon"
+    if location == "leo-sat":
+        return "leo"
+    return "earth"
+
+
+def _extract_tier_metrics(network, global_proposer_id: int) -> dict[str, float | int | None]:
+    packet_send_time = {}
+
+    src_sent = {"earth": 0, "leo": 0, "moon": 0, "mars": 0}
+    src_delay_sum = {"earth": 0.0, "leo": 0.0, "moon": 0.0, "mars": 0.0}
+    src_delay_count = {"earth": 0, "leo": 0, "moon": 0, "mars": 0}
+
+    g_p1 = {"earth": 0, "leo": 0, "moon": 0, "mars": 0}
+    g_p2 = {"earth": 0, "leo": 0, "moon": 0, "mars": 0}
+
+    for ev in network.packet_log:
+        packet = ev["packet"]
+        event = ev["event"]
+        packet_key = id(packet)
+
+        if event == "send":
+            packet_send_time[packet_key] = ev["time"]
+            src_id = getattr(packet, "client_id", None) if packet.__class__.__name__ == "Request" else getattr(packet, "server_id", None)
+            src_loc = network._entity_location.get(src_id)
+            src_tier = _tier_from_location(src_loc)
+            if src_tier in src_sent:
+                src_sent[src_tier] += 1
+            continue
+
+        if event == "deliver":
+            send_t = packet_send_time.get(packet_key)
+            if send_t is not None:
+                src_id = getattr(packet, "client_id", None) if packet.__class__.__name__ == "Request" else getattr(packet, "server_id", None)
+                src_loc = network._entity_location.get(src_id)
+                src_tier = _tier_from_location(src_loc)
+                if src_tier in src_delay_sum:
+                    src_delay_sum[src_tier] += (ev["time"] - send_t)
+                    src_delay_count[src_tier] += 1
+
+            # Count global proposer response burden by source tier and phase.
+            if (
+                packet.__class__.__name__ == "Response"
+                and getattr(packet, "client_id", None) == global_proposer_id
+                and hasattr(packet, "payload")
+                and packet.payload.__class__.__name__ == "PaxosPayload"
+            ):
+                src_loc = network._entity_location.get(packet.server_id)
+                src_tier = _tier_from_location(src_loc)
+                phase_name = getattr(packet.payload.phase, "name", "")
+                if src_tier in g_p1 and phase_name == "PROMISE":
+                    g_p1[src_tier] += 1
+                if src_tier in g_p2 and phase_name == "ACCEPTED":
+                    g_p2[src_tier] += 1
+
+    def _avg(sum_v, cnt_v):
+        return (sum_v / cnt_v) if cnt_v > 0 else None
+
+    return {
+        "global_phase1_responses_earth": g_p1["earth"],
+        "global_phase1_responses_leo": g_p1["leo"],
+        "global_phase1_responses_moon": g_p1["moon"],
+        "global_phase1_responses_mars": g_p1["mars"],
+        "global_phase2_responses_earth": g_p2["earth"],
+        "global_phase2_responses_leo": g_p2["leo"],
+        "global_phase2_responses_moon": g_p2["moon"],
+        "global_phase2_responses_mars": g_p2["mars"],
+        "network_src_sent_earth": src_sent["earth"],
+        "network_src_sent_leo": src_sent["leo"],
+        "network_src_sent_moon": src_sent["moon"],
+        "network_src_sent_mars": src_sent["mars"],
+        "network_src_avg_oneway_s_earth": _avg(src_delay_sum["earth"], src_delay_count["earth"]),
+        "network_src_avg_oneway_s_leo": _avg(src_delay_sum["leo"], src_delay_count["leo"]),
+        "network_src_avg_oneway_s_moon": _avg(src_delay_sum["moon"], src_delay_count["moon"]),
+        "network_src_avg_oneway_s_mars": _avg(src_delay_sum["mars"], src_delay_count["mars"]),
+    }
 
 
 def build_topology(env: simpy.Environment, mars_base_latency_s: float, seed: int = 42):
@@ -158,8 +273,8 @@ def _wire_system(env: simpy.Environment, cfg: ExperimentConfig):
         network,
         all_ids,
         wall,
-        timeout=500.0,
-        max_rounds=1,
+        timeout=cfg.global_timeout_s,
+        max_rounds=cfg.global_max_rounds,
     )
 
     return network, earth_prop, mars_prop, global_prop
@@ -182,6 +297,8 @@ def run_conjunction_experiment(
     during = ReconciliationStats()
     post = ReconciliationStats()
     global_latencies = []
+    earth_latencies = []
+    mars_latencies = []
     first_success_after_blackout = None
 
     blackout_end = cfg.blackout_start_s + cfg.blackout_duration_s
@@ -194,6 +311,7 @@ def run_conjunction_experiment(
             earth_total += 1
             if result.success:
                 earth_success += 1
+                earth_latencies.append(result.total_time)
             slot += 1
             yield env.timeout(2.0)
 
@@ -205,6 +323,7 @@ def run_conjunction_experiment(
             mars_total += 1
             if result.success:
                 mars_success += 1
+                mars_latencies.append(result.total_time)
             slot += 1
             yield env.timeout(2.0)
 
@@ -263,6 +382,7 @@ def run_conjunction_experiment(
     env.process(global_reconcile())
     env.process(conjunction_controller())
     env.run(until=cfg.sim_end_s)
+    tier_metrics = _extract_tier_metrics(network, global_prop.entity.id)
 
     result = ExperimentResult(
         name="with_repeater" if with_repeater else "blackout_only",
@@ -277,6 +397,26 @@ def run_conjunction_experiment(
         avg_global_latency_s=(
             sum(global_latencies) / len(global_latencies) if global_latencies else None
         ),
+        earth_local_avg_latency_s=(mean(earth_latencies) if earth_latencies else None),
+        earth_local_p95_latency_s=_p95(earth_latencies),
+        mars_local_avg_latency_s=(mean(mars_latencies) if mars_latencies else None),
+        mars_local_p95_latency_s=_p95(mars_latencies),
+        global_phase1_responses_earth=tier_metrics["global_phase1_responses_earth"],
+        global_phase1_responses_leo=tier_metrics["global_phase1_responses_leo"],
+        global_phase1_responses_moon=tier_metrics["global_phase1_responses_moon"],
+        global_phase1_responses_mars=tier_metrics["global_phase1_responses_mars"],
+        global_phase2_responses_earth=tier_metrics["global_phase2_responses_earth"],
+        global_phase2_responses_leo=tier_metrics["global_phase2_responses_leo"],
+        global_phase2_responses_moon=tier_metrics["global_phase2_responses_moon"],
+        global_phase2_responses_mars=tier_metrics["global_phase2_responses_mars"],
+        network_src_sent_earth=tier_metrics["network_src_sent_earth"],
+        network_src_sent_leo=tier_metrics["network_src_sent_leo"],
+        network_src_sent_moon=tier_metrics["network_src_sent_moon"],
+        network_src_sent_mars=tier_metrics["network_src_sent_mars"],
+        network_src_avg_oneway_s_earth=tier_metrics["network_src_avg_oneway_s_earth"],
+        network_src_avg_oneway_s_leo=tier_metrics["network_src_avg_oneway_s_leo"],
+        network_src_avg_oneway_s_moon=tier_metrics["network_src_avg_oneway_s_moon"],
+        network_src_avg_oneway_s_mars=tier_metrics["network_src_avg_oneway_s_mars"],
     )
 
     if verbose:
@@ -307,6 +447,12 @@ def run_conjunction_experiment(
             )
         else:
             print("    First success after blackout end: none observed")
+        if result.earth_local_avg_latency_s is not None:
+            print(f"    Earth local avg/p95: {result.earth_local_avg_latency_s*1000:.1f}ms / "
+                  f"{result.earth_local_p95_latency_s*1000:.1f}ms")
+        if result.mars_local_avg_latency_s is not None:
+            print(f"    Mars local avg/p95:  {result.mars_local_avg_latency_s*1000:.1f}ms / "
+                  f"{result.mars_local_p95_latency_s*1000:.1f}ms")
         print()
 
     return result
@@ -380,6 +526,8 @@ def write_summary_csv(
                 "blackout_duration_s",
                 "sim_end_s",
                 "reconcile_interval_s",
+                "global_timeout_s",
+                "global_max_rounds",
                 "earth_success",
                 "earth_total",
                 "mars_success",
@@ -392,6 +540,26 @@ def write_summary_csv(
                 "global_post_total",
                 "first_success_after_blackout_s",
                 "avg_global_latency_s",
+                "earth_local_avg_latency_s",
+                "earth_local_p95_latency_s",
+                "mars_local_avg_latency_s",
+                "mars_local_p95_latency_s",
+                "global_phase1_responses_earth",
+                "global_phase1_responses_leo",
+                "global_phase1_responses_moon",
+                "global_phase1_responses_mars",
+                "global_phase2_responses_earth",
+                "global_phase2_responses_leo",
+                "global_phase2_responses_moon",
+                "global_phase2_responses_mars",
+                "network_src_sent_earth",
+                "network_src_sent_leo",
+                "network_src_sent_moon",
+                "network_src_sent_mars",
+                "network_src_avg_oneway_s_earth",
+                "network_src_avg_oneway_s_leo",
+                "network_src_avg_oneway_s_moon",
+                "network_src_avg_oneway_s_mars",
             ]
         )
         for r in (baseline, repeater):
@@ -403,6 +571,8 @@ def write_summary_csv(
                     cfg.blackout_duration_s,
                     cfg.sim_end_s,
                     cfg.reconcile_interval_s,
+                    cfg.global_timeout_s,
+                    cfg.global_max_rounds,
                     r.earth_success,
                     r.earth_total,
                     r.mars_success,
@@ -419,6 +589,26 @@ def write_summary_csv(
                         else ""
                     ),
                     f"{r.avg_global_latency_s:.6f}" if r.avg_global_latency_s is not None else "",
+                    f"{r.earth_local_avg_latency_s:.6f}" if r.earth_local_avg_latency_s is not None else "",
+                    f"{r.earth_local_p95_latency_s:.6f}" if r.earth_local_p95_latency_s is not None else "",
+                    f"{r.mars_local_avg_latency_s:.6f}" if r.mars_local_avg_latency_s is not None else "",
+                    f"{r.mars_local_p95_latency_s:.6f}" if r.mars_local_p95_latency_s is not None else "",
+                    r.global_phase1_responses_earth,
+                    r.global_phase1_responses_leo,
+                    r.global_phase1_responses_moon,
+                    r.global_phase1_responses_mars,
+                    r.global_phase2_responses_earth,
+                    r.global_phase2_responses_leo,
+                    r.global_phase2_responses_moon,
+                    r.global_phase2_responses_mars,
+                    r.network_src_sent_earth,
+                    r.network_src_sent_leo,
+                    r.network_src_sent_moon,
+                    r.network_src_sent_mars,
+                    f"{r.network_src_avg_oneway_s_earth:.6f}" if r.network_src_avg_oneway_s_earth is not None else "",
+                    f"{r.network_src_avg_oneway_s_leo:.6f}" if r.network_src_avg_oneway_s_leo is not None else "",
+                    f"{r.network_src_avg_oneway_s_moon:.6f}" if r.network_src_avg_oneway_s_moon is not None else "",
+                    f"{r.network_src_avg_oneway_s_mars:.6f}" if r.network_src_avg_oneway_s_mars is not None else "",
                 ]
             )
 
@@ -430,6 +620,8 @@ def _parse_args():
     parser.add_argument("--blackout-duration-s", type=float, default=900.0)
     parser.add_argument("--sim-end-s", type=float, default=3000.0)
     parser.add_argument("--reconcile-interval-s", type=float, default=120.0)
+    parser.add_argument("--global-timeout-s", type=float, default=500.0)
+    parser.add_argument("--global-max-rounds", type=int, default=1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--csv", type=str, default="")
     parser.add_argument("--quiet", action="store_true")
@@ -444,6 +636,8 @@ def main():
         blackout_duration_s=args.blackout_duration_s,
         sim_end_s=args.sim_end_s,
         reconcile_interval_s=args.reconcile_interval_s,
+        global_timeout_s=args.global_timeout_s,
+        global_max_rounds=args.global_max_rounds,
         seed=args.seed,
     )
     baseline, repeater = compare_blackout_vs_repeater(cfg, verbose=not args.quiet)
