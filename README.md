@@ -83,7 +83,7 @@ Run the sweep and generate plots:
 uv run python experiments/step9_sweep.py \
   --mars-latencies-s "186,750,1342" \
   --blackout-durations-s "300,900,1800" \
-  --seeds "40,41,42,43,44" \
+  --seeds "40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89" \
   --output results/step9/step9_sweep.csv \
   --aggregate-output results/step9/step9_sweep_ci.csv
 
@@ -95,7 +95,7 @@ uv run python experiments/step9_liveness.py \
   --mars-latency-s 186 \
   --timeout-s "120,240,360,500,720" \
   --blackout-durations-s "300,900,1800" \
-  --seeds "40,41,42,43,44" \
+  --seeds "40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89" \
   --output results/step9/step9_liveness.csv \
   --aggregate-output results/step9/step9_liveness_ci.csv
 

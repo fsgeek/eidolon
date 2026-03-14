@@ -38,7 +38,7 @@ uv run python experiments/step9_sweep.py \
   --blackout-start-s 600 \
   --sim-end-s 4000 \
   --reconcile-interval-s 120 \
-  --seeds "40,41,42,43,44" \
+  --seeds "40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89" \
   --output results/step9/step9_sweep.csv \
   --aggregate-output results/step9/step9_sweep_ci.csv
 ```
@@ -62,7 +62,7 @@ uv run python experiments/step9_liveness.py \
   --sim-end-s 4000 \
   --reconcile-interval-s 120 \
   --global-max-rounds 1 \
-  --seeds "40,41,42,43,44" \
+  --seeds "40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89" \
   --output results/step9/step9_liveness.csv \
   --aggregate-output results/step9/step9_liveness_ci.csv
 
@@ -91,4 +91,4 @@ uv run python experiments/plot_step9_liveness.py \
 - All timings are in simulation seconds.
 - `scenario=blackout_only` models hard conjunction blackout.
 - `scenario=with_repeater` models degraded continuity via repeater.
-- `step9_sweep_ci.csv` reports means and 95% CI over the specified seed set.
+- `step9_sweep_ci.csv` reports means and 95% CI over the specified 50-seed set.

@@ -8,7 +8,7 @@
 \usepackage{array}
 \usepackage{longtable}
 
-\title{Topology-Aware Flexible Paxos Under Interplanetary Delay and Conjunction Blackouts}
+\title{Eidolon: Topology-Aware Flexible Paxos for High-Latency, Intermittently Connected Systems}
 \author{Tony Mason}
 \date{March 2026}
 
@@ -16,13 +16,15 @@
 \maketitle
 
 \begin{abstract}
-We study Paxos in a high-latency, intermittently disconnected setting motivated by Earth--Mars operations. The main claim is structural: safety depends on quorum intersection, not on a flat majority rule, so quorum shape can be aligned with physical topology. We evaluate a tiered quorum family in which the hot Phase~2 path stays entirely on Earth while the rarer Phase~1 path spans Earth, LEO, Moon, and Mars. A discrete-event simulator compares hard conjunction blackouts with a repeater-assisted degraded-connectivity model. Across a 5-seed sweep, Earth-local latency remains stable at 250.9--251.2~ms mean and 263.4--264.0~ms p95 despite large Mars-delay changes. Hard blackouts drive during-blackout global success to 0\% in every tested setting. Under repeater-assisted connectivity, during-blackout global success remains 100\% for most tested points and degrades only at the most extreme cases (80\%$\pm$9.8\% at 750~s one-way Mars delay with an 1800~s blackout, and 90\%$\pm$12.0\% at 1342~s with an 1800~s blackout). These results position topology-aware Flexible Paxos as a useful design pattern for high-latency, intermittently connected deployments rather than a Mars-specific curiosity.
+We study Paxos in a high-latency, intermittently disconnected setting motivated by Earth--Mars operations. The main claim is structural: safety depends on quorum intersection, not on a flat majority rule, so quorum shape can be aligned with physical topology. We evaluate Eidolon, a discrete-event simulator with a tiered quorum family in which the hot Phase~2 path stays entirely on Earth while the rarer Phase~1 path spans Earth, LEO, Moon, and Mars. The experiments compare hard conjunction blackouts with a repeater-assisted degraded-connectivity model. Across a 50-seed sweep, Earth-local latency remains stable at 251.0--251.0~ms mean and 263.6--263.8~ms p95 despite large Mars-delay changes. Hard blackouts drive during-blackout global success to 0\% in every tested setting. Under repeater-assisted connectivity, during-blackout global success remains 100\% for most tested points and degrades only at the most extreme cases (85.5\%$\pm$3.5\% at 750~s one-way Mars delay with an 1800~s blackout, and 82.5\%$\pm$3.2\% at 1342~s with an 1800~s blackout). These results position topology-aware Flexible Paxos as a useful design pattern for high-latency, intermittently connected deployments rather than a Mars-specific curiosity.
 \end{abstract}
 
 \section{Introduction}
 Consensus in interplanetary settings is constrained less by logic than by geometry. If every quorum is treated as a flat majority over all nodes, then the steady-state commit path inherits the full cost of Earth--Mars propagation. Our thesis is that Paxos safety is compatible with a much more topology-aware arrangement: the hot commit path can remain local to the fast tier as long as Phase~1 and Phase~2 quorums still intersect.
 
-This paper makes four concrete contributions. First, it gives an explicit quorum-family definition for the tiered construction used in the simulator. Second, it states the safety and liveness assumptions under which the construction is evaluated. Third, it reports a full parameter sweep over Mars latency, blackout duration, and timeout settings rather than a single representative run. Fourth, it ties each empirical claim to an executable artifact and output file.
+The evaluation is implemented in Eidolon, the simulator used throughout this paper. The name is deliberate: during blackout and long-delay operation, every tier reasons over an inevitably stale projection of remote state. The central claim of the paper is that this is acceptable for safety if quorum geometry is chosen correctly.
+
+This paper makes four concrete contributions. First, it gives an explicit quorum-family definition for the tiered construction used in the simulator. Second, it states the safety and liveness assumptions under which the construction is evaluated. Third, it reports a full parameter sweep over Mars latency, blackout duration, and timeout settings rather than a single representative run, using 50 seeds per point for the main experiments. Fourth, it ties each empirical claim to an executable artifact and output file.
 
 \section{Formal Model}
 \subsection{System Model}
@@ -82,6 +84,8 @@ The evaluation does not prove unconditional liveness. Instead, it studies livene
 \section{Experimental Design}
 We use the repository's discrete-event simulator and the exact commands recorded in \texttt{docs/step9-repro.md}. Table~\ref{tab:design} separates fixed parameters from the parameters varied in each experiment family.
 
+The repeater model is an explicit alternate path in the simulator, not a scalar multiplier on the direct Earth--Mars links. In the \texttt{with\_repeater} scenario, Earth reaches a \texttt{lagrange-relay} hop in 350--360~ms one way, and the relay reaches Mars in 220~s one way with 10~s jitter. In the \texttt{blackout\_only} scenario, that path is absent and the relevant cross-tier links are removed during the conjunction window. The relay is therefore modeled as a separate degraded control-plane path with its own latency distribution.
+
 \begin{table}[t]
 \centering
 \small
@@ -95,7 +99,7 @@ Purpose & Compare hard blackout vs repeater over topology and blackout severity 
 Scenarios & \texttt{blackout\_only}, \texttt{with\_repeater} & \texttt{blackout\_only}, \texttt{with\_repeater} \\
 Varied parameters & Mars one-way latency $\in \{186, 750, 1342\}$~s; blackout duration $\in \{300, 900, 1800\}$~s & Global timeout $\in \{120, 240, 360, 500, 720\}$~s; blackout duration $\in \{300, 900, 1800\}$~s \\
 Fixed parameters & Blackout start 600~s; simulation end 4000~s; reconcile interval 120~s; global max rounds 1 & Mars one-way latency 186~s; blackout start 600~s; simulation end 4000~s; reconcile interval 120~s; global max rounds 1 \\
-Seeds & 40--44 (5 runs per point) & 40--44 (5 runs per point) \\
+Seeds & 40--89 (50 runs per point) & 40--89 (50 runs per point) \\
 Topology & 5 Earth, 1 LEO, 1 Moon, 3 Mars nodes & Same as sweep study \\
 Primary metrics & Earth/Mars local success, global pre/during/post success, recovery lag, average global latency, local average and p95 latency & During-blackout and post-blackout success, recovery lag, average global latency \\
 Runtime control & One CSV row per seed and scenario, plus aggregated mean/95\% CI CSV & One CSV row per seed and scenario, plus aggregated mean/95\% CI CSV \\
@@ -112,14 +116,14 @@ Table~\ref{tab:local} summarizes the local-path metrics across the full 18-point
 \begin{table}[t]
 \centering
 \small
-\caption{Local-path stability across all 18 sweep points (means and p95 values aggregated from \texttt{step9\_sweep\_ci.csv}).}
+\caption{Local-path stability across all 18 sweep points (means and p95 values aggregated from \texttt{step9\_sweep\_ci.csv}, 50 seeds per point).}
 \label{tab:local}
 \begin{tabular}{lrr}
 \toprule
 Metric & Minimum & Maximum \\
 \midrule
-Earth local mean latency & 250.9 ms & 251.2 ms \\
-Earth local p95 latency & 263.4 ms & 264.0 ms \\
+Earth local mean latency & 251.0 ms & 251.0 ms \\
+Earth local p95 latency & 263.6 ms & 263.8 ms \\
 Mars local mean latency & 21.1 ms & 21.1 ms \\
 Mars local p95 latency & 22.6 ms & 22.7 ms \\
 Earth local success rate & 100\% & 100\% \\
@@ -134,15 +138,15 @@ Table~\ref{tab:blackout} reports the full hard-blackout sweep. During-blackout g
 \begin{table}[p]
 \centering
 \small
-\caption{Hard-blackout sweep (\texttt{blackout\_only}, mean$\pm$95\% CI over 5 seeds).}
+\caption{Hard-blackout sweep (\texttt{blackout\_only}, mean$\pm$95\% CI over 50 seeds).}
 \label{tab:blackout}
 \begin{tabular}{rrrr}
 \toprule
 Mars delay (s) & Blackout (s) & During-blackout success & Post-blackout recovery lag (s) \\
 \midrule
-186 & 300 & 0\%$\pm$0.0\% & 579.4$\pm$4.3 \\
-186 & 900 & 0\%$\pm$0.0\% & 596.5$\pm$4.5 \\
-186 & 1800 & 0\%$\pm$0.0\% & 937.4$\pm$2.7 \\
+186 & 300 & 0\%$\pm$0.0\% & 577.7$\pm$1.0 \\
+186 & 900 & 0\%$\pm$0.0\% & 597.7$\pm$1.1 \\
+186 & 1800 & 0\%$\pm$0.0\% & 937.7$\pm$0.9 \\
 750 & 300 & 0\%$\pm$0.0\% & n/a \\
 750 & 900 & 0\%$\pm$0.0\% & n/a \\
 750 & 1800 & 0\%$\pm$0.0\% & n/a \\
@@ -159,21 +163,21 @@ Table~\ref{tab:repeater} reports the repeater-assisted sweep. The qualitative pa
 \begin{table}[p]
 \centering
 \small
-\caption{Repeater-assisted sweep (\texttt{with\_repeater}, mean$\pm$95\% CI over 5 seeds).}
+\caption{Repeater-assisted sweep (\texttt{with\_repeater}, mean$\pm$95\% CI over 50 seeds).}
 \label{tab:repeater}
 \begin{tabular}{rrrrr}
 \toprule
 Mars delay (s) & Blackout (s) & During success & Post success & Recovery lag (s) \\
 \midrule
-186 & 300 & 0\%$\pm$0.0\% & 100\%$\pm$0.0\% & 105.7$\pm$188.2 \\
-186 & 900 & 100\%$\pm$0.0\% & 100\%$\pm$0.0\% & 293.1$\pm$220.3 \\
-186 & 1800 & 100\%$\pm$0.0\% & 100\%$\pm$0.0\% & 232.1$\pm$15.3 \\
-750 & 300 & 100\%$\pm$0.0\% & 0\%$\pm$0.0\% & 190.7$\pm$4.6 \\
-750 & 900 & 100\%$\pm$0.0\% & 0\%$\pm$0.0\% & 179.7$\pm$9.0 \\
-750 & 1800 & 80\%$\pm$9.8\% & 0\%$\pm$0.0\% & n/a \\
-1342 & 300 & 100\%$\pm$0.0\% & 0\%$\pm$0.0\% & 193.7$\pm$6.7 \\
-1342 & 900 & 100\%$\pm$0.0\% & 0\%$\pm$0.0\% & 188.7$\pm$13.1 \\
-1342 & 1800 & 90\%$\pm$12.0\% & 0\%$\pm$0.0\% & n/a \\
+186 & 300 & 0\%$\pm$0.0\% & 100\%$\pm$0.0\% & 38.3$\pm$31.8 \\
+186 & 900 & 100\%$\pm$0.0\% & 100\%$\pm$0.0\% & 264.4$\pm$66.2 \\
+186 & 1800 & 100\%$\pm$0.0\% & 100\%$\pm$0.0\% & 232.7$\pm$3.4 \\
+750 & 300 & 100\%$\pm$0.0\% & 0\%$\pm$0.0\% & 192.2$\pm$2.1 \\
+750 & 900 & 100\%$\pm$0.0\% & 0\%$\pm$0.0\% & 185.2$\pm$3.5 \\
+750 & 1800 & 85.5\%$\pm$3.5\% & 0\%$\pm$0.0\% & n/a \\
+1342 & 300 & 100\%$\pm$0.0\% & 0\%$\pm$0.0\% & 193.1$\pm$1.9 \\
+1342 & 900 & 100\%$\pm$0.0\% & 0\%$\pm$0.0\% & 183.3$\pm$2.7 \\
+1342 & 1800 & 82.5\%$\pm$3.2\% & 0\%$\pm$0.0\% & n/a \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -182,6 +186,8 @@ Mars delay (s) & Blackout (s) & During success & Post success & Recovery lag (s)
 Figures~\ref{fig:liveness-blackout} and \ref{fig:liveness-repeater} visualize the timeout sweep at 186~s one-way Mars delay. Both scenarios fail during blackout for timeout budgets of 120--360~s. The threshold appears between 360~s and 500~s. At 500--720~s, hard blackout still yields no during-blackout success, but the repeater-assisted model succeeds during the 900~s and 1800~s windows.
 
 The 300~s blackout line in the timeout sweep deserves care: the aggregated CSV contains zero during-blackout attempts at that setting, so its reported 0\% should be read as ``no attempts completed during the window'' rather than ``attempts failed despite relay connectivity.'' This is a workload-scheduling artifact of the 120~s reconciliation interval combined with a short blackout window and belongs in the interpretation of the figure rather than the safety claim.
+
+The 750~s and 1342~s rows in Tables~\ref{tab:blackout} and \ref{tab:repeater} expose a second, more substantive effect: with a fixed 500~s global timeout, the system can fail to recover global reconciliation even after blackout ends. This is not a blackout-only phenomenon; it is a timeout-mismatch phenomenon. Operationally, that suggests at least three follow-on strategies: increase the timeout budget with distance, adapt timeouts dynamically from observed round-trip behavior, or defer global reconciliation attempts entirely when the system is known to be outside the current timeout envelope.
 
 \begin{figure}[t]
 \centering
@@ -202,7 +208,9 @@ Paxos established the standard safety argument for replicated state machines und
 
 The broader quorum-systems literature provides the combinatorial foundation for moving beyond majority quorums. Grid-style and crumbling-wall constructions show that quorum geometry can be engineered around availability and structure rather than simple counts \cite{cheung1992,peleg1995}. What this paper adds is a concrete mapping from that literature to a tiered Earth/LEO/Moon/Mars deployment, together with an explicit distinction between the conceptual structural family and the more conservative implemented family used in the simulator.
 
-Space-networking and delay-tolerant networking work motivates the operating regime but addresses a different layer of the problem. DTN research studies intermittent connectivity, long propagation delay, and store-and-forward delivery across challenged links \cite{cerf2007}. Our simulator borrows that disruption-oriented perspective for the network model, but the contribution here is not a routing protocol. It is a consensus-layer argument about how quorum shape changes the commit critical path and the liveness envelope under scheduled disconnection.
+Geo-distributed consensus systems provide the closest practical analog. WPaxos~\cite{ailijiang2020} uses Flexible Paxos with object-stealing to keep the commit path in the nearest region. EPaxos~\cite{moraru2013} removes the leader bottleneck so that any replica can commit locally when commands do not conflict. Mencius~\cite{mao2008} distributes the leader role round-robin across WAN sites. MDCC~\cite{kraska2013} achieves single-round cross-datacenter commits through Generalized Paxos. All four systems optimize for heterogeneous WAN latency in the tens-to-hundreds of milliseconds range and assume that all replicas are reachable most of the time. Eidolon differs in two ways. First, the asymmetry is far more extreme: the one-way delay spans three orders of magnitude (sub-second Earth to 1342~s Mars opposition) rather than the 2--5$\times$ variation across datacenters. Second, the target phenomenon is scheduled total disconnection---conjunction blackouts lasting minutes to hours---rather than merely heterogeneous latency. Even so, the structural question is the same: which coordination steps belong on the hot path, and which can be pushed onto a slower or rarer control path?
+
+Delay-tolerant networking motivates the operating regime but addresses a different layer of the problem. The DTN architecture~\cite{cerf2007,fall2003} studies intermittent connectivity, long propagation delay, and store-and-forward delivery across challenged links. The overwhelming majority of DTN work concerns routing and custody transfer, not consensus over shared state. Where consistency has been studied in DTN-like settings, the dominant approach is to abandon consensus entirely in favor of conflict-free replicated data types (CRDTs) that guarantee eventual convergence through algebraic merge properties~\cite{guidec2023}. SwarmDAG~\cite{tran2019swarmdag} takes a middle path: a partition-tolerant distributed ledger for robot swarms that uses extended virtual synchrony to handle split-and-merge dynamics, with Tran et al.\ separately measuring consensus latency under network partitioning~\cite{tran2019milcom}. Protocol Labs' Interplanetary Consensus (IPC)~\cite{delarocha2022} uses hierarchical subnets with independent consensus for blockchain scaling; despite the name, it does not target interplanetary latencies. NASA's DSN replication study~\cite{connell2011} evaluates commercial database replication for ground-station coordination but does not formalize quorum geometry. Our contribution occupies the gap between these approaches: we show that Paxos safety is compatible with topology-aware quorum geometry under scheduled disconnection, without surrendering to eventual consistency or restricting the protocol to a single tier.
 
 \section{Threats to Validity and Model Limitations}
 The results are design-level, not deployment-level. Several limitations matter.
@@ -215,10 +223,17 @@ Third, the study fixes one topology size and one global Phase~2 family. We do no
 
 Fourth, the fault model is crash-stop only. Byzantine behavior, correlated software faults, reconfiguration during blackout, and storage failures are all outside scope. The paper therefore speaks to quorum geometry under delay and partition, not to adversarial resilience.
 
-Finally, the seed count is small. Five seeds are enough to estimate stable means for the deterministic parts of the model, but they do not justify fine-grained distributional claims. We report means with 95\% confidence intervals to make that limitation explicit.
+Finally, some metrics remain higher-variance than others even after increasing the main experiments to 50 seeds per point. The near-deterministic local-path metrics are now tightly estimated, and the noisier recovery metrics are substantially better resolved than in the initial 5-seed pass. For example, the repeater-assisted 186~s/300~s recovery lag is now 38.3~s with a 95\% confidence interval of $\pm$31.8~s. That is much more interpretable than the initial wide interval, but it still indicates that recovery behavior is meaningfully more variable than the steady-state local path. We therefore report means with 95\% confidence intervals throughout and treat recovery estimates as empirical envelope measurements rather than exact deployment predictions.
+
+An additional modeling tradeoff is the strict Phase~2 choice $\mathcal{Q}_2 = \{E\}$. Using the full Earth tier as the only Phase~2 quorum makes the hot path clean and easy to analyze, but it also means any missing Earth acceptor blocks global Phase~2 progress. A relaxed Earth-local family such as 4-of-5 Earth nodes could still preserve cross-phase intersection with an appropriately chosen Phase~1 family. We do not explore that availability/latency tradeoff in the current paper.
+
+\section{Discussion: Eventual Consistency Under Topology}
+One useful way to read the evaluated construction is as a seed for analyzing eventual consistency in topologically asymmetric systems. During conjunction blackout, Earth and Mars are not merely ``temporarily inconsistent replicas'' in the usual flat sense. Each tier remains internally strongly consistent according to its local quorum policy, while cross-tier state becomes stale in a structured way determined by the unavailable global reconciliation path. That suggests a topology-scoped view of consistency: quorum geometry determines which consistency domains remain strong during disruption, and the network topology determines how and when those domains can be stitched back together.
+
+The present simulator is not rich enough to make strong claims about application-level merge semantics, conflict resolution, or arbitrary eventual-consistency protocols. It does, however, suggest a useful analysis direction. Standard eventual-consistency descriptions often treat the inconsistency window as a temporal black box. In contrast, the results here make visible the internal structure of that window: local strong-consistency islands, explicit stale views of remote state, and a measurable protocol-level reconciliation cost once cross-tier communication resumes. We therefore view the current paper not as a contribution to eventual-consistency theory per se, but as evidence that interesting future analyses should characterize consistency locality and reconciliation behavior as functions of topology rather than as purely global or time-only properties.
 
 \section{Conclusion}
-The evaluated construction shows that interplanetary consensus should be framed as a quorum-shaping problem, not as a flat-majority problem. By placing the global Phase~2 quorum entirely on Earth and making Phase~1 tier-spanning, the design preserves Paxos safety while keeping Earth-local behavior nearly constant across large Mars-delay changes. Hard blackouts eliminate global during-blackout progress; repeater-assisted degraded connectivity restores most of that liveness envelope. The broader lesson is that topology-aware Flexible Paxos offers a principled way to separate hot-path latency from rare cross-tier coordination in high-latency, intermittently connected systems.
+The evaluated construction shows that high-latency consensus should be framed as a quorum-shaping problem, not as a flat-majority problem. By placing the global Phase~2 quorum entirely on Earth and making Phase~1 tier-spanning, the design preserves Paxos safety while keeping Earth-local behavior nearly constant across large Mars-delay changes. Hard blackouts eliminate global during-blackout progress; repeater-assisted degraded connectivity restores most of that liveness envelope, though only inside the configured timeout regime. The broader lesson is that topology-aware Flexible Paxos offers a principled way to separate hot-path latency from rare cross-tier coordination in high-latency, intermittently connected systems.
 
 \appendix
 \section{Claim-to-Artifact Traceability}
@@ -237,7 +252,7 @@ Claim & Evidence in repository & Primary artifact(s) \\
 \endhead
 Earth-local latency stays near 251~ms mean and 264~ms p95 across Mars-delay changes. & Aggregated sweep rows for all 18 scenario/latency/blackout combinations; columns \texttt{earth\_local\_avg\_latency\_s\_mean} and \texttt{earth\_local\_p95\_latency\_s\_mean}. & \texttt{results/step9/step9\_sweep\_ci.csv}; generated by \texttt{experiments/step9\_sweep.py}. \\
 Hard blackout produces zero during-blackout global success throughout the sweep. & All \texttt{blackout\_only} rows have \texttt{global\_during\_rate\_mean = 0}. & \texttt{step9\_sweep\_ci.csv}. \\
-Repeater-assisted connectivity preserves during-blackout success for most tested settings and degrades only at the 1800~s extreme cases. & \texttt{with\_repeater} rows show 100\% during-blackout success except 80\%$\pm$9.8\% at 750/1800 and 90\%$\pm$12.0\% at 1342/1800. & \texttt{step9\_sweep\_ci.csv}; plotted by \texttt{experiments/plot\_step9.py}. \\
+Repeater-assisted connectivity preserves during-blackout success for most tested settings and degrades only at the 1800~s extreme cases. & \texttt{with\_repeater} rows show 100\% during-blackout success except 85.5\%$\pm$3.5\% at 750/1800 and 82.5\%$\pm$3.2\% at 1342/1800. & \texttt{step9\_sweep\_ci.csv}; plotted by \texttt{experiments/plot\_step9.py}. \\
 Timeout threshold appears between 360~s and 500~s at the 186~s Mars-delay setting. & Liveness-envelope rows show zero during-blackout success at 120--360~s and non-zero repeater-assisted success at 500--720~s for the longer blackout windows. & \texttt{step9\_liveness\_ci.csv}; plots \texttt{liveness\_envelope\_*.svg}. \\
 The paper is reproducible from repository commands. & Exact commands for environment setup, sweep execution, and plot generation. & \texttt{docs/step9-repro.md}. \\
 The implemented global quorum family is topology-aware rather than size-only. & Global proposer instantiates \texttt{CrumblingWallQuorum}; quorum validation uses \texttt{is\_phase1\_quorum} and \texttt{is\_phase2\_quorum}. & \texttt{demo\_step\_9.py}; \texttt{quorums.py}. \\

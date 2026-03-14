@@ -49,7 +49,11 @@ def _parse_args():
     parser.add_argument("--sim-end-s", type=float, default=4000.0)
     parser.add_argument("--reconcile-interval-s", type=float, default=120.0)
     parser.add_argument("--global-max-rounds", type=int, default=1)
-    parser.add_argument("--seeds", type=str, default="40,41,42,43,44")
+    parser.add_argument(
+        "--seeds",
+        type=str,
+        default="40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89",
+    )
     parser.add_argument("--output", type=str, default="results/step9/step9_liveness.csv")
     parser.add_argument(
         "--aggregate-output",
