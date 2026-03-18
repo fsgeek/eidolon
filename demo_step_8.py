@@ -120,7 +120,8 @@ def run_crumbling_wall_system(verbose: bool = True):
     network.assign_entity(earth_proposer.id, "na-west")
     global_prop = Proposer(
         env, earth_proposer, network, all_ids, wall,
-        timeout=10.0,  # Long enough for Phase 1 to reach Moon
+        timeout=10.0,
+        initiator_tier=3,  # Earth = bottom of wall
     )
     global_learner = Learner()
 

@@ -96,7 +96,7 @@ class QuorumSystem:
         """How many responses needed for Phase 2 (Accept/Accepted)."""
         raise NotImplementedError
 
-    def is_phase1_quorum(self, respondents: set[int]) -> bool:
+    def is_phase1_quorum(self, respondents: set[int], initiator_tier: int | None = None) -> bool:
         """Check if we have enough Phase 1 responses."""
         return len(respondents & set(self.nodes)) >= self.phase1_quorum_size()
 
@@ -309,6 +309,7 @@ class Proposer:
         quorum: QuorumSystem,
         timeout: float = 0.500,  # 500ms default timeout per phase
         max_rounds: int = 10,
+        initiator_tier: int | None = None,
     ):
         self.env = env
         self.entity = entity
@@ -317,6 +318,7 @@ class Proposer:
         self.quorum = quorum
         self.timeout = timeout
         self.max_rounds = max_rounds
+        self.initiator_tier = initiator_tier
 
         # Proposal number: (round * 1000) + proposer_id for uniqueness
         self._proposal_counter = 0
@@ -466,7 +468,7 @@ class Proposer:
             # Collect Phase 1 responses
             responses, phase1_respondents = yield from self._collect_responses(
                 txn_ids,
-                self.quorum.is_phase1_quorum,
+                lambda resp: self.quorum.is_phase1_quorum(resp, self.initiator_tier),
                 self.timeout,
                 lambda r: (
                     isinstance(r.payload, PaxosPayload) and
@@ -487,7 +489,7 @@ class Proposer:
             total_phase1 += len(promises)
             total_nacks += phase1_nacks
 
-            if not self.quorum.is_phase1_quorum(phase1_respondents):
+            if not self.quorum.is_phase1_quorum(phase1_respondents, self.initiator_tier):
                 # Didn't get quorum - retry with higher proposal
                 yield self.env.timeout(0.010 * (round_num + 1))  # Backoff
                 continue

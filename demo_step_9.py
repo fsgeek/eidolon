@@ -275,6 +275,7 @@ def _wire_system(env: simpy.Environment, cfg: ExperimentConfig):
         wall,
         timeout=cfg.global_timeout_s,
         max_rounds=cfg.global_max_rounds,
+        initiator_tier=3,  # Earth = bottom of wall
     )
 
     return network, earth_prop, mars_prop, global_prop

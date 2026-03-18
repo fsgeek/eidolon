@@ -140,50 +140,50 @@ class FlexibleGridQuorum(QuorumSystem):
 
 
 class CrumblingWallQuorum(QuorumSystem):
-    """Topology-aware quorum: rows = geographic tiers, columns = nodes.
+    """Topology-aware quorum based on Peleg & Wool's crumbling walls.
 
-    Peleg & Wool's crumbling walls generalized to non-rectangular grids.
-    Each tier (row) has a different number of nodes. The topology itself
-    defines the quorum structure.
+    Tiers are ordered slow-to-fast (Mars at top, Earth at bottom).
+    The wall structure gives each tier a DIFFERENT Phase 1 quorum
+    requirement: a proposer reads DOWN through the wall, needing
+    one node from its own tier and each tier below it.
 
-    Example tiers:
+    Example tiers (top to bottom of wall):
       Row 0 (Mars):    [mars-0, mars-1, mars-2]  (slow, far)
-      Row 1 (Moon):    [moon-0]                   (slower)
-      Row 2 (LEO):     [sat-0]                    (medium)
+      Row 1 (Moon):    [moon-0]                   (medium)
+      Row 2 (LEO):     [sat-0]                    (medium-fast)
       Row 3 (Earth):   [na, eu, asia, sa, af]     (fast, close)
 
-    Phase 1 quorum (elections, rare):
-      One node from EACH tier → geographic spread for durability.
-      Size = number of tiers (e.g., 4).
-      Requires: at least one node from every tier.
+    Phase 1 quorum (per-tier, reading downward):
+      Mars proposer:  one from Mars + one from Moon + one from LEO + one from Earth
+      Moon proposer:  one from Moon + one from LEO + one from Earth
+      LEO proposer:   one from LEO + one from Earth
+      Earth proposer: full Earth row (Phase 1 = Phase 2 at the bottom)
 
     Phase 2 quorum (commits, hot path):
-      All nodes from the FASTEST tier (Earth).
-      Size = len(fastest_tier).
-      Stays entirely on the fast path.
+      All nodes (or k-of-n) from the fastest tier (Earth).
 
     Intersection guarantee:
-      Phase 1 includes one from the fastest tier.
-      Phase 2 includes ALL of the fastest tier.
-      Therefore Phase 1 ∩ Phase 2 ≠ ∅.
+      Every tier's Phase 1 reads down to Earth, so every Phase 1
+      quorum contains at least one Earth node. Phase 2 contains all
+      (or k-of-n) Earth nodes. Therefore every Q1 intersects every Q2.
 
-    Combined with Flexible Paxos: q1 + q2 > n required.
-    If tiers are [3, 1, 1, 5] = 10 total,
-    Phase 1 = one per tier = 4, Phase 2 = all Earth = 5.
-    4 + 5 = 9 ≤ 10. NOT enough! Need q1 ≥ 6.
-    Fix: Phase 1 = one per tier + extras from Earth.
-
-    The real construction: Phase 1 spans all tiers AND is large enough
-    that q1 + q2 > n. Phase 2 is the fast tier.
+    Liveness consequence:
+      During Mars blackout, only Mars-initiated Phase 1 is blocked.
+      Moon, LEO, and Earth can still complete Phase 1 because they
+      never needed Mars. The liveness failure is scoped to the
+      unreachable tier, not the whole system.
     """
 
-    def __init__(self, tiers: list[list[int]]):
+    def __init__(self, tiers: list[list[int]], phase2_threshold: int | None = None):
         """Create a crumbling wall quorum from geographic tiers.
 
         Args:
-            tiers: List of tiers, ordered slow-to-fast.
+            tiers: List of tiers, ordered slow-to-fast (top to bottom).
                    Last tier is the "fast" tier used for Phase 2.
                    Example: [[mars_ids...], [moon_id], [leo_id], [earth_ids...]]
+            phase2_threshold: Minimum fast-tier nodes for Phase 2.
+                   None (default) = all nodes in the fast tier (strict).
+                   e.g., 4 for 4-of-5 Earth (relaxed).
         """
         all_nodes = []
         for tier in tiers:
@@ -193,62 +193,94 @@ class CrumblingWallQuorum(QuorumSystem):
         self.tiers = tiers
         self.tier_sizes = [len(t) for t in tiers]
         self.num_tiers = len(tiers)
-        self.fast_tier = tiers[-1]  # Last tier = fastest
+        self.fast_tier = tiers[-1]  # Last tier = fastest (bottom of wall)
         self._tier_sets = [set(t) for t in tiers]
         self._fast_tier_set = set(self.fast_tier)
 
-        # Phase 2: all of the fast tier
-        self._phase2_size = len(self.fast_tier)
+        # Build a lookup: node_id -> tier index
+        self._node_to_tier: dict[int, int] = {}
+        for i, tier in enumerate(tiers):
+            for node_id in tier:
+                self._node_to_tier[node_id] = i
 
-        # Phase 1: must satisfy q1 + q2 > n AND span all tiers
-        # Minimum: one from each tier = num_tiers
-        # Required: q1 > n - q2 = n - len(fast_tier)
-        min_phase1 = self.n - self._phase2_size + 1
-        # Also must have at least one from each tier
-        min_from_tiers = self.num_tiers
-        self._phase1_size = max(min_phase1, min_from_tiers)
+        # Phase 2: all of the fast tier, or a threshold subset
+        if phase2_threshold is None:
+            self._phase2_size = len(self.fast_tier)
+            self._phase2_threshold = len(self.fast_tier)
+        else:
+            if phase2_threshold < 1 or phase2_threshold > len(self.fast_tier):
+                raise ValueError(
+                    f"phase2_threshold must be in [1, {len(self.fast_tier)}], "
+                    f"got {phase2_threshold}"
+                )
+            self._phase2_size = phase2_threshold
+            self._phase2_threshold = phase2_threshold
 
-        # How many EXTRA nodes needed beyond one-per-tier?
-        self._extras_needed = self._phase1_size - self.num_tiers
-        # Extras come from the fast tier (cheapest to add)
-        self._extras_from_fast = min(self._extras_needed, len(self.fast_tier) - 1)
+        # Minimum Earth nodes in any Q1 for intersection with relaxed Q2.
+        # Pigeonhole: min_earth + phase2_threshold > |E|
+        # For strict Q2 (threshold = |E|): min_earth >= 1 (always satisfied)
+        # For relaxed Q2 (e.g. 4-of-5): min_earth >= 2
+        self._min_earth_in_q1 = len(self.fast_tier) - self._phase2_threshold + 1
 
-    def phase1_quorum_size(self) -> int:
-        return self._phase1_size
+    def tier_of(self, node_id: int) -> int:
+        """Return the tier index for a given node ID."""
+        return self._node_to_tier[node_id]
+
+    def phase1_quorum_size(self, initiator_tier: int | None = None) -> int:
+        """Phase 1 size depends on the initiating tier.
+
+        A proposer at tier i needs one node from each tier j where j >= i
+        (its own tier and all tiers below it in the wall).
+        """
+        if initiator_tier is None:
+            # Top of wall (Mars) — worst case, for backwards compatibility
+            initiator_tier = 0
+        # Count of tiers at or below the initiator
+        return sum(1 for j in range(initiator_tier, self.num_tiers))
 
     def phase2_quorum_size(self) -> int:
         return self._phase2_size
 
-    def is_phase1_quorum(self, respondents: set[int]) -> bool:
-        """Phase 1 must span all tiers and meet minimum size."""
-        covered_tiers = 0
-        for tier in self._tier_sets:
-            if respondents & tier:
-                covered_tiers += 1
-        return (
-            covered_tiers == self.num_tiers
-            and len(respondents & set(self.nodes)) >= self._phase1_size
-        )
+    def is_phase1_quorum(self, respondents: set[int], initiator_tier: int | None = None) -> bool:
+        """Phase 1: must have one node from each tier at or below initiator.
+
+        Args:
+            respondents: Set of node IDs that responded.
+            initiator_tier: Tier index of the proposer (0=Mars/top, 3=Earth/bottom).
+                If None, defaults to 0 (top of wall — requires all tiers).
+        """
+        if initiator_tier is None:
+            initiator_tier = 0
+        # Need at least one respondent from each tier from initiator down to bottom
+        for j in range(initiator_tier, self.num_tiers):
+            if not (respondents & self._tier_sets[j]):
+                return False
+        # For relaxed Q2, need enough Earth nodes for pigeonhole intersection
+        if len(respondents & self._fast_tier_set) < self._min_earth_in_q1:
+            return False
+        return True
 
     def is_phase2_quorum(self, respondents: set[int]) -> bool:
-        """Phase 2 is the full fast tier (Earth in our examples)."""
-        return self._fast_tier_set.issubset(respondents)
+        """Phase 2 requires phase2_threshold nodes from the fast tier."""
+        return len(respondents & self._fast_tier_set) >= self._phase2_threshold
 
     def describe(self) -> str:
         tier_desc = " / ".join(f"{len(t)}" for t in self.tiers)
+        p2_desc = ("fast tier" if self._phase2_threshold == len(self.fast_tier)
+                   else f"{self._phase2_threshold}-of-{len(self.fast_tier)} fast tier")
         return (f"CrumblingWall(tiers=[{tier_desc}]): "
-                f"Phase1={self._phase1_size} (span all tiers), "
-                f"Phase2={self._phase2_size} (fast tier)")
+                f"Phase1=read-down (top needs {self.num_tiers}, bottom needs 1), "
+                f"Phase2={self._phase2_size} ({p2_desc})")
 
     def describe_tiers(self, tier_names: list[str]) -> str:
         """Human-readable tier description."""
         lines = []
         for i, (name, tier) in enumerate(zip(tier_names, self.tiers)):
             speed = "FAST" if i == len(self.tiers) - 1 else "slow"
-            lines.append(f"    Tier {i} ({name}): {len(tier)} nodes [{speed}]")
-        lines.append(f"    Phase 1: {self._phase1_size} "
-                     f"(one per tier + {self._extras_needed} extras from fast tier)")
-        lines.append(f"    Phase 2: {self._phase2_size} (all of fast tier)")
+            q1_needs = self.num_tiers - i
+            lines.append(f"    Tier {i} ({name}): {len(tier)} nodes [{speed}], "
+                         f"Phase 1 reads {q1_needs} tier(s) downward")
+        lines.append(f"    Phase 2: {self._phase2_size} (fast tier)")
         return "\n".join(lines)
 
 

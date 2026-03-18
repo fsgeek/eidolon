@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository is for exploring and implementing VMTP (Versatile Message Transaction Protocol) based on RFC 1045. VMTP is a transport protocol designed specifically for remote procedure call (RPC) and transaction-oriented communication.
+Eidolon is a discrete-event simulation framework for studying quorum-based consensus under extreme latency and intermittent disconnection, motivated by Earth--Mars operations.
 
-**Current State**: Early exploration. Building a simulator to test whether VMTP's transaction-as-primitive model behaves meaningfully differently from modern transaction-on-streams (gRPC/QUIC) under failure conditions.
+**Core thesis**: Paxos safety depends on quorum intersection properties, not majority voting. Quorum *shape* can encode physical topology, keeping the hot commit path local to the fast tier while the rarer election path spans all tiers.
 
-**Target**: Datacenter protocol. Datacenters control their fabric, can accept IP protocol 81, and can run IP multicast - making VMTP's design viable there even if the public internet has ossified around TCP/UDP.
+**Current state**: Paper revision targeting arXiv submission. The simulator, experiments, and sweep data are complete. The paper (`docs/paper/main.tex`) is being refined for framing and scientific rigor.
+
+**History**: This repository began as a VMTP (RFC 1045) transport protocol simulator ("VMTPsim") before evolving into its current focus on topology-aware Flexible Paxos.
 
 ## Development Environment
 
@@ -19,69 +21,71 @@ uv run python ...    # Run scripts
 uv run pytest        # Run tests
 ```
 
-**Important**: This project uses `uv` for Python environment management. Do not use `pip` directly.
+**Important**: This project uses `uv` for Python environment management. Do not use `pip` directly. Requires Python >= 3.14.
 
 ## Key Documents
 
-- `docs/rfc1045.txt` - Complete RFC 1045 specification (the primary source)
-- `docs/vmtp-minimal-spec.md` - Extracted minimal transaction protocol for simulator design
+- `docs/paper/main.tex` - The paper (compiles with pdflatex + bibtex)
+- `docs/paper/references.bib` - Bibliography (15 entries)
+- `docs/step9-repro.md` - Reproduction commands for all experiments
+- `docs/workshop-paper-roadmap.md` - Paper development roadmap
+- `docs/rfc1045.txt` - Original RFC 1045 specification (historical)
 
-## What is VMTP?
+## Repository Layout
 
-VMTP addresses TCP's inefficiencies for RPC by providing:
-- Minimal two-packet exchanges for simple transactions (vs TCP's connection setup/teardown overhead)
-- Stateless transaction model - no connection state between transactions
-- Host-address independent entity identifiers (solves process migration, mobile hosts)
-- Built-in multicast, real-time, and security support
+### Core simulation
+- `paxos.py` - Acceptor, Proposer, QuorumSystem base class, FlexibleQuorum, MajorityQuorum
+- `quorums.py` - GridQuorum, FlexibleGridQuorum, CrumblingWallQuorum (topology-aware)
+- `datacenter.py` - Network topology builder (five_dc_topology)
+- `network.py` - Asynchronous network model with delay, jitter, partitions
+- `entity.py` - Entity registry for transport-level endpoints
+
+### Interplanetary demos (progressive)
+- `demo_step_1.py` through `demo_step_9.py` - Building from simple to conjunction blackout
+- `demo_step_9.py` is the primary experiment driver
+
+### Experiment tooling
+- `experiments/step9_sweep.py` - Parameter sweep (Mars latency x blackout duration)
+- `experiments/step9_liveness.py` - Timeout threshold sweep
+- `experiments/plot_step9.py` - Sweep visualization
+- `experiments/plot_step9_liveness.py` - Liveness envelope plots
+
+### Results
+- `results/step9/step9_sweep.csv` / `step9_sweep_ci.csv` - Sweep raw/aggregated
+- `results/step9/step9_liveness.csv` / `step9_liveness_ci.csv` - Liveness raw/aggregated
+- `results/step9/plots/` - SVG/PDF figures
 
 ## Key Architectural Concepts
 
-**Entities**: Transport-level endpoints identified by stable, 64-bit host-address independent identifiers. Entities can be processes, services, or any addressable endpoint.
+**5/1/1/3 topology**: 5 Earth, 1 LEO, 1 Moon, 3 Mars acceptor nodes (10 total). Use this notation consistently.
 
-**Message Transactions**: The fundamental communication unit - a request-response exchange as an atomic operation. The client sends a request, server processes it, server responds.
+**Three consensus scopes**:
+- Earth-local: Flexible Paxos (q1=4, q2=2) over 5 Earth nodes
+- Mars-local: Majority quorum over 3 Mars nodes
+- Global reconciliation: CrumblingWallQuorum spanning all tiers
 
-**Entity Domains**: Different naming and allocation schemes for entity identifiers (domain 1 for Internet, domain 3 for Stanford).
+**Quorum families**:
+- Phase 2 (hot path): Q2 = {E} (full Earth tier only)
+- Phase 1 (elections): Must span all 4 tiers AND have |Q| >= 6
+- Intersection guaranteed because Q1 contains an Earth node and Q2 = E
 
-**Packet Groups**: Multiple packets transmitted together to support streaming for large data transfers.
+**CrumblingWallQuorum** (`quorums.py`): `is_phase1_quorum` enforces tier-spanning + minimum size. `is_phase2_quorum` checks that the full fast tier (Earth) is present. During blackout, Phase 1 fails because Mars nodes are unreachable — this is a liveness failure, not a safety violation.
 
-**Client State Record (CSR)**: Server-maintained state about remote clients. Servers can discard CSRs without affecting correctness (stateless design).
+## Building the Paper
 
-## Protocol Architecture (from RFC 1045)
+```bash
+cd docs/paper
+pdflatex main && bibtex main && pdflatex main && pdflatex main
+```
 
-1. **Client Protocol Module**: Initiates transactions, handles retransmissions, manages timeouts, processes responses
-2. **Server Protocol Module**: Receives requests, manages CSRs, sends responses, handles duplicate detection
-3. **Management Module**: Entity creation/deletion, authentication, group membership
-4. **Reliability Layer**: Checksums, acknowledgments, retransmissions, duplicate suppression
+## Running Experiments
 
-Both client and server implement explicit state machines with event-driven processing (user events, packet arrivals, timeouts).
+See `docs/step9-repro.md` for full reproduction commands, or:
 
-## Key Differences from TCP
+```bash
+# Single run
+uv run python demo_step_9.py --mars-latency-s 186 --blackout-duration-s 900 --seed 42
 
-| Aspect | TCP | VMTP |
-|--------|-----|------|
-| Model | Stream-oriented | Transaction-oriented |
-| Connection | Requires setup/teardown | Stateless transactions |
-| RPC cost | Multiple round-trips | 2 packets minimum |
-| Naming | IP:port (host-bound) | Entity IDs (host-independent) |
-| Multicast | Not supported | Native support |
-
-## Subsettability
-
-VMTP is designed for minimal implementations - useful for PROM boot loaders, embedded sensors, simple controllers. Not all features need to be implemented.
-
-## RFC 1045 Structure
-
-Key sections for implementation:
-- Section 3: Packet formats and field definitions
-- Section 4: Client protocol state machine and events
-- Section 5: Server protocol state machine and events
-- Appendix VI: IP implementation specifics
-- Appendix VII: Implementation notes and data structures
-- Appendix VIII: UNIX 4.3 BSD kernel interface
-
-## Terminology
-
-- **Transaction ID**: 32-bit identifier for a request-response exchange
-- **Run**: Sequence of packet groups (for streaming)
-- **Delivery Mask**: Bitmap indicating which packets in a group were received
-- **CMG (Co-resident Module Group)**: Entities sharing an address space
+# Full sweep (50 seeds x 18 points)
+uv run python experiments/step9_sweep.py --seeds "40,41,...,89" --output results/step9/step9_sweep.csv
+```

@@ -8,7 +8,7 @@
 \usepackage{array}
 \usepackage{longtable}
 
-\title{Eidolon: Topology-Aware Flexible Paxos for High-Latency, Intermittently Connected Systems}
+\title{Legible Consensus: Topology-Aware Quorum Geometry\\for Asymmetric Networks}
 \author{Tony Mason}
 \date{March 2026}
 
@@ -16,17 +16,51 @@
 \maketitle
 
 \begin{abstract}
-We study Paxos in a high-latency, intermittently disconnected setting motivated by Earth--Mars operations. The main claim is structural: safety depends on quorum intersection, not on a flat majority rule, so quorum shape can be aligned with physical topology. We evaluate Eidolon, a discrete-event simulator with a tiered quorum family in which the hot Phase~2 path stays entirely on Earth while the rarer Phase~1 path spans Earth, LEO, Moon, and Mars. The experiments compare hard conjunction blackouts with a repeater-assisted degraded-connectivity model. Across a 50-seed sweep, Earth-local latency remains stable at 251.0--251.0~ms mean and 263.6--263.8~ms p95 despite large Mars-delay changes. Hard blackouts drive during-blackout global success to 0\% in every tested setting. Under repeater-assisted connectivity, during-blackout global success remains 100\% for most tested points and degrades only at the most extreme cases (85.5\%$\pm$3.5\% at 750~s one-way Mars delay with an 1800~s blackout, and 82.5\%$\pm$3.2\% at 1342~s with an 1800~s blackout). These results position topology-aware Flexible Paxos as a useful design pattern for high-latency, intermittently connected deployments rather than a Mars-specific curiosity.
+Flexible Paxos requires only that Phase~1 and Phase~2 quorums intersect, leaving the shape of those quorums as a design choice. We show that mapping a crumbling-wall quorum construction to a physically tiered network makes the protocol's safety and liveness properties \emph{legible}: an operator can read which tiers retain global consensus capability directly from the wall structure and the current connectivity state, without runtime probing. Using a 10-node Earth/LEO/Moon/Mars topology as a magnifying glass, we demonstrate that a flat Phase~1 family (requiring all tiers) produces 0\% global success during conjunction blackout, while a per-tier crumbling-wall family over the same topology produces 100\% at 183~ms latency---the only change is quorum geometry. Under the wall construction, three of four tiers retain global liveness during Mars disconnection; only the disconnected tier loses it. Consensus latency at each tier equals the speed-of-light round-trip to the Earth row: 131~ms from LEO, 5.1~s from Moon. A comparison between sparse and full-coverage network topologies separates the wall's quorum obligations from network reachability as independent constraints on liveness. All results are design-level and confirmed across 50-seed sweeps with negligible variance; quorum intersection is verified exhaustively in TLA+. The source repository, sweep data, and reproduction commands are available at \url{https://github.com/fsgeek/eidolon}.
 \end{abstract}
 
 \section{Introduction}
-Consensus in interplanetary settings is constrained less by logic than by geometry. If every quorum is treated as a flat majority over all nodes, then the steady-state commit path inherits the full cost of Earth--Mars propagation. Our thesis is that Paxos safety is compatible with a much more topology-aware arrangement: the hot commit path can remain local to the fast tier as long as Phase~1 and Phase~2 quorums still intersect.
 
-The evaluation is implemented in Eidolon, the simulator used throughout this paper. The name is deliberate: during blackout and long-delay operation, every tier reasons over an inevitably stale projection of remote state. The central claim of the paper is that this is acceptable for safety if quorum geometry is chosen correctly.
+Consensus protocols are usually studied over networks where all participants are roughly equidistant. In practice, many systems span topologies with structured asymmetry: datacenters at different distances, edge nodes behind slow links, or---in the extreme case that motivates this paper---tiers separated by minutes to hours of light-travel time.
 
-This paper makes four concrete contributions. First, it gives an explicit quorum-family definition for the tiered construction used in the simulator. Second, it states the safety and liveness assumptions under which the construction is evaluated. Third, it reports a full parameter sweep over Mars latency, blackout duration, and timeout settings rather than a single representative run, using 50 seeds per point for the main experiments. Fourth, it ties each empirical claim to an executable artifact and output file.
+The naive approach to consensus over such a topology is a flat quorum: majority (or any uniform threshold) over all nodes. This forces the commit path through the slowest tier on every operation. Flexible Paxos~\cite{howard2016} showed that safety requires only cross-intersection between Phase~1 and Phase~2 quorum families, not universal majority. This decouples the two phases and opens a design space: Phase~2 (the hot commit path) can be small and fast while Phase~1 (the rare election path) can be large and slow, as long as they intersect.
 
-\section{Formal Model}
+But how should that design space be explored? Most Flexible Paxos deployments choose quorum sizes---a number for each phase---without considering the \emph{shape} of those quorums. Peleg and Wool~\cite{peleg1995} showed that quorum geometry can be engineered around combinatorial structure rather than simple counts, with crumbling-wall constructions that achieve high availability through asymmetric quorum families. This paper composes these two ideas: Flexible Paxos's intersection requirement with Peleg and Wool's wall construction, mapped onto a physically tiered network where the rows of the wall correspond to latency tiers.
+
+The result is a protocol whose failure modes are \emph{legible}. In a flat quorum system, when consensus fails, the failure is opaque---you know a quorum didn't form, but the structure doesn't tell you who lost what capability. In the wall construction, the geometry is a map of the failure. Given a connectivity state (which tiers can reach which), the set of tiers retaining global Phase~1 capability is determined by the wall structure alone, without probing.
+
+We demonstrate this using Eidolon, a discrete-event Paxos simulator, over a 10-node topology spanning Earth (5~nodes), LEO (1), Moon (1), and Mars (3)---the 5/1/1/3 topology. The interplanetary setting is not the point; it is the magnifying glass. The latency asymmetry (sub-second Earth, minutes-to-hours Mars) makes properties visible that exist but are harder to measure in terrestrial deployments.
+
+This paper makes four contributions:
+\begin{enumerate}
+\item \textbf{The crumbling-wall construction mapped to physical topology.} Per-tier Phase~1 quorum families where each tier reads downward through the wall. Phase~2 is the Earth row. Intersection holds because every Phase~1 contains at least one Earth node. The construction is verified exhaustively in TLA+ over the full 10-node topology (Section~\ref{sec:construction}).
+\item \textbf{Legible liveness degradation.} Under Mars conjunction blackout, the wall crumbles from the top: only Mars loses global Phase~1 capability. Earth, LEO, and Moon retain it. Consensus latency at each tier equals the speed-of-light round-trip to Earth: 183~ms (Earth), 131~ms (LEO), 5.1~s (Moon). A flat construction over the same topology produces 0\% global success during blackout---the only change is quorum geometry (Section~\ref{sec:results}).
+\item \textbf{Wall obligations versus network reachability.} A sparse network topology where LEO sees only 3~of~5 Earth ground stations breaks LEO's liveness despite the wall permitting it. The wall determines quorum \emph{obligations}; the network determines \emph{achievability}. These are independent constraints that compose to determine liveness (Section~\ref{sec:reachability}).
+\item \textbf{Crash tolerance and the weakest-link migration.} Relaxing Phase~2 from all-of-Earth to $k$-of-Earth introduces crash tolerance, but the weakest link migrates from the global quorum to the Earth-local quorum. Under two Earth crashes, the topology-aware global construction maintains 98\% success while the flat local construction drops below 50\% (Section~\ref{sec:relaxed}).
+\end{enumerate}
+Each empirical claim is tied to an executable artifact and output file (Appendix~A). All results are design-level; deployment would introduce orbital dynamics, antenna scheduling, and variable link quality not modeled here.
+
+
+\section{Background}
+\label{sec:background}
+
+\subsection{Flexible Paxos}
+Classic Paxos~\cite{lamport1998} uses majority quorums for both phases: Phase~1 (prepare/promise) establishes a proposer's right to propose, and Phase~2 (accept/accepted) commits a value. Safety requires that any two quorums intersect, which majority trivially guarantees via the pigeonhole principle.
+
+Flexible Paxos~\cite{howard2016} observed that the intersection requirement is \emph{cross-phase}, not within-phase: any Phase~1 quorum must intersect any Phase~2 quorum, but Phase~1 quorums need not intersect each other, nor Phase~2 quorums each other. Formally, safety holds if $q_1 + q_2 > |N|$, where $q_1$ and $q_2$ are the quorum sizes for Phase~1 and Phase~2 respectively. This means Phase~2 (the hot path, executed on every commit) can be small if Phase~1 (the cold path, executed only during leader election) is correspondingly large.
+
+\subsection{Crumbling-Wall Quorum Systems}
+Peleg and Wool~\cite{peleg1995} introduced crumbling walls as quorum constructions that achieve high availability through asymmetric structure. Nodes are arranged in rows of potentially different widths. A quorum is formed by selecting elements from successive rows, reading from top to bottom, with each row's width determining how many elements must be chosen. The ``crumbling'' refers to rows that may lose elements to failure, narrowing the paths through the wall.
+
+The key property: any two paths through the wall must share at least one node, guaranteeing the intersection that consensus requires.
+
+\subsection{Composing the Two Ideas}
+Grid and crumbling-wall constructions~\cite{cheung1992,peleg1995} show that quorum geometry can be structured around combinatorial properties rather than simple counts. Flexible Paxos shows that the two phases of consensus can use different quorum families. Our construction composes these: the rows of the crumbling wall correspond to physical tiers of the network, and each tier's Phase~1 quorum family reads downward through the wall from that tier's position. Phase~2 uses only the bottom row (the fastest tier). The intersection guarantee follows from the wall structure: every path through the wall reaches the bottom row, and Phase~2 \emph{is} the bottom row.
+
+
+\section{Construction}
+\label{sec:construction}
+
 \subsection{System Model}
 Let the acceptor universe be
 \[
@@ -36,226 +70,330 @@ where the tiers are pairwise disjoint and represent Earth, LEO, Moon, and Mars r
 \[
 |E| = 5,\quad |L| = 1,\quad |U| = 1,\quad |M| = 3,\quad |N| = 10.
 \]
-Earth is the fastest tier. The network is asynchronous: messages experience delay and jitter, and links may be removed during scheduled blackout windows. Acceptors are crash-stop and non-Byzantine, and accepted Paxos state is stable once written. Timeouts affect liveness only; they do not affect safety.
+We call this the 5/1/1/3 topology. Tiers are ordered by latency: Earth is the fastest (bottom of the wall), Mars is the slowest (top). The network is asynchronous with configurable per-link delay and jitter. Acceptors are crash-stop and non-Byzantine. Links may be removed during scheduled blackout windows.
 
-The simulator uses three logical consensus scopes.
+The simulator uses three logical consensus scopes:
 \begin{itemize}
-\item Earth-local consensus runs over the Earth tier with Flexible Paxos, using $q_1 = 4$ and $q_2 = 2$ over the five Earth acceptors.
-\item Mars-local consensus runs over the three Mars nodes with a majority quorum of size two.
-\item Global reconciliation runs over all ten nodes with the topology-aware quorum family defined below.
+\item \textbf{Earth-local}: Flexible Paxos over the five Earth nodes ($q_1 = 4$, $q_2 = 2$).
+\item \textbf{Mars-local}: majority quorum over the three Mars nodes ($q = 2$).
+\item \textbf{Global}: the crumbling-wall construction defined below, over all ten nodes.
 \end{itemize}
 
-\subsection{Global Quorum Families}
-Let the Phase~2 quorum family be
+\subsection{Per-Tier Phase~1 Families}
+
+The wall maps tiers to rows, ordered top (Mars, slow) to bottom (Earth, fast). A proposer at tier~$i$ forms its Phase~1 quorum by reading \emph{downward} from row~$i$: it needs at least one respondent from its own tier and every tier below.
+
+\begin{center}
+\small
+\begin{tabular}{llll}
+\toprule
+Initiating tier & Phase~1 scope & Tiers needed & Min size \\
+\midrule
+Mars (row 0, top) & Mars $+$ Moon $+$ LEO $+$ Earth & 4 & 4 \\
+Moon (row 1) & Moon $+$ LEO $+$ Earth & 3 & 3 \\
+LEO (row 2) & LEO $+$ Earth & 2 & 2 \\
+Earth (row 3, bottom) & Earth only & 1 & 1 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Let $\mathcal{Q}_1^{(i)}$ denote the Phase~1 family for a proposer at tier~$i$:
 \[
-\mathcal{Q}_2 = \{E\},
+\mathcal{Q}_1^{(i)} = \bigl\{Q \subseteq N \;\big|\; \forall\, j \ge i:\; Q \cap T_j \neq \emptyset\bigr\},
 \]
-that is, the full Earth tier. This keeps the hot commit path entirely on the fast tier.
+where $T_0 = M$, $T_1 = U$, $T_2 = L$, $T_3 = E$ and tier indices increase from top (slow) to bottom (fast). For relaxed Phase~2 (Section~\ref{sec:relaxed}), Phase~1 additionally requires enough Earth nodes to satisfy a pigeonhole intersection constraint.
 
-The structural Phase~1 family is
+\subsection{Phase~2 Family}
+
+The Phase~2 family places the hot commit path entirely on the fast tier:
 \[
-\widehat{\mathcal{Q}}_1 =
-\{Q \subseteq N \mid Q \cap E \neq \emptyset,\; Q \cap L \neq \emptyset,\; Q \cap U \neq \emptyset,\; Q \cap M \neq \emptyset\}.
+\mathcal{Q}_2 = \{E\}.
 \]
-Every Phase~1 quorum spans all tiers. The implementation uses a conservative strengthening of this family:
-\[
-\mathcal{Q}_1 =
-\{Q \in \widehat{\mathcal{Q}}_1 \mid |Q| \ge |N| - |E| + 1 = 6\}.
-\]
-Operationally, this means ``one node from every tier plus enough extra Earth nodes to satisfy the standard sufficient size condition.'' In the evaluated 3/1/1/5 topology, the minimum implemented Phase~1 quorum contains one Mars node, the Moon node, the LEO node, and three Earth nodes.
+That is, Phase~2 requires all five Earth nodes (the strict construction). Section~\ref{sec:relaxed} relaxes this to $k$-of-$|E|$.
 
-\subsection{Safety Argument}
-\textbf{Proposition 1.} Every global Phase~1 quorum intersects every global Phase~2 quorum.
+\subsection{Safety: Quorum Intersection}
 
-\textit{Proof sketch.} Let $Q_1 \in \widehat{\mathcal{Q}}_1$ and $Q_2 \in \mathcal{Q}_2$. By definition, $Q_1$ contains at least one Earth node and $Q_2 = E$, so $Q_1 \cap Q_2 \neq \emptyset$. Because $\mathcal{Q}_1 \subseteq \widehat{\mathcal{Q}}_1$, the same result holds for the implemented family. Therefore the cross-phase intersection requirement used by Flexible Paxos is preserved. \hfill $\square$
+\textbf{Proposition 1.} For every tier $i$ and every $Q_1 \in \mathcal{Q}_1^{(i)}$, $Q_2 \in \mathcal{Q}_2$: $Q_1 \cap Q_2 \neq \emptyset$.
 
-This is the core modeling point: majority size is only one sufficient route to intersection. Here the relevant invariant is structural overlap between the tier-spanning Phase~1 family and the Earth-only Phase~2 family.
+\textit{Verification.} Every $\mathcal{Q}_1^{(i)}$ requires $Q_1 \cap E \neq \emptyset$ (since Earth is at or below every tier). $Q_2 = E$. Therefore $Q_1 \cap Q_2 \supseteq Q_1 \cap E \neq \emptyset$. \hfill $\square$
 
-\subsection{Liveness Assumptions}
-The evaluation does not prove unconditional liveness. Instead, it studies liveness envelopes under explicit assumptions.
+The intersection follows from the wall's structure: every path through the wall reaches the bottom row, and Phase~2 is the bottom row. We verified this exhaustively in TLA+ by enumerating all valid Phase~1 quorums for each of the four initiating tiers against all Phase~2 quorums, including relaxed and crash-fault variants. The \texttt{ExhaustiveIntersection} specification checks strict $Q_2$, relaxed $Q_2$ ($k = 4$ and $k = 3$), and crash-fault constructions across all four tiers' $Q_1$ families. The \texttt{QuorumIntersection} specification explores the same property via state-space search (11{,}789 states). No intersection failure was found. Single-decree Paxos agreement was model-checked under a structurally equivalent reduced topology (6~nodes, 67M~states, no violation) and partially explored at full scale (6.5B~states, no violation before termination). Specifications are in \texttt{tla/}.
+
+\subsection{Liveness: Reading the Wall}
+\label{sec:liveness-wall}
+
+The wall determines liveness as follows. A proposer at tier~$i$ can complete Phase~1 if and only if it can reach at least one node in every tier from $i$ down to the bottom. Phase~2 succeeds if the proposer can reach enough Earth nodes (all five under strict $\mathcal{Q}_2$).
+
+During Mars conjunction blackout, cross-tier links between Mars and the inner system are removed. The connectivity state is:
 \begin{itemize}
-\item Earth-local progress requires enough reachable Earth acceptors to form the Earth-local Flexible Paxos quorums.
-\item Mars-local progress requires a reachable Mars majority.
-\item Global progress requires a successful Phase~1 exchange across all tiers and a timeout budget that exceeds the realized end-to-end delay on the currently available path.
-\item In the \texttt{blackout\_only} scenario, Earth--Mars communication is removed during conjunction.
-\item In the \texttt{with\_repeater} scenario, blackout is replaced with a degraded Earth--relay--Mars path.
+\item Mars $\leftrightarrow$ \{Moon, LEO, Earth\}: \textbf{partitioned}.
+\item Moon $\leftrightarrow$ LEO $\leftrightarrow$ Earth: \textbf{connected}.
 \end{itemize}
+
+Reading the wall against this connectivity:
+\begin{itemize}
+\item \textbf{Mars} (needs Mars $+$ Moon $+$ LEO $+$ Earth): \textbf{blocked}. Cannot reach Moon, LEO, or Earth.
+\item \textbf{Moon} (needs Moon $+$ LEO $+$ Earth): \textbf{works}. All three tiers reachable.
+\item \textbf{LEO} (needs LEO $+$ Earth): \textbf{works}. Both tiers reachable.
+\item \textbf{Earth} (needs Earth): \textbf{works}. Trivially satisfied.
+\end{itemize}
+
+The liveness failure is scoped to exactly the disconnected tier. The wall crumbles from the top.
+
+This is a \emph{legibility property}: given the wall structure and any connectivity state~$C$, the set of tiers retaining global Phase~1 capability is determined without runtime probing. For any tier~$i$, global Phase~1 succeeds if and only if every tier from $i$ to the bottom is reachable from~$i$ in~$C$. Any quorum system admits, in principle, computing quorum validity against a connectivity graph. The wall makes this computation structurally trivial: the question reduces to ``is every tier from mine to the bottom reachable?''---an $O(\text{tiers})$ check that requires no enumeration of quorum subsets. This is what distinguishes legibility from mere computability.
+
+\subsection{What ``Global'' Means}
+
+When an Earth-based proposer completes both phases using only Earth nodes, the resulting decision is \emph{global} in the Paxos sense: it is durable in the quorum intersection. Any future proposer at any tier, upon completing Phase~1, will discover this value in the Earth acceptors' state and cannot contradict it. Mars does not participate in the decision, but Mars cannot disagree with it. This is the distinction between participation and safety: global consensus does not require that all tiers voted, only that no future quorum can produce a conflicting result.
+
+
+\section{Related Work}
+
+Paxos established the standard safety argument for replicated state machines under asynchronous messaging and crash failures~\cite{lamport1998}. Flexible Paxos showed that safety requires only Phase~1/Phase~2 cross-intersection, not universal majority~\cite{howard2016}. Our construction builds directly on that result; the novelty is not in the intersection theorem but in mapping the quorum shape to physical topology and characterizing the resulting liveness properties per tier.
+
+Grid and crumbling-wall quorum constructions~\cite{cheung1992,peleg1995} demonstrate that quorum geometry can be engineered around combinatorial structure. Howard et al.\ note explicitly that Flexible Paxos can use such constructions; we take up that suggestion. Peleg and Wool analyzed crumbling-wall availability under random, independent node failures. Our contribution is not the wall itself but the mapping: rows correspond to physical latency tiers, and the resulting per-tier liveness properties under scheduled, topology-correlated disconnection---properties the abstract framework identifies as possible but does not explore. Li, Chan, and Lesani~\cite{li2023} formalize heterogeneous quorum systems in which each process may use a different quorum family, and give necessary and sufficient conditions for liveness; our per-tier Phase~1 families are a concrete, topology-aligned instantiation of that general idea. Hierarchical quorum structures have a longer history in database replication~\cite{daudjee2004} and coordination services; our wall differs in that the hierarchy reflects physical latency tiers rather than organizational or logical grouping.
+
+Geo-distributed consensus provides the closest practical analog. WPaxos~\cite{ailijiang2020} uses Flexible Paxos with object-stealing to keep commits local. EPaxos~\cite{moraru2013} removes the leader bottleneck for non-conflicting commands. Mencius~\cite{mao2008} distributes leader responsibility across WAN sites. MDCC~\cite{kraska2013} achieves single-round cross-datacenter commits. All four optimize for tens-to-hundreds of milliseconds WAN latency and assume all replicas are usually reachable. Our setting differs in two respects: the asymmetry spans three orders of magnitude (sub-second to 1342~s), and the target phenomenon is scheduled total disconnection rather than heterogeneous latency.
+
+Delay-tolerant networking~\cite{cerf2007,fall2003} motivates the operating regime but addresses routing and custody transfer, not consensus. CRDTs have been studied in DTN-like settings~\cite{guidec2023}. SwarmDAG~\cite{tran2019swarmdag} uses extended virtual synchrony for partition-tolerant robot swarms; Tran et al.~\cite{tran2019milcom} measure consensus latency under partitioning. Protocol Labs' IPC~\cite{delarocha2022} uses hierarchical subnets for blockchain scaling. NASA's DSN study~\cite{connell2011} evaluates database replication for ground stations. Our work occupies a gap: Paxos safety under topology-shaped quorum geometry and scheduled disconnection, with per-tier liveness characterization.
+
 
 \section{Experimental Design}
-We use the repository's discrete-event simulator and the exact commands recorded in \texttt{docs/step9-repro.md}. Table~\ref{tab:design} separates fixed parameters from the parameters varied in each experiment family.
+\label{sec:expdesign}
 
-The repeater model is an explicit alternate path in the simulator, not a scalar multiplier on the direct Earth--Mars links. In the \texttt{with\_repeater} scenario, Earth reaches a \texttt{lagrange-relay} hop in 350--360~ms one way, and the relay reaches Mars in 220~s one way with 10~s jitter. In the \texttt{blackout\_only} scenario, that path is absent and the relevant cross-tier links are removed during the conjunction window. The relay is therefore modeled as a separate degraded control-plane path with its own latency distribution.
+Eidolon is a discrete-event simulator built on SimPy. Acceptors process Prepare and Accept messages with configurable processing delay. Proposers fan out messages to all acceptors and collect responses with a per-phase timeout. The network model assigns entities to named locations with per-link latency, jitter, and optional loss. Blackout is modeled as deterministic link removal; the repeater model substitutes a degraded alternate path. Event ordering is by simulation timestamp; the simulator is deterministic given a seed.
+
+\subsection{Topology}
+
+Five Earth ground stations (NA-West, Europe, Asia, SA-East, Africa) with cross-continental latencies of 30--120~ms. One LEO satellite with 20--45~ms links to ground stations. One Moon node at 1.28~s one-way. Three Mars nodes at configurable one-way delay (186--1342~s, representing closest approach to opposition). Mars-local links are 5~ms.
+
+We evaluate two network variants:
+\begin{itemize}
+\item \textbf{Sparse}: LEO has links to 3 of 5 Earth stations (NA-West, Europe, Asia). Mars has links to 2 of 5 (NA-West, Europe). This models a single LEO satellite with limited ground coverage and a Mars relay with two tracking stations.
+\item \textbf{Full coverage}: LEO and Mars have links to all 5 Earth stations. This models a LEO constellation with global coverage and a deep-space network with worldwide antenna placement.
+\end{itemize}
+
+\subsection{Experiments}
+
+Three experiment families probe different aspects of the construction.
 
 \begin{table}[t]
 \centering
 \small
 \caption{Experimental design.}
 \label{tab:design}
-\begin{tabular}{p{0.23\linewidth}p{0.34\linewidth}p{0.34\linewidth}}
+\begin{tabular}{p{0.14\linewidth}p{0.40\linewidth}p{0.38\linewidth}}
 \toprule
-Item & Sweep study & Liveness-envelope study \\
+Experiment & Purpose & Key parameters \\
 \midrule
-Purpose & Compare hard blackout vs repeater over topology and blackout severity & Identify timeout thresholds for during-blackout success \\
-Scenarios & \texttt{blackout\_only}, \texttt{with\_repeater} & \texttt{blackout\_only}, \texttt{with\_repeater} \\
-Varied parameters & Mars one-way latency $\in \{186, 750, 1342\}$~s; blackout duration $\in \{300, 900, 1800\}$~s & Global timeout $\in \{120, 240, 360, 500, 720\}$~s; blackout duration $\in \{300, 900, 1800\}$~s \\
-Fixed parameters & Blackout start 600~s; simulation end 4000~s; reconcile interval 120~s; global max rounds 1 & Mars one-way latency 186~s; blackout start 600~s; simulation end 4000~s; reconcile interval 120~s; global max rounds 1 \\
-Seeds & 40--89 (50 runs per point) & 40--89 (50 runs per point) \\
-Topology & 5 Earth, 1 LEO, 1 Moon, 3 Mars nodes & Same as sweep study \\
-Primary metrics & Earth/Mars local success, global pre/during/post success, recovery lag, average global latency, local average and p95 latency & During-blackout and post-blackout success, recovery lag, average global latency \\
-Runtime control & One CSV row per seed and scenario, plus aggregated mean/95\% CI CSV & One CSV row per seed and scenario, plus aggregated mean/95\% CI CSV \\
+Parameter sweep & Confirm structural invariance of Earth-initiated global consensus across Mars delay and blackout duration & Mars delay $\in \{186, 750, 1342\}$~s; blackout $\in \{300, 900, 1800\}$~s; 50 seeds per point \\
+Per-tier sweep & Measure which tiers retain global liveness; compare sparse vs.\ full-coverage topologies & Initiating tier $\in \{$Mars, Moon, LEO, Earth$\}$; both topologies; 186~s Mars delay; 900~s blackout; 50 seeds \\
+Crash tolerance & Characterize the tradeoff between Phase~2 relaxation ($k$-of-$|E|$) and crash tolerance & $k \in \{3, 4, 5\}$; 0--2 Earth crashes; 186~s; 900~s blackout; 50 seeds \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The sweep study writes raw and aggregated \texttt{step9\_sweep} CSVs under \texttt{results/step9/}. The timeout study writes raw and aggregated \texttt{step9\_liveness} CSVs in the same directory. Plot files are generated under \texttt{results/step9/plots/}.
+Fixed parameters across all experiments: blackout starts at 600~s, simulation ends at 4000~s, reconciliation interval 120~s, global timeout 500~s, max 1 Paxos round per attempt. All seeds are 40--89 (50 runs per point). Results are reported as means with 95\% confidence intervals.
+
 
 \section{Results}
-\subsection{Local Autonomy Is Stable}
-Table~\ref{tab:local} summarizes the local-path metrics across the full 18-point sweep. Earth-local latency is essentially invariant to Mars delay and blackout duration, which is the expected consequence of keeping the global Phase~2 path on Earth. Mars-local metrics are also stable because Mars-local consensus uses its own local majority.
+\label{sec:results}
+
+\subsection{Flat versus Crumbling Wall: Geometry Alone Changes the Outcome}
+
+To calibrate the effect of quorum geometry, we compare two constructions over the identical topology, blackout model, and parameter sweep. The \emph{flat} construction requires Phase~1 quorums that span all four tiers (the prior version of this work). The \emph{crumbling wall} construction uses the per-tier Phase~1 families defined in Section~\ref{sec:construction}, with an Earth-based global proposer.
 
 \begin{table}[t]
 \centering
 \small
-\caption{Local-path stability across all 18 sweep points (means and p95 values aggregated from \texttt{step9\_sweep\_ci.csv}, 50 seeds per point).}
-\label{tab:local}
-\begin{tabular}{lrr}
+\caption{Effect of quorum geometry: flat vs.\ crumbling-wall Phase~1 over the same topology and blackout model. Earth-initiated global proposer, hard blackout, 50 seeds per point. All 18 parameter points (3 Mars delays $\times$ 3 blackout durations) return identical rates.}
+\label{tab:flat-vs-wall}
+\begin{tabular}{lrrr}
 \toprule
-Metric & Minimum & Maximum \\
+Construction & During-blackout success & Post-blackout success & Avg latency \\
 \midrule
-Earth local mean latency & 251.0 ms & 251.0 ms \\
-Earth local p95 latency & 263.6 ms & 263.8 ms \\
-Mars local mean latency & 21.1 ms & 21.1 ms \\
-Mars local p95 latency & 22.6 ms & 22.7 ms \\
-Earth local success rate & 100\% & 100\% \\
-Mars local success rate & 100\% & 100\% \\
+Flat Phase~1 (all tiers required) & 0.0\% $\pm$ 0.0\% & varies by setting & varies \\
+Crumbling wall (Earth reads Earth only) & 100.0\% $\pm$ 0.0\% & 100.0\% $\pm$ 0.0\% & 0.183~s \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Hard Blackouts Remove Global During-Blackout Progress}
-Table~\ref{tab:blackout} reports the full hard-blackout sweep. During-blackout global success is 0\% in every tested condition. At the closest Mars-delay setting (186~s one-way), the system resumes post-blackout reconciliation, but recovery lag grows as blackout duration lengthens. At the 750~s and 1342~s settings, the 500~s global timeout budget is insufficient even after blackout, so no global success is observed.
+The flat construction produces 0\% during-blackout success at every sweep point---a tautology of its own design, since it requires Mars nodes that are unreachable. The crumbling wall produces 100\% at every point, because the Earth-based proposer's Phase~1 needs only Earth nodes. The difference is entirely in quorum geometry. Same simulator, same topology, same blackout, same timeout budget.
 
-\begin{table}[p]
+This demonstrates that the design space within Flexible Paxos's safety constraint is large. Both constructions satisfy the cross-intersection requirement. One produces a protocol that is dead during disconnection; the other produces one that doesn't notice. Quorum \emph{shape} is a first-order design decision.
+
+\subsection{Per-Tier Liveness: The Wall Crumbles from the Top}
+
+Table~\ref{tab:pertier} reports the central result. Under full network coverage, each tier runs its own global proposer during Mars conjunction blackout (186~s one-way, 900~s blackout, hard blackout model, 50 seeds).
+
+\begin{table}[t]
 \centering
 \small
-\caption{Hard-blackout sweep (\texttt{blackout\_only}, mean$\pm$95\% CI over 50 seeds).}
-\label{tab:blackout}
-\begin{tabular}{rrrr}
+\caption{Per-tier global consensus during Mars conjunction blackout (full-coverage topology, hard blackout, 186~s Mars delay, 900~s blackout, mean $\pm$ 95\% CI over 50 seeds).}
+\label{tab:pertier}
+\begin{tabular}{llrrr}
 \toprule
-Mars delay (s) & Blackout (s) & During-blackout success & Post-blackout recovery lag (s) \\
+Initiating tier & Wall position & During-blackout & Avg latency & Recovery lag \\
 \midrule
-186 & 300 & 0\%$\pm$0.0\% & 577.7$\pm$1.0 \\
-186 & 900 & 0\%$\pm$0.0\% & 597.7$\pm$1.1 \\
-186 & 1800 & 0\%$\pm$0.0\% & 937.7$\pm$0.9 \\
-750 & 300 & 0\%$\pm$0.0\% & n/a \\
-750 & 900 & 0\%$\pm$0.0\% & n/a \\
-750 & 1800 & 0\%$\pm$0.0\% & n/a \\
-1342 & 300 & 0\%$\pm$0.0\% & n/a \\
-1342 & 900 & 0\%$\pm$0.0\% & n/a \\
-1342 & 1800 & 0\%$\pm$0.0\% & n/a \\
+Mars & top (row 0) & 0.0\% $\pm$ 0.0\% & --- & --- \\
+Moon & row 1 & 100.0\% $\pm$ 0.0\% & 5.131~s $\pm$ 0.000 & 6.7~s $\pm$ 0.01 \\
+LEO & row 2 & 100.0\% $\pm$ 0.0\% & 0.131~s $\pm$ 0.000 & 61.8~s $\pm$ 0.01 \\
+Earth & bottom (row 3) & 100.0\% $\pm$ 0.0\% & 0.183~s $\pm$ 0.000 & 62.6~s $\pm$ 0.01 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Repeater-Assisted Connectivity Preserves Most of the Liveness Envelope}
-Table~\ref{tab:repeater} reports the repeater-assisted sweep. The qualitative pattern is different: during-blackout success is 100\% for most parameter points, including the 750~s and 1342~s latency cases at 300~s and 900~s blackout durations. Degradation appears only at the most extreme 1800~s blackout settings. Post-blackout success is still limited by the fixed 500~s global timeout budget at the larger Mars-delay points.
+Three of four tiers retain global consensus capability during hard Mars blackout. Only Mars---the disconnected tier---loses it. The liveness failure crumbles from the top of the wall, exactly as the construction predicts.
 
-\begin{table}[p]
+The latency column maps directly to physics. Moon's 5.131~s is two Paxos phases at the 1.28~s one-way Moon--Earth light delay ($\approx 4 \times 1.28$~s). Earth's 183~ms reflects cross-continental round-trips within the Earth tier. LEO's 131~ms is \emph{faster} than Earth---a counterintuitive result explained by the network topology: LEO-to-ground links (20--45~ms) are shorter than cross-continental Earth links (50--120~ms). Wall position determines quorum \emph{obligations}; the speed of light determines their \emph{cost}. These are correlated but not identical, and LEO is the proof.
+
+Mars fails during blackout for the structural reason predicted by the wall (it cannot reach inner tiers for Phase~1). Mars also fails \emph{before} blackout, for a different reason: Mars-to-Earth round-trip time ($\approx$372~s per phase) exceeds the 500~s per-phase timeout budget for a complete two-phase Paxos round. This is not a blackout finding but a physics finding: Mars-initiated global consensus requires either patient timeouts or delegation to a lower-tier proposer.
+
+Recovery lag differences between tiers (6.7~s for Moon vs.\ 62.6~s for Earth) are scheduling artifacts of the 120~s reconciliation interval interacting with blackout boundaries, not protocol properties.\footnote{Moon's slightly longer per-round time shifts its reconciliation cadence so the next attempt falls shortly after blackout ends. Earth's falls $\sim$62~s later. The effect is deterministic and independent of the consensus protocol.}
+
+
+\subsection{Wall Obligations versus Network Reachability}
+\label{sec:reachability}
+
+Table~\ref{tab:sparse} repeats the per-tier experiment under the sparse network topology.
+
+\begin{table}[t]
 \centering
 \small
-\caption{Repeater-assisted sweep (\texttt{with\_repeater}, mean$\pm$95\% CI over 50 seeds).}
-\label{tab:repeater}
-\begin{tabular}{rrrrr}
+\caption{Per-tier global consensus under sparse topology (same parameters as Table~\ref{tab:pertier}).}
+\label{tab:sparse}
+\begin{tabular}{llr}
 \toprule
-Mars delay (s) & Blackout (s) & During success & Post success & Recovery lag (s) \\
+Initiating tier & Wall prediction & Sparse result \\
 \midrule
-186 & 300 & 0\%$\pm$0.0\% & 100\%$\pm$0.0\% & 38.3$\pm$31.8 \\
-186 & 900 & 100\%$\pm$0.0\% & 100\%$\pm$0.0\% & 264.4$\pm$66.2 \\
-186 & 1800 & 100\%$\pm$0.0\% & 100\%$\pm$0.0\% & 232.7$\pm$3.4 \\
-750 & 300 & 100\%$\pm$0.0\% & 0\%$\pm$0.0\% & 192.2$\pm$2.1 \\
-750 & 900 & 100\%$\pm$0.0\% & 0\%$\pm$0.0\% & 185.2$\pm$3.5 \\
-750 & 1800 & 85.5\%$\pm$3.5\% & 0\%$\pm$0.0\% & n/a \\
-1342 & 300 & 100\%$\pm$0.0\% & 0\%$\pm$0.0\% & 193.1$\pm$1.9 \\
-1342 & 900 & 100\%$\pm$0.0\% & 0\%$\pm$0.0\% & 183.3$\pm$2.7 \\
-1342 & 1800 & 82.5\%$\pm$3.2\% & 0\%$\pm$0.0\% & n/a \\
+Mars & blocked & 0.0\% $\pm$ 0.0\% \\
+Moon & works & 100.0\% $\pm$ 0.0\% \\
+LEO & works & 0.0\% $\pm$ 0.0\% \\
+Earth & works & 100.0\% $\pm$ 0.0\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Timeout Thresholds Show a Sharp Liveness Transition}
-Figures~\ref{fig:liveness-blackout} and \ref{fig:liveness-repeater} visualize the timeout sweep at 186~s one-way Mars delay. Both scenarios fail during blackout for timeout budgets of 120--360~s. The threshold appears between 360~s and 500~s. At 500--720~s, hard blackout still yields no during-blackout success, but the repeater-assisted model succeeds during the 900~s and 1800~s windows.
+LEO drops from 100\% (full coverage) to 0\% (sparse). The wall says LEO needs LEO $+$ Earth; that obligation is satisfiable. But strict Phase~2 requires all five Earth nodes, and LEO has links to only three ground stations. The wall determines what a tier \emph{needs}; the network determines what it \emph{can reach}. Liveness requires both.
 
-The 300~s blackout line in the timeout sweep deserves care: the aggregated CSV contains zero during-blackout attempts at that setting, so its reported 0\% should be read as ``no attempts completed during the window'' rather than ``attempts failed despite relay connectivity.'' This is a workload-scheduling artifact of the 120~s reconciliation interval combined with a short blackout window and belongs in the interpretation of the figure rather than the safety claim.
+This separation has practical implications. An operator designing a tiered deployment must check two things: (1)~the wall structure, which determines quorum obligations per tier, and (2)~the network topology, which determines whether those obligations are achievable. The wall is the blueprint; the network is the building site. The legibility property extends to both: given the wall and the connectivity graph, an operator can determine which tiers have liveness without probing.
 
-The 750~s and 1342~s rows in Tables~\ref{tab:blackout} and \ref{tab:repeater} expose a second, more substantive effect: with a fixed 500~s global timeout, the system can fail to recover global reconciliation even after blackout ends. This is not a blackout-only phenomenon; it is a timeout-mismatch phenomenon. Operationally, that suggests at least three follow-on strategies: increase the timeout budget with distance, adapt timeouts dynamically from observed round-trip behavior, or defer global reconciliation attempts entirely when the system is known to be outside the current timeout envelope.
+Moon succeeds in both topologies because it has links to all five Earth ground stations. Earth succeeds because it is co-located with the ground stations. The sparse topology is a realistic model of a single LEO satellite with limited ground coverage; the full-coverage topology models a constellation. The three missing links are the difference between 0\% and 100\% for LEO-initiated consensus.
 
-\begin{figure}[t]
+
+\section{Crash Tolerance and Coordinated Relaxation}
+\label{sec:relaxed}
+
+The strict Phase~2 choice $\mathcal{Q}_2 = \{E\}$ introduces a fragility: a single crashed Earth acceptor blocks all global Phase~2 progress. This section relaxes that choice.
+
+\subsection{Relaxed Construction}
+Let the relaxed Phase~2 family require $k$ of $|E|$ Earth nodes. We evaluate $k = 4$ (tolerates one crash) and $k = 3$ (tolerates two). Phase~1 requires correspondingly more Earth nodes to maintain intersection: the minimum Earth count in any $Q_1$ is $|E| - k + 1$ (2 for $k = 4$, 3 for $k = 3$). Both constructions were verified exhaustively in TLA+.
+
+\subsection{Results: The Weakest Link Migrates}
+Table~\ref{tab:relaxed} reports the crash-tolerance sweep (Earth-initiated, repeater-assisted, 186~s Mars delay, 900~s blackout, 50 seeds).
+
+\begin{table}[t]
 \centering
-\includegraphics[width=0.85\linewidth]{figures/liveness_envelope_blackout_only.pdf}
-\caption{During-blackout global success under the hard-blackout model.}
-\label{fig:liveness-blackout}
-\end{figure}
+\small
+\caption{Coordinated relaxation under Earth crashes (mean $\pm$ 95\% CI, 50 seeds). Earth-local Flexible Paxos: ``std'' is $q_1{=}4, q_2{=}2$; ``maj'' is $q_1{=}q_2{=}3$.}
+\label{tab:relaxed}
+\begin{tabular}{llrrrrr}
+\toprule
+Global $\mathcal{Q}_2$ & Local & Crashes & Earth-local & Global during & Global post & Recovery (s) \\
+\midrule
+strict & std & 0 & 100.0\% & 100.0\% & 100.0\% & 488.9$\pm$2.6 \\
+strict & std & 1 & 100.0\% & --- & 0.0\% & n/a \\
+4-of-5 & std & 0 & 100.0\% & 100.0\% & 100.0\% & 489.9$\pm$2.5 \\
+4-of-5 & std & 1 & 100.0\% & 100.0\% & 100.0\% & 489.1$\pm$2.1 \\
+3-of-5 & std & 2 & 49.7\% & 98.0\%$\pm$3.9\% & 100.0\% & 512.7$\pm$2.0 \\
+3-of-5 & maj & 2 & 100.0\% & 92.0\%$\pm$7.6\% & 100.0\% & 513.4$\pm$2.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.85\linewidth]{figures/liveness_envelope_with_repeater.pdf}
-\caption{During-blackout global success under the repeater-assisted model.}
-\label{fig:liveness-repeater}
-\end{figure}
+\textbf{Strict Phase~2 is completely crash-intolerant.} A single Earth crash produces permanent global liveness loss (row~2).
 
-\section{Related Work}
-Paxos established the standard safety argument for replicated state machines under asynchronous messaging and crash failures \cite{lamport1998}. Flexible Paxos relaxed the ``every quorum is a majority'' intuition by showing that safety only requires Phase~1/Phase~2 cross-intersection, not universal pairwise intersection among all quorums \cite{howard2016}. Our construction follows that line directly: the hot path is made small and local, while the slower election path is made larger and topology-spanning.
+\textbf{The weakest link migrates.} At two crashes with standard Earth-local quorums, the \emph{global} construction (3-of-5, spanning all tiers) maintains 98\% during-blackout success---but the \emph{Earth-local} construction drops to 49.7\% because it cannot form a Phase~1 quorum of 4 with only 3 remaining Earth nodes (rows~5--6). The topology-aware global quorum is more crash-resilient than the flat local quorum because it can recruit acceptors from other tiers.
 
-The broader quorum-systems literature provides the combinatorial foundation for moving beyond majority quorums. Grid-style and crumbling-wall constructions show that quorum geometry can be engineered around availability and structure rather than simple counts \cite{cheung1992,peleg1995}. What this paper adds is a concrete mapping from that literature to a tiered Earth/LEO/Moon/Mars deployment, together with an explicit distinction between the conceptual structural family and the more conservative implemented family used in the simulator.
+\textbf{Coordinated relaxation restores resilience.} Relaxing the Earth-local quorum to majority ($q_1 = q_2 = 3$) recovers 100\% local success while maintaining 92\% global success (row~6). The tradeoff curve:
 
-Geo-distributed consensus systems provide the closest practical analog. WPaxos~\cite{ailijiang2020} uses Flexible Paxos with object-stealing to keep the commit path in the nearest region. EPaxos~\cite{moraru2013} removes the leader bottleneck so that any replica can commit locally when commands do not conflict. Mencius~\cite{mao2008} distributes the leader role round-robin across WAN sites. MDCC~\cite{kraska2013} achieves single-round cross-datacenter commits through Generalized Paxos. All four systems optimize for heterogeneous WAN latency in the tens-to-hundreds of milliseconds range and assume that all replicas are reachable most of the time. Eidolon differs in two ways. First, the asymmetry is far more extreme: the one-way delay spans three orders of magnitude (sub-second Earth to 1342~s Mars opposition) rather than the 2--5$\times$ variation across datacenters. Second, the target phenomenon is scheduled total disconnection---conjunction blackouts lasting minutes to hours---rather than merely heterogeneous latency. Even so, the structural question is the same: which coordination steps belong on the hot path, and which can be pushed onto a slower or rarer control path?
+\begin{center}
+\small
+\begin{tabular}{lrrrl}
+\toprule
+Regime & Phase~1 min & Phase~2 & Crash tol. & Commit cost \\
+\midrule
+Strict ($k = 5$) & 6 / 10 & 5 / 5 & 0 & 2-node Earth \\
+Relaxed ($k = 4$) & 7 / 10 & 4 / 5 & 1 & 2-node Earth \\
+Relaxed ($k = 3$) + maj & 8 / 10 & 3 / 5 & 2 & 3-node Earth \\
+\bottomrule
+\end{tabular}
+\end{center}
 
-Delay-tolerant networking motivates the operating regime but addresses a different layer of the problem. The DTN architecture~\cite{cerf2007,fall2003} studies intermittent connectivity, long propagation delay, and store-and-forward delivery across challenged links. The overwhelming majority of DTN work concerns routing and custody transfer, not consensus over shared state. Where consistency has been studied in DTN-like settings, the dominant approach is to abandon consensus entirely in favor of conflict-free replicated data types (CRDTs) that guarantee eventual convergence through algebraic merge properties~\cite{guidec2023}. SwarmDAG~\cite{tran2019swarmdag} takes a middle path: a partition-tolerant distributed ledger for robot swarms that uses extended virtual synchrony to handle split-and-merge dynamics, with Tran et al.\ separately measuring consensus latency under network partitioning~\cite{tran2019milcom}. Protocol Labs' Interplanetary Consensus (IPC)~\cite{delarocha2022} uses hierarchical subnets with independent consensus for blockchain scaling; despite the name, it does not target interplanetary latencies. NASA's DSN replication study~\cite{connell2011} evaluates commercial database replication for ground-station coordination but does not formalize quorum geometry. Our contribution occupies the gap between these approaches: we show that Paxos safety is compatible with topology-aware quorum geometry under scheduled disconnection, without surrendering to eventual consistency or restricting the protocol to a single tier.
 
-\section{Threats to Validity and Model Limitations}
-The results are design-level, not deployment-level. Several limitations matter.
+\section{Threats to Validity and Limitations}
 
-First, the network model is deliberately abstract. Blackout is represented as deterministic link removal, and repeater assistance is represented as a fixed degraded path. Orbital dynamics, antenna scheduling, contention, coding strategy, and variable link availability are not modeled. A more realistic space-network study could change the exact liveness thresholds even if the quorum-intersection argument stays intact.
+All results are design-level, not deployment-level.
 
-Second, the workload is stylized. Earth and Mars local proposals run on fixed cadences, and global reconciliation runs on a fixed 120~s interval with bounded retries. This creates aliasing effects, most visibly in the 300~s blackout cases of the timeout sweep, where the measured during-blackout rate is driven by whether an attempt is scheduled entirely inside the window. That effect is informative about operational tuning, but it should not be over-interpreted as a sharp physical threshold.
+\textbf{Earth as single point of failure.} The wall concentrates both safety and liveness at the bottom row. Every Phase~1 reads down to Earth; every Phase~2 is on Earth. If the entire Earth tier becomes unreachable---not individual node crashes, but tier-level partition---global consensus fails for all tiers. This is the price of placing the anchor at the bottom of the wall. Relaxed Phase~2 tolerates individual Earth crashes but not Earth-tier partition.
 
-Third, the study fixes one topology size and one global Phase~2 family. We do not sweep Earth-tier size, Mars-tier replication degree, or alternative relay placements. The local autonomy result is therefore strongest as a claim about this class of construction, not as a proof that the chosen 5/1/1/3 split is optimal.
+\textbf{Abstract network model.} Blackout is deterministic link removal. Orbital dynamics, antenna scheduling, contention, signal coding, and variable link quality are not modeled. The LEO topology variant demonstrates that network reachability matters; a more realistic model with time-varying LEO coverage (orbital ground tracks) would show liveness fluctuating with satellite position.
 
-Fourth, the fault model is crash-stop only. Byzantine behavior, correlated software faults, reconfiguration during blackout, and storage failures are all outside scope. The paper therefore speaks to quorum geometry under delay and partition, not to adversarial resilience.
+\textbf{Stylized workload.} Reconciliation runs on a fixed 120~s interval. This creates scheduling artifacts in recovery lag measurements; recovery lag differences between tiers are workload properties, not protocol properties.
 
-Finally, some metrics remain higher-variance than others even after increasing the main experiments to 50 seeds per point. The near-deterministic local-path metrics are now tightly estimated, and the noisier recovery metrics are substantially better resolved than in the initial 5-seed pass. For example, the repeater-assisted 186~s/300~s recovery lag is now 38.3~s with a 95\% confidence interval of $\pm$31.8~s. That is much more interpretable than the initial wide interval, but it still indicates that recovery behavior is meaningfully more variable than the steady-state local path. We therefore report means with 95\% confidence intervals throughout and treat recovery estimates as empirical envelope measurements rather than exact deployment predictions.
+\textbf{Single topology.} We evaluate one topology size (5/1/1/3). The construction generalizes to other tier sizes, but we do not sweep Earth-tier size or Mars replication degree.
 
-An additional modeling tradeoff is the strict Phase~2 choice $\mathcal{Q}_2 = \{E\}$. Using the full Earth tier as the only Phase~2 quorum makes the hot path clean and easy to analyze, but it also means any missing Earth acceptor blocks global Phase~2 progress. A relaxed Earth-local family such as 4-of-5 Earth nodes could still preserve cross-phase intersection with an appropriately chosen Phase~1 family. We do not explore that availability/latency tradeoff in the current paper.
+\textbf{Crash-stop only.} Byzantine behavior, correlated faults, reconfiguration during blackout, and storage failures are outside scope.
 
-\section{Discussion: Eventual Consistency Under Topology}
-One useful way to read the evaluated construction is as a seed for analyzing eventual consistency in topologically asymmetric systems. During conjunction blackout, Earth and Mars are not merely ``temporarily inconsistent replicas'' in the usual flat sense. Each tier remains internally strongly consistent according to its local quorum policy, while cross-tier state becomes stale in a structured way determined by the unavailable global reconciliation path. That suggests a topology-scoped view of consistency: quorum geometry determines which consistency domains remain strong during disruption, and the network topology determines how and when those domains can be stitched back together.
+\textbf{Per-tier crash tolerance.} The interaction between wall position and crash tolerance (does a Moon-initiated proposer degrade differently from an Earth-initiated one under Earth crashes?) is not explored and remains future work.
 
-The present simulator is not rich enough to make strong claims about application-level merge semantics, conflict resolution, or arbitrary eventual-consistency protocols. It does, however, suggest a useful analysis direction. Standard eventual-consistency descriptions often treat the inconsistency window as a temporal black box. In contrast, the results here make visible the internal structure of that window: local strong-consistency islands, explicit stale views of remote state, and a measurable protocol-level reconciliation cost once cross-tier communication resumes. We therefore view the current paper not as a contribution to eventual-consistency theory per se, but as evidence that interesting future analyses should characterize consistency locality and reconciliation behavior as functions of topology rather than as purely global or time-only properties.
+
+\section{Discussion}
+
+\subsection{The Design Space within Flexible Paxos}
+
+The 0\% $\to$ 100\% transition between flat and crumbling-wall constructions demonstrates that quorum \emph{shape} is a first-order design decision within the Flexible Paxos framework. Both constructions satisfy the cross-intersection safety requirement. The difference is entirely in how Phase~1 quorum families are structured. Most Flexible Paxos deployments choose quorum \emph{sizes}---a number for each phase---without considering the geometry of those quorums. Recent work continues to expand this design space: Howard and Abraham~\cite{howard2021} show that even Fast Paxos's quorum constraints are more conservative than necessary. The results here suggest that for topologically asymmetric networks, the shape matters at least as much as the size.
+
+\subsection{Topology-Scoped Consistency}
+
+During conjunction blackout, the system is not simply ``inconsistent.'' Each tier maintains strong local consistency via its local quorum. Cross-tier state becomes stale in a structured way: each tier's view of remote state reflects the last successful global reconciliation before disconnection. The wall determines which tiers retain the ability to make globally durable decisions during disconnection. This is a topology-scoped view of consistency in which quorum geometry determines which consistency domains survive disruption, and the network topology determines when they reconcile.
+
+The framework generalizes beyond the interplanetary setting. Any system with tiered latency asymmetry---edge computing, multi-region cloud, satellite-terrestrial hybrids---exhibits similar structure. The wall construction makes the consistency topology explicit rather than implicit, allowing operators to reason about failure modes from the quorum design rather than discovering them at runtime.
+
 
 \section{Conclusion}
-The evaluated construction shows that high-latency consensus should be framed as a quorum-shaping problem, not as a flat-majority problem. By placing the global Phase~2 quorum entirely on Earth and making Phase~1 tier-spanning, the design preserves Paxos safety while keeping Earth-local behavior nearly constant across large Mars-delay changes. Hard blackouts eliminate global during-blackout progress; repeater-assisted degraded connectivity restores most of that liveness envelope, though only inside the configured timeout regime. The broader lesson is that topology-aware Flexible Paxos offers a principled way to separate hot-path latency from rare cross-tier coordination in high-latency, intermittently connected systems.
+
+We showed that mapping a crumbling-wall quorum construction to a physically tiered network produces a consensus protocol whose failure modes are legible from the geometry. The wall crumbles from the top: during disconnection, only the unreachable tier loses global liveness. Three of four tiers in the evaluated topology retain global consensus capability during hard Mars blackout, at latencies determined by the speed of light to Earth.
+
+Two additional findings emerged from the experiments. First, the sparse-versus-full-coverage topology comparison separates quorum obligations from network reachability as independent constraints on liveness, a distinction the theory alone does not make visible. Second, the crash-tolerance analysis reveals that topology-aware global quorums are inherently more resilient than flat local quorums, because they can recruit acceptors from other tiers---a counterintuitive consequence of the wall's asymmetric structure.
+
+The interplanetary setting is the magnifying glass, not the point. The underlying principle---that quorum geometry should mirror the topology it serves---applies wherever latency asymmetry and structured disconnection determine which operations are practical.
+
 
 \appendix
 \section{Claim-to-Artifact Traceability}
-Table~\ref{tab:traceability} maps the paper's main claims to scripts and output files in the repository. Artifact paths are relative to the repository root.
+\label{app:traceability}
+Table~\ref{tab:traceability} maps the paper's main claims to executable artifacts. Paths are relative to the repository root.
 
-\begin{longtable}{p{0.26\linewidth}p{0.33\linewidth}p{0.31\linewidth}}
+\begin{longtable}{p{0.30\linewidth}p{0.30\linewidth}p{0.30\linewidth}}
 \caption{Claim-to-artifact traceability.}
 \label{tab:traceability} \\
 \toprule
-Claim & Evidence in repository & Primary artifact(s) \\
+Claim & Evidence & Artifact(s) \\
 \midrule
 \endfirsthead
 \toprule
-Claim & Evidence in repository & Primary artifact(s) \\
+Claim & Evidence & Artifact(s) \\
 \midrule
 \endhead
-Earth-local latency stays near 251~ms mean and 264~ms p95 across Mars-delay changes. & Aggregated sweep rows for all 18 scenario/latency/blackout combinations; columns \texttt{earth\_local\_avg\_latency\_s\_mean} and \texttt{earth\_local\_p95\_latency\_s\_mean}. & \texttt{results/step9/step9\_sweep\_ci.csv}; generated by \texttt{experiments/step9\_sweep.py}. \\
-Hard blackout produces zero during-blackout global success throughout the sweep. & All \texttt{blackout\_only} rows have \texttt{global\_during\_rate\_mean = 0}. & \texttt{step9\_sweep\_ci.csv}. \\
-Repeater-assisted connectivity preserves during-blackout success for most tested settings and degrades only at the 1800~s extreme cases. & \texttt{with\_repeater} rows show 100\% during-blackout success except 85.5\%$\pm$3.5\% at 750/1800 and 82.5\%$\pm$3.2\% at 1342/1800. & \texttt{step9\_sweep\_ci.csv}; plotted by \texttt{experiments/plot\_step9.py}. \\
-Timeout threshold appears between 360~s and 500~s at the 186~s Mars-delay setting. & Liveness-envelope rows show zero during-blackout success at 120--360~s and non-zero repeater-assisted success at 500--720~s for the longer blackout windows. & \texttt{step9\_liveness\_ci.csv}; plots \texttt{liveness\_envelope\_*.svg}. \\
-The paper is reproducible from repository commands. & Exact commands for environment setup, sweep execution, and plot generation. & \texttt{docs/step9-repro.md}. \\
-The implemented global quorum family is topology-aware rather than size-only. & Global proposer instantiates \texttt{CrumblingWallQuorum}; quorum validation uses \texttt{is\_phase1\_quorum} and \texttt{is\_phase2\_quorum}. & \texttt{demo\_step\_9.py}; \texttt{quorums.py}. \\
+Flat construction: 0\% during blackout across all 18 sweep points. & Old construction sweep results. & \texttt{results/step9/} (prior sweep data). \\
+Crumbling wall: 100\% during blackout across all 18 sweep points, 183~ms latency. & All rows show 100\% during-blackout. & \texttt{results/step9\_crumbling/ step9\_sweep.csv}; \texttt{experiments/ step9\_sweep.py}. \\
+Per-tier liveness: 3 of 4 tiers retain global consensus during blackout. & Per-tier sweep, both topologies. & \texttt{results/tier\_liveness/ tier\_sweep\_ci.csv}; \texttt{experiments/ tier\_liveness\_sweep.py}. \\
+LEO faster than Earth (131~ms vs 183~ms). & Latency column in per-tier results. & Same as above. \\
+Sparse topology: LEO drops to 0\%. & Sparse rows in per-tier sweep. & Same as above. \\
+Weakest-link migration and coordinated relaxation. & Crash-tolerance sweep rows. & \texttt{results/step10/ step10\_sweep\_ci.csv}; \texttt{experiments/ step10\_sweep.py}. \\
+TLA+ verification of quorum intersection. & Exhaustive enumeration, all tiers $\times$ all constructions. & \texttt{tla/ExhaustiveIntersection.tla}; \texttt{tla/QuorumIntersection.tla}. \\
+Paxos agreement model-checked. & 67M states (reduced), 6.5B states (full, partial). & \texttt{tla/PaxosSmall.tla}; \texttt{tla/PaxosFull.tla}. \\
 \bottomrule
 \end{longtable}
 
