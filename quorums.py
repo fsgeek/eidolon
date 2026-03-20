@@ -142,16 +142,24 @@ class FlexibleGridQuorum(QuorumSystem):
 class CrumblingWallQuorum(QuorumSystem):
     """Topology-aware quorum based on Peleg & Wool's crumbling walls.
 
+    NOTE ON INDEXING: The code and paper use opposite tier-index
+    conventions.  The code accepts tiers ordered slow-to-fast
+    (index 0 = Mars/top of wall, last index = Earth/bottom), matching
+    the constructor's natural "read downward toward the fast tier"
+    iteration.  The paper (main.tex) indexes from the bottom:
+    T_0 = Earth, T_3 = Mars.  The algorithm is identical; only the
+    numbering differs.  To map: paper tier i = code tier (num_tiers-1-i).
+
     Tiers are ordered slow-to-fast (Mars at top, Earth at bottom).
     The wall structure gives each tier a DIFFERENT Phase 1 quorum
     requirement: a proposer reads DOWN through the wall, needing
     one node from its own tier and each tier below it.
 
     Example tiers (top to bottom of wall):
-      Row 0 (Mars):    [mars-0, mars-1, mars-2]  (slow, far)
-      Row 1 (Moon):    [moon-0]                   (medium)
-      Row 2 (LEO):     [sat-0]                    (medium-fast)
-      Row 3 (Earth):   [na, eu, asia, sa, af]     (fast, close)
+      Code index 0 (Mars, paper T_3):  [mars-0, mars-1, mars-2]
+      Code index 1 (Moon, paper T_2):  [moon-0]
+      Code index 2 (LEO,  paper T_1):  [sat-0]
+      Code index 3 (Earth, paper T_0): [na, eu, asia, sa, af]
 
     Phase 1 quorum (per-tier, reading downward):
       Mars proposer:  one from Mars + one from Moon + one from LEO + one from Earth
@@ -246,7 +254,9 @@ class CrumblingWallQuorum(QuorumSystem):
 
         Args:
             respondents: Set of node IDs that responded.
-            initiator_tier: Tier index of the proposer (0=Mars/top, 3=Earth/bottom).
+            initiator_tier: Code-convention tier index of the proposer
+                (0=Mars/top of wall, last=Earth/bottom; see class docstring
+                for paper-to-code index mapping).
                 If None, defaults to 0 (top of wall — requires all tiers).
         """
         if initiator_tier is None:
