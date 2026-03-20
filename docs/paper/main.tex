@@ -11,6 +11,7 @@
 \usetikzlibrary{positioning,calc,arrows.meta,patterns,decorations.pathreplacing}
 
 \title{Legible Consensus: Topology-Aware Quorum Geometry\\for Asymmetric Networks}
+\author{Tony Mason\thanks{\texttt{fsgeek@\{cs.ubc.ca,gatech.edu,wamason.com\}}}}
 %\author{Tony Mason}
 %\email{fsgeek@{cs.ubc.ca,gatech.edu,wamason.com}}
 \date{March 2026}
@@ -39,7 +40,7 @@ We demonstrate this using Eidolon, a discrete-event Paxos simulator, over a 10-n
 This paper makes five contributions:
 \begin{enumerate}
 \item \textbf{The crumbling-wall construction mapped to physical topology.} Per-tier Phase~1 quorum families where each tier reads downward through the wall. Phase~2 is the Earth row. Intersection holds because every Phase~1 contains at least one Earth node. The construction is verified exhaustively in TLA+ over the full 10-node topology (Section~\ref{sec:construction}).
-\item \textbf{Legible liveness degradation.} Under Mars conjunction blackout, the wall crumbles from the top: only Mars loses global Phase~1 capability. Earth, LEO, and Moon retain it. Consensus latency at each tier equals the speed-of-light round-trip to Earth: 183~ms (Earth), 131~ms (LEO), 5.1~s (Moon). As baseline calibration, a flat construction over the same topology produces 0\% global success during blackout---a structural guarantee of both constructions, confirmed by the simulator across all 18 sweep points with zero variance (Section~\ref{sec:results}).
+\item \textbf{Legible liveness degradation.} Under Mars conjunction blackout, the wall crumbles from the top: only Mars loses global Phase~1 capability. Earth, LEO, and Moon retain it. Consensus latency at each tier equals the speed-of-light round-trip to Earth: 183~ms (Earth), 131~ms (LEO), 5.1~s (Moon). Section~\ref{sec:results} includes a flat-vs-wall calibration on the same topology.
 \item \textbf{Wall obligations versus network reachability.} A sparse network topology where LEO sees only 3~of~5 Earth ground stations breaks LEO's liveness despite the wall permitting it. The wall determines quorum \emph{obligations}; the network determines \emph{achievability}. These are independent constraints that compose to determine liveness (Section~\ref{sec:reachability}).
 \item \textbf{Crash tolerance and the weakest-link migration.} Relaxing Phase~2 from all-of-Earth to $k$-of-Earth introduces crash tolerance, but the weakest link migrates from the global quorum to the Earth-local quorum. Under two Earth crashes, the topology-aware global construction maintains 98\% success while the flat local construction drops below 50\% (Section~\ref{sec:relaxed}).
 \item \textbf{Leadership cost gradient.} The wall imposes a monotonic cost hierarchy on Multi-Paxos leader election: exhaustive TLA+ enumeration shows Earth has 4.6$\times$ more valid Phase~1 quorums than Mars, giving Earth leadership more valid quorum configurations and thus more survivable crash patterns. Symmetric grid quorums cannot express this gradient (Section~\ref{sec:leadership}).
@@ -180,7 +181,7 @@ That is, Phase~2 requires all five Earth nodes (the strict construction). Sectio
 
 The intersection follows from the wall's structure: every path through the wall reaches the bottom row, and Phase~2 is the bottom row.
 
-We verified this in TLA+, a formal specification language for concurrent systems. Its model checker, TLC, checks safety by exhaustively exploring every reachable state---every possible interleaving of messages and failures---and verifying that a safety invariant holds in each one. When TLC completes without finding a violation, the property is proven for all behaviors of the model. The \texttt{ExhaustiveIntersection} specification checks strict $Q_2$, relaxed $Q_2$ ($k = 4$ and $k = 3$), and crash-fault constructions across all four tiers' $Q_1$ families (11{,}789 states, complete). No intersection failure was found.
+We verified this in TLA+. The \texttt{ExhaustiveIntersection} specification checks strict $Q_2$, relaxed $Q_2$ ($k = 4$ and $k = 3$), and crash-fault constructions across all four tiers' $Q_1$ families (11{,}789 states, complete). No intersection failure was found.
 
 For the full Paxos protocol (not just quorum intersection), we verify safety over a reduced 6-node topology ($3E + 1L + 1U + 1M$) that preserves all tier-membership relationships. Cross-intersection requires $Q_1 \cap Q_2 \neq \emptyset$; since every $Q_1$ contains at least one node from $T_0$ (Earth) and $Q_2 \subseteq T_0$, intersection holds regardless of $|T_0|$. Adding nodes to a tier cannot break this property (monotonicity), so the reduction preserves all safety properties. Liveness properties (crash tolerance, progress under partial failure) are topology-size-dependent and are evaluated only at full scale. Over this reduced topology, single-decree Paxos agreement was model-checked exhaustively (67M~states, no violation). For the full 10-node topology, the state space exceeds what TLC can exhaust: we explored 6.5 billion states over 24 hours with the frontier still expanding, finding no violation. The reduced-topology complete result, plus the monotonicity argument, is the primary safety argument; the partial full-scale exploration provides additional confidence. Specifications are in \texttt{tla/} (see \autoref{app:traceability}).
 
@@ -364,7 +365,7 @@ Crumbling wall (Earth reads Earth only) & 100.0\% $\pm$ 0.0\% & 100.0\% $\pm$ 0.
 \end{tabular}
 \end{table}
 
-The flat construction produces 0\% during-blackout success at every sweep point, which is a tautology of its own design, since it requires Mars nodes that are unreachable. The crumbling wall produces 100\% at every point, because the Earth-based proposer's Phase~1 needs only Earth nodes. The zero variance across 50 seeds confirms that the outcome is structurally determined by quorum geometry and link state, not influenced by message scheduling or concurrency artifacts, a fact that was not obvious before running the sweep. We present this comparison not as an empirical finding but as a calibration: it isolates quorum geometry as the sole variable and confirms that the simulator correctly implements both constructions.
+The flat construction yields 0\% during-blackout success at every sweep point because it requires all tiers, including disconnected Mars. The crumbling wall yields 100\% because the Earth-based proposer's Phase~1 reads only Earth. Zero variance across 50 seeds confirms that outcomes here are structural consequences of quorum geometry and link state, not scheduler artifacts. We therefore treat this as calibration, not discovery.
 
 \subsection{Per-Tier Liveness: The Wall Crumbles from the Top}
 
@@ -419,6 +420,8 @@ Mars & blocked & 0.0\% $\pm$ 0.0\% \\
 \end{table}
 
 LEO drops from 100\% (full coverage) to 0\% (sparse). The wall says LEO needs LEO $+$ Earth; that obligation is satisfiable. But strict Phase~2 requires all five Earth nodes, and LEO has links to only three ground stations. The wall determines what a tier \emph{needs}; the network determines what it \emph{can reach}. Liveness requires both.
+
+This makes legibility a two-step operator procedure: check the wall structure (which determines quorum obligations per tier) and check the network topology (which determines whether those obligations are achievable). The wall is the blueprint; the network is the building site.
 
 Moon succeeds in both topologies because it has links to all five Earth ground stations. The sparse topology models a single LEO satellite with limited ground coverage; the three missing ground-station links are the difference between 0\% and 100\% for LEO-initiated consensus.
 
@@ -548,7 +551,7 @@ All results are design-level, not deployment-level.
 \label{fig:gradient}
 \end{figure}
 
-WPaxos~\cite{ailijiang2019wpaxos} uses Flexible Paxos with symmetric grid quorum layouts, where $Q_1$ spans $Z - f_z$ zones regardless of which node initiates. The grid's intersection proof requires uniform $Q_1$ size; there is no ``who is asking'' parameter. The wall's $\mathcal{Q}_1^{(i)}$ is a different mathematical object: a family of families, indexed by tier. This means partition failover cost is topology-proportional: if the leader is on Earth and Mars goes dark, the disconnection is a non-event for leader election. Safety follows from the Phase~2 anchor: since $\mathcal{Q}_2 \subseteq E$, all accepted values reside on Earth nodes, so Earth-scope Phase~1 discovers all relevant state.
+WPaxos~\cite{ailijiang2019wpaxos} uses symmetric grid quorums with uniform $Q_1$ structure regardless of initiator. By contrast, the wall uses tier-indexed families $\mathcal{Q}_1^{(i)}$, so partition failover cost is topology-proportional: if the leader is on Earth and Mars disconnects, leader election remains Earth-scoped.
 
 \textbf{Terrestrial mapping.} The separation principle applies wherever topology creates structured latency asymmetry. Consider a 3-tier edge deployment: $T_0$ = cloud region (one logical anchor, internally replicated across availability zones), $T_1$ = metro edge (2~retail-store servers), $T_2$ = remote site (1~offshore-platform node). Phase~2 anchors at the cloud; each tier's Phase~1 reads downward. The cloud's internal replication is its own concern; the edge servers are independent witnesses, any one of which satisfies the wall's per-tier obligation. During planned WAN maintenance that disconnects the remote site, the wall predicts: cloud and metro edge retain global consensus; only the remote site loses it. Existing edge/cloud systems already separate these concerns in practice---cloud databases replicate within a region, edge nodes sync via ad hoc protocols---but they do so outside the quorum design, with bespoke consistency layers rather than structural guarantees. The wall gives that informal practice a formal foundation. The interplanetary setting makes the separation undeniable; terrestrial deployments would benefit from the same decomposition made explicit.
 
@@ -557,7 +560,7 @@ WPaxos~\cite{ailijiang2019wpaxos} uses Flexible Paxos with symmetric grid quorum
 
 \section{Conclusion}
 
-Flat quorum constructions conflate inter-tier obligation with intra-tier replication. The crumbling-wall construction separates them: one witness per tier on the downward path for cross-tier safety, with each tier's internal replication invisible to the wall. From this separation follow legibility ($O(\text{tiers})$ liveness determination without probing), a leadership cost gradient that symmetric constructions cannot express, and composable fault tolerance where each tier's durability decisions are independent of the wall's quorum geometry.
+Flat quorums conflate inter-tier obligation with intra-tier replication. The crumbling wall separates them: one witness per tier on the downward path for cross-tier safety, while each tier's internal replication stays outside wall geometry. This yields legible liveness, a leadership cost gradient that symmetric constructions cannot express, and composable fault tolerance.
 
 Over a 10-node interplanetary topology, we confirm that three of four tiers retain global consensus during hard Mars blackout, at latencies determined by the speed of light to Earth. The extreme asymmetry makes the conflation error in flat quorum design undeniable, but the separation principle applies wherever topology creates structured asymmetry---the wall gives a formal foundation to practices that edge/cloud systems already follow informally.
 
@@ -581,7 +584,6 @@ Claim & Evidence & Artifact(s) \\
 Flat construction: 0\% during blackout across all 18 sweep points. & Old construction sweep results. & \texttt{results/step9/} (prior sweep data). \\
 Crumbling wall: 100\% during blackout across all 18 sweep points, 183~ms latency. & All rows show 100\% during-blackout. & \texttt{results/step9\_crumbling/step9\_sweep.csv}; \texttt{experiments/step9\_sweep.py}. \\
 Per-tier liveness: 3 of 4 tiers retain global consensus during blackout. & Per-tier sweep, both topologies. & \texttt{results/tier\_liveness/tier\_sweep\_ci.csv}; \texttt{experiments/tier\_liveness\_sweep.py}. \\
-LEO faster than Earth (131~ms vs 183~ms). & Latency column in per-tier results. & Same as above. \\
 Sparse topology: LEO drops to 0\%. & Sparse rows in per-tier sweep. & Same as above. \\
 Weakest-link migration and coordinated relaxation. & Crash-tolerance sweep rows. & \texttt{results/step10/step10\_sweep\_ci.csv}; \texttt{experiments/step10\_sweep.py}. \\
 TLA+ verification of quorum intersection. & Exhaustive enumeration, all tiers $\times$ all constructions. & \texttt{tla/ExhaustiveIntersection.tla}; \texttt{tla/QuorumIntersection.tla}. \\
