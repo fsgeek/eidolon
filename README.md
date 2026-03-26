@@ -1,5 +1,9 @@
 # Eidolon (formerly VMTPsim)
 
+https://doi.org/10.5281/zenodo.19229385
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19229385.svg)](https://doi.org/10.5281/zenodo.19229385)
+
+
 Discrete-event simulation framework for studying quorum-based consensus under
 extreme latency and intermittent disconnection.
 
