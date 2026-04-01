@@ -13,3 +13,4 @@ __pycache__
 *.toc
 *.gz
 *.xdv
+.vscode
