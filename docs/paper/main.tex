@@ -317,7 +317,7 @@ Fixed parameters across all experiments are listed in Table~\ref{tab:params}. Al
 \small
 \caption{Simulator parameters.}
 \label{tab:params}
-\begin{tabular}{llr}
+\begin{tabular}{llp{0.38\linewidth}}
 \toprule
 Parameter & Value & Notes \\
 \midrule
@@ -357,7 +357,7 @@ Any blackout that removes a tier makes this quorum unformable. The \emph{crumbli
 \label{tab:flat-vs-wall}
 \begin{tabular}{lrrr}
 \toprule
-Construction & During-blackout success & Post-blackout success & Avg latency \\
+Construction & During blackout & Post blackout & Avg latency \\
 \midrule
 Flat Phase~1 (all tiers required) & 0.0\% $\pm$ 0.0\% & varies by setting & varies \\
 Crumbling wall (Earth reads Earth only) & 100.0\% $\pm$ 0.0\% & 100.0\% $\pm$ 0.0\% & 0.183~s \\
@@ -501,7 +501,7 @@ All results are design-level, not deployment-level.
 \section{Discussion}
 \label{sec:leadership}
 
-\textbf{Separation of inter-tier obligation from intra-tier replication.} The separation introduced in Section~1 has a concrete cost consequence: the wall's per-tier Phase~1 obligation (one witness from the tier) is strictly cheaper than requiring intra-tier consensus. Mars's three nodes are independent witnesses---any one satisfies the wall's requirement. A Mars-internal majority would require two of three, adding a quorum obligation the wall does not need. The anchor tier is the sole exception: Phase~2 coherence requires it to behave as a single logical entity, achievable through internal replication (the standard 2PC coordinator trick). Non-anchor tiers benefit from redundancy without paying the cost of within-tier agreement.
+\textbf{Separation of inter-tier obligation from intra-tier replication.} The separation introduced in Section~1 has a concrete cost consequence: the wall's per-tier Phase~1 obligation (one witness from the tier) is strictly cheaper than requiring intra-tier consensus. Mars's three nodes are independent witnesses---any one satisfies the wall's requirement. A Mars-internal majority would require two of three, adding a quorum obligation the wall does not need. The anchor tier is the sole exception: Phase~2 coherence requires it to behave as a single logical entity, achievable through internal replication (the standard 2PC coordinator trick). Non-anchor tiers benefit from redundancy without paying the cost of within-tier agreement. The TLA+ verification provides independent evidence for this separation: the reduced 6-node topology ($3E + 1L + 1U + 1M$) is not merely a computational shortcut but a model of the collapsed-tier design---shrinking Earth from five nodes to three preserves all quorum intersection properties precisely because safety depends on tier membership, not tier size. The same structural invariant that makes the reduction valid makes the deployment collapse cheap.
 
 \textbf{Topology-scoped consistency.} During blackout, the wall partitions the system into tiers that are linearizable with respect to the global log and tiers that retain only sequential consistency locally. Earth, LEO, and Moon can still complete global Phase~1, discover all committed values, and write new ones that are ordered with respect to the full history---they remain linearizable. Mars nodes can still read their local replicas and those reads respect the order of locally observed writes, but there are Earth-committed values that Mars cannot discover until connectivity resumes. Mars is sequentially consistent but not linearizable with respect to the global log. The wall tells you exactly which regime each tier is in: a tier at position~$i$ is globally linearizable if and only if it can reach every tier $j \le i$; otherwise its consistency degrades to local sequential consistency in a way the wall makes explicit. At interplanetary distances, the gap between the two regimes is twenty-two minutes wide---the distinction that distributed systems students struggle with as an abstract definition becomes a physical fact you could set a timer by.
 
@@ -570,7 +570,7 @@ Over a 10-node interplanetary topology, we confirm that three of four tiers reta
 \label{app:traceability}
 Table~\ref{tab:traceability} maps the paper's main claims to executable artifacts. Paths are relative to the repository root. Results were generated with Python~$\ge$3.14 and SimPy~$\ge$4.1.1. Persistent archive: Zenodo DOI \texttt{10.5281/zenodo.19122943}, commit \texttt{50fd0a3}.
 
-\begin{longtable}{p{0.30\linewidth}p{0.30\linewidth}p{0.30\linewidth}}
+\begin{longtable}{p{0.28\linewidth}p{0.30\linewidth}p{0.34\linewidth}}
 \caption{Claim-to-artifact traceability.}
 \label{tab:traceability} \\
 \toprule
@@ -582,12 +582,12 @@ Claim & Evidence & Artifact(s) \\
 \midrule
 \endhead
 Flat construction: 0\% during blackout across all 18 sweep points. & Old construction sweep results. & \texttt{results/step9/} (prior sweep data). \\
-Crumbling wall: 100\% during blackout across all 18 sweep points, 183~ms latency. & All rows show 100\% during-blackout. & \texttt{results/step9\_crumbling/step9\_sweep.csv}; \texttt{experiments/step9\_sweep.py}. \\
-Per-tier liveness: 3 of 4 tiers retain global consensus during blackout. & Per-tier sweep, both topologies. & \texttt{results/tier\_liveness/tier\_sweep\_ci.csv}; \texttt{experiments/tier\_liveness\_sweep.py}. \\
+Crumbling wall: 100\% during blackout across all 18 sweep points, 183~ms latency. & All rows show 100\% during-blackout. & \texttt{results/step9\_crumbling/\allowbreak step9\_sweep.csv}; \texttt{experiments/\allowbreak step9\_sweep.py}. \\
+Per-tier liveness: 3 of 4 tiers retain global consensus during blackout. & Per-tier sweep, both topologies. & \texttt{results/tier\_liveness/\allowbreak tier\_sweep\_ci.csv}; \texttt{experiments/\allowbreak tier\_liveness\_sweep.py}. \\
 Sparse topology: LEO drops to 0\%. & Sparse rows in per-tier sweep. & Same as above. \\
-Weakest-link migration and coordinated relaxation. & Crash-tolerance sweep rows. & \texttt{results/step10/step10\_sweep\_ci.csv}; \texttt{experiments/step10\_sweep.py}. \\
-TLA+ verification of quorum intersection. & Exhaustive enumeration, all tiers $\times$ all constructions. & \texttt{tla/ExhaustiveIntersection.tla}; \texttt{tla/QuorumIntersection.tla}. \\
-Paxos agreement model-checked. & 67M states (reduced), 6.5B states (full, partial). & \texttt{tla/PaxosSmall.tla}; \texttt{tla/PaxosFull.tla}. \\
+Weakest-link migration and coordinated relaxation. & Crash-tolerance sweep rows. & \texttt{results/step10/\allowbreak step10\_sweep\_ci.csv}; \texttt{experiments/\allowbreak step10\_sweep.py}. \\
+TLA+ verification of quorum intersection. & Exhaustive enumeration, all tiers $\times$ all constructions. & \texttt{tla/\allowbreak ExhaustiveIntersection.tla}; \texttt{tla/\allowbreak QuorumIntersection.tla}. \\
+Paxos agreement model-checked. & 67M states (reduced), 6.5B states (full, partial). & \texttt{tla/\allowbreak PaxosSmall.tla}; \texttt{tla/\allowbreak PaxosFull.tla}. \\
 \bottomrule
 \end{longtable}
 
