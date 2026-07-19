@@ -1,6 +1,6 @@
 # Four-Layer Capability Model for Legible Consensus
 
-**Status:** Revised design approved after external generative critique
+**Status:** Twice-revised design approved after cross-model generative critique
 
 **Date:** 2026-07-19
 
@@ -36,7 +36,7 @@ This formulation replaces the current identification of Paxos Phase 1 with “le
 
 ## The Four Layers
 
-The layers are stratified by the evidence required to evaluate them. This is not a universal claim that their monetary or computational costs are monotonically ordered: authority may be locally cheap to read while acquiring an accurate connectivity summary may be expensive. The invariant is the source and freshness of the evidence, not a fixed cost ranking.
+The layers are stratified by the evidence required to evaluate them. This is not a universal claim that their monetary or computational costs are monotonically ordered: authority may be locally cheap to read while acquiring an accurate connectivity summary may be expensive. Legibility is observer-relative—the incumbent, a peer tier, and a remote diagnostician have different acquisition costs and vantage points. The invariant across observers is the source and freshness of the evidence, not a fixed cost ranking.
 
 ### 1. Quorum obligation
 
@@ -90,14 +90,14 @@ The matrix describes protocol-action reachability, not read semantics. If the pa
 
 ## Observation Is a Separate Capability
 
-Let `O(i, C)` denote whether tier `i` can obtain the chosen prefix required by the service through a non-disruptive learner or read mechanism. The exact predicate depends on that mechanism and is not inferred from `R1`.
+Let `O(i, C, s)` denote whether tier `i` can obtain evidence that slot `s` is chosen through a non-disruptive learner or read mechanism. The exact predicate depends on that mechanism and is not inferred from `R1`.
 
 For this revision, `O` is an analytical capability backed by an explicit standard learner path. A learner must receive either:
 
 - matching `Accepted` evidence from a complete Phase 2 quorum; or
 - a trusted decision notification carrying equivalent quorum evidence.
 
-One acceptor notification proves acceptance, not chosenness. The learner path requires no ballot authority and may use one-way, delay-tolerant delivery rather than a proposer’s round trip, but its evidence requirement remains explicit. The paper may therefore retain epistemic language only with this mechanism as its referent. It will not claim that Phase 1 alone determines what a tier knows.
+One acceptor notification proves acceptance, not chosenness. The learner path requires no ballot authority and may use one-way, delay-tolerant delivery rather than a proposer’s round trip, but its evidence requirement remains explicit. Delivery can be out of order: claiming observation of a chosen prefix through slot `h` requires evidence for every slot through `h`; a learner buffers later certificates until earlier gaps are filled by chosen values or explicit no-ops. The paper may therefore retain epistemic language only with this mechanism as its referent. It will not claim that Phase 1 alone determines what a tier knows.
 
 ## Scenario Admission Rule
 
@@ -107,7 +107,7 @@ A physical or terrestrial scenario belongs in the evaluation only if it realizes
 |---|---|---|
 | Fully reachable wall | `R1=1, R2=1` | Establish ordinary resilient global operation. |
 | Sparse LEO with strict or 4-of-5 Phase 2 | `R1=1, R2=0` | Demonstrate the futile/harmful election state and derive an operational warning not to initiate elections from that tier. |
-| Sparse LEO with 3-of-5 Phase 2 | `10 → 11` | Show that quorum relaxation is also a reachability knob: it restores commit reachability and disarms the election hazard. |
+| Sparse LEO with 3-of-5 Phase 2 | `10 → 11` | Show that quorum relaxation is also a reachability knob: it restores commit reachability and converts futile disruption into ordinary failover capability. |
 | Broken intermediate Phase-1 obligation with anchor reachable | `R1=0, R2=1` | Expose incumbent-only progress and failure to recover leadership analytically; no new Multi-Paxos experiment is required for this revision. |
 | Hard upper-tier cut | `R1=0, R2=0` | Show loss of global protocol capability while a separate local scope may remain. Mars conjunction is the candidate. |
 
@@ -123,6 +123,19 @@ Duration can still affect workload-dependent outcomes such as the number of fail
 - **Workload consequences**, which can depend on blackout duration and operation cadence.
 
 Values such as 300, 900, and 1,800 seconds must not be described as physically realistic Mars-conjunction durations. If retained, they must be labeled accelerated observation windows or workload-sensitivity parameters. A literal two-week run may be added as a validation point with a sparse workload, but it is not needed to establish the structural matrix.
+
+### Time-budget validity
+
+For every tested latency and route, derive an upper bound `d_max` for the slowest required one-way path including declared jitter, and an acceptor processing bound `p_max`. A two-message Paxos phase needs approximately `2*d_max + p_max`, and a fresh two-phase round needs approximately `4*d_max + 2*p_max`. Each experiment configuration must validate all of the following before it runs:
+
+- the per-phase timeout exceeds the worst required request-response path;
+- the pre-blackout window can contain at least one fully completed round for every capability claimed there;
+- the post-blackout window can contain at least one fully completed round after accounting for reconciliation cadence;
+- the simulation horizon contains the pre-window, blackout, and post-window budgets.
+
+Configurations that fail these checks must be rejected or explicitly classified as temporally unavailable. They must not silently become evidence of a topological capability loss.
+
+Regime classification uses both attempt start and completion time. An attempt fully contained before blackout is `pre`, one fully contained in blackout is `during`, and one fully contained after blackout is `post`. An attempt that crosses either boundary is `transition` and is excluded from steady-regime success rates. This is required because the current network tests a partition when a packet is sent: a packet sent before the boundary may arrive after it.
 
 ## Evidence and Experiment Design
 
@@ -140,19 +153,19 @@ evidence provenance:       configuration, connectivity, runtime state, policy
 
 A failed classification must identify the missing obligation rather than merely report timeout. The provenance field makes stratified legibility operational: it marks which conclusions are structural, which require a connectivity summary, which require fresh authority state, and which are service declarations.
 
-### Disruptive-election theorem
+### Disruption lemma and capability map
 
 Let an incumbent hold ballot `b`, and let another proposer complete Phase 1 at `b' > b` using `q1`. Every acceptor in `q1` promises to reject `b`. Because every allowed `q2` intersects `q1`, each Phase 2 quorum contains a rejector, so the incumbent can no longer complete Phase 2 at `b`.
 
 For an Earth anchor of size `n` with `k`-of-`n` Phase 2, a completed Phase 1 contains at least `n-k+1` Earth promises. That set intersects every `k`-subset by pigeonhole. For strict all-of-Earth Phase 2, even one Earth promise blocks the sole Phase 2 quorum. For relaxed Phase 2, an arbitrary smaller partial attempt is not guaranteed to block every quorum; the theorem applies to the completed Phase 1 hitting set.
 
-This theorem is scoped to the ballot and instances covered by the promises. In the current simulator, promises are per slot. Under epoch-style Multi-Paxos, Phase 1 may cover a range of future slots.
+This is a standard consequence of Paxos safety viewed from the incumbent’s side, not a new preemption theorem. It is scoped to the ballot and instances covered by the promises. In the current simulator, promises are per slot. Under epoch-style Multi-Paxos, Phase 1 may cover a range of future slots. The paper’s contribution is the capability map that derives where this disruptive action is reachable from topology and connectivity, including the exact `n-k+1` hitting-set condition under quorum relaxation.
 
 ### Dueling-proposer hazard experiment
 
-Use the existing single-decree machinery to run Earth and sparse-LEO proposers against the same slots. Compare Earth progress with and without repeated higher-ballot LEO election attempts while LEO has `R1=1, R2=0`. Report Earth commit success, latency, retries, and NACKs, together with LEO’s completed Phase 1 and failed Phase 2 counts.
+Use the existing single-decree machinery to run Earth and sparse-LEO proposers against the same slots. Compare Earth progress with and without repeated higher-ballot LEO election attempts while LEO has `R1=1, R2=0`. Sweep the relative start offset between the two proposers explicitly across one reconciliation period; seeds and link jitter are secondary factors. Report Earth commit success, latency, retries, and NACKs, together with LEO’s completed Phase 1 and failed Phase 2 counts, grouped by offset.
 
-The experiment demonstrates the same-slot disruption theorem; it does not claim to model persistent Multi-Paxos authority. Scheduling and ballot assignment must be explicit so that the baseline and contended runs are reproducible rather than accidental races.
+The experiment corroborates the same-slot disruption lemma; it does not claim to model persistent Multi-Paxos authority. Scheduling and ballot assignment must be explicit so that the baseline and contended runs are reproducible rather than accidental races. If symmetric cadences produce repeated collision or livelock, report it together with the offsets under which progress resumes. Do not label this result an FLP theorem, and do not expand the experiment into a new backoff-policy study.
 
 ### Analytical incumbent-only state
 
@@ -171,9 +184,11 @@ Before regenerating results:
 1. Define logical end-to-end Mars-to-required-tier reachability before blackout so Mars has the capability claimed for the tested delay/timeout pair.
 2. Remove those effective routes during hard blackout.
 3. Reconcile the paper’s timeout units with the implementation. Remove the claim that a 372-second round trip exceeds a 500-second per-phase timeout; after the route repair, close-approach Mars should fit within each phase budget, while longer Mars delays may not.
-4. Regenerate the stale crash-tolerance sweep rather than explaining the obsolete 98%/92% interaction.
-5. Relabel the trade-off table’s “Commit” column as the Earth-local Phase 2 quorum.
-6. Correct the `Li et al.` bibliography entry to name Xiao Li and Eric Chan, and add the 2026 Satrapy follow-on where the related-work distinction relies on it.
+4. Validate timeout, blackout start, reconciliation cadence, and simulation end as a coupled budget for every latency. In particular, a close-approach two-phase Mars round is roughly 744 seconds before margin, so a 600-second pre-window cannot demonstrate a completed pre-blackout round; at longer delays both timeout and horizon must be scaled or the claim narrowed.
+5. Classify boundary-crossing operations as `transition` rather than assigning them to a regime by start time alone.
+6. Regenerate the stale crash-tolerance sweep rather than explaining the obsolete 98%/92% interaction.
+7. Relabel the trade-off table’s “Commit” column as the Earth-local Phase 2 quorum.
+8. Correct the `Li et al.` bibliography entry to name Xiao Li and Eric Chan, and add the 2026 Satrapy follow-on where the related-work distinction relies on it.
 
 ### Formal evidence
 
@@ -184,7 +199,7 @@ The TLA+ claims must match the checked models:
 - Update or replace the reduced Paxos specification so its quorum families match the current tier-indexed design.
 - Treat the incomplete full-scale TLC run only as a bounded search, never as proof.
 
-The capability classifier and its hazard flags can be checked exhaustively over the finite topology and threshold states used in the paper. This is separate from Paxos safety verification. The disruptive-election theorem should be stated and proved analytically; its simulation is corroboration, not proof.
+The capability classifier and its hazard flags can be checked exhaustively over the finite topology and threshold states used in the paper. This is separate from Paxos safety verification. The disruption lemma should be stated and derived analytically from cross-intersection; its simulation is corroboration, not proof.
 
 ## Paper Structure
 
@@ -193,12 +208,11 @@ The revision should make the capability model visible early:
 1. **Introduction:** Mars as magnifying glass; stratified legibility; the boundary between structural inference and runtime evidence; the classifier as a named contribution.
 2. **Background:** Paxos Phase 1 as authority acquisition/recovery and Phase 2 as replication under a ballot; Flexible Paxos cross-intersection.
 3. **Construction:** tier-indexed quorum obligations and intersection proof.
-4. **Capability model:** effective reachability predicates, authority state, complete matrix, evidence provenance, and limits of topology-only inference.
-5. **Hazard theorem:** prove that a completed higher-ballot Phase 1 disables every lower-ballot Phase 2 quorum and derive the operational election warning.
-6. **Evaluation:** classifier outputs, sparse-LEO hazard and `10→11` relaxation, hard-cut behavior, and repaired crash-tolerance and latency results.
-7. **Observation and service semantics:** specify decision-certificate learning; separate observation, authority, and consistency contracts; no Phase-1-as-reader claim.
-8. **Related work:** distinguish the composition from topology-aware quorum optimization, heterogeneous quorum availability, Heterogeneous Paxos, Satrapy, HAT/CAP, and epistemic distributed computing.
-9. **Limitations and future work:** empirical incumbent-only authority, temporal legibility/contact plans, relays, delegation, conflict-tolerant reconciliation, and terrestrial empirical validation.
+4. **Capability model:** effective reachability predicates, authority state, complete matrix, evidence provenance, the standard disruption lemma, and the topology-indexed hazard map.
+5. **Evaluation:** classifier outputs, offset-swept sparse-LEO hazard, `10→11` relaxation, hard-cut behavior, and repaired crash-tolerance and latency results.
+6. **Observation and service semantics:** specify per-slot decision-certificate learning and prefix gap handling; separate observation, authority, and consistency contracts; no Phase-1-as-reader claim.
+7. **Related work:** distinguish the composition from topology-aware quorum optimization, heterogeneous quorum availability, Heterogeneous Paxos, Satrapy, HAT/CAP, and epistemic distributed computing.
+8. **Limitations and future work:** empirical incumbent-only authority, temporal legibility/contact plans, relays, delegation, conflict-tolerant reconciliation, and terrestrial empirical validation.
 
 ## Novelty Boundary
 
@@ -208,6 +222,7 @@ The paper will not claim novelty for:
 - differing costs or availability of Phase 1 and Phase 2;
 - per-process or heterogeneous quorum availability;
 - topology-aware quorum optimization;
+- the fact that a completed higher-ballot Phase 1 preempts lower-ballot Phase 2 progress;
 - the observation that partitions constrain consistency and availability; or
 - epistemic reasoning about distributed systems.
 
@@ -223,16 +238,18 @@ If NINeS requests disclosure, describe the use accurately rather than as editing
 
 The design is realized when:
 
-1. The paper defines all four layers, identifies the evidence source and freshness required by each, and does not conflate Phase 1 with nondisruptive learning.
+1. The paper defines all four layers, identifies the evidence source and freshness required by each, states that acquisition cost is observer-relative, and does not conflate Phase 1 with nondisruptive learning.
 2. The complete `R1 × R2` matrix appears with authority-state qualifications and explicit hazardous-action labels.
 3. The classifier reports the structural envelope, witnesses or missing obligations, authority dependence, hazard flags, and evidence provenance.
-4. The disruptive-election theorem is stated with ballot/slot scope and the completed-Phase-1 qualification, and its proof is separate from experimental corroboration.
-5. The sparse-LEO dueling-proposer experiment is reproducible and reports collateral effects on contested Earth progress without claiming Multi-Paxos semantics.
-6. The sparse-LEO classifier demonstrates the expected `(1,0)`, `(1,0)`, `(1,1)` sequence for `k=5,4,3`.
+4. The disruption lemma is labeled as standard Paxos behavior, stated with ballot/slot scope and the completed-Phase-1 qualification, and separated from the novel topology-indexed capability map.
+5. The sparse-LEO dueling-proposer experiment sweeps relative schedule offset, reports collision and escape conditions, and does not claim Multi-Paxos or FLP semantics.
+6. The sparse-LEO classifier demonstrates the expected `(1,0)`, `(1,0)`, `(1,1)` sequence for `k=5,4,3`, described as a transition from futile disruption to ordinary failover capability.
 7. The `R1=0, R2=1` state is explicitly limited to analysis in this revision.
-8. Learner observation requires a Phase 2 decision certificate or equivalent quorum evidence; one acceptance is never described as proof of chosenness.
-9. Mars has the effective pre-blackout routes required by the tested quorum and loses those routes during blackout; latency claims respect the per-phase timeout actually configured.
-10. Timeout units, table labels, TLA+ scope, bibliography, and regenerated crash-tolerance results agree across prose, code, and artifacts.
-11. Blackout durations are described as physical durations only when physically grounded; otherwise they are observation or sensitivity windows.
-12. Related work explicitly positions the contribution against the closest prior abstractions, including the 2026 Satrapy result.
-13. A reader can apply the stratified-legibility procedure to a new cloud/edge topology without relying on planetary details.
+8. Learner observation is defined per slot and requires a Phase 2 decision certificate or equivalent quorum evidence; prefix claims require gap-free evidence through the stated boundary.
+9. Every experiment configuration validates phase timeout, pre-window, post-window, reconciliation cadence, and total horizon against its slowest required route.
+10. Attempts crossing a blackout boundary are reported as `transition` and excluded from steady-regime rates.
+11. Mars has the effective pre-blackout routes and sufficient time required by the tested quorum, then loses those routes during blackout; latency claims respect the per-phase timeout actually configured.
+12. Timeout units, table labels, TLA+ scope, bibliography, and regenerated crash-tolerance results agree across prose, code, and artifacts.
+13. Blackout durations are described as physical durations only when physically grounded; otherwise they are observation or sensitivity windows.
+14. Related work explicitly positions the contribution against the closest prior abstractions, including the 2026 Satrapy result.
+15. A reader can apply the stratified-legibility procedure to a new cloud/edge topology without relying on planetary details.
