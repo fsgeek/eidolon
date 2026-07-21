@@ -288,6 +288,21 @@ def _wire_system(env: simpy.Environment, cfg: ExperimentConfig):
     return network, earth_prop, mars_prop, global_prop
 
 
+def mars_blackout_pairs(network) -> list[tuple[str, str]]:
+    """Every (non-Mars location, Mars location) pair in the topology.
+
+    Hard blackout must sever every effective route into Mars - derived
+    from the network rather than hardcoded, so added links (Mars-LEO,
+    full-coverage Earth sites, the relay) are severed too.
+    partition_locations on an unlinked pair is a no-op, so this may
+    safely include pairs with no direct link.
+    """
+    mars_locs = [f"mars-{i}" for i in range(3)]
+    others = sorted(loc for loc in network._locations
+                    if loc not in set(mars_locs))
+    return [(src, dst) for src in others for dst in mars_locs]
+
+
 def run_conjunction_experiment(
     with_repeater: bool,
     cfg: ExperimentConfig,
@@ -359,29 +374,25 @@ def run_conjunction_experiment(
             yield env.timeout(cfg.reconcile_interval_s)
 
     def conjunction_controller():
-        mars_locs = [f"mars-{i}" for i in range(3)]
-        earth_path_locs = ["na-west", "europe", "moon"]
+        pairs = mars_blackout_pairs(network)
 
         yield env.timeout(cfg.blackout_start_s)
 
         if with_repeater:
             # Refinement model: link remains available but degraded.
-            for src in earth_path_locs:
-                for dst in mars_locs:
-                    network.update_link(src, dst, latency=240.0, jitter=12.0)
+            for src, dst in pairs:
+                network.update_link(src, dst, latency=240.0, jitter=12.0)
         else:
             # Baseline model: hard communication blackout.
-            for src in earth_path_locs:
-                for dst in mars_locs:
-                    network.partition_locations(src, dst)
+            for src, dst in pairs:
+                network.partition_locations(src, dst)
 
         yield env.timeout(cfg.blackout_duration_s)
 
         if with_repeater:
-            for src in earth_path_locs:
-                for dst in mars_locs:
-                    base = cfg.mars_base_latency_s + (1.28 if src == "moon" else 0.0)
-                    network.update_link(src, dst, latency=base, jitter=5.0)
+            for src, dst in pairs:
+                base = cfg.mars_base_latency_s + (1.28 if src == "moon" else 0.0)
+                network.update_link(src, dst, latency=base, jitter=5.0)
         else:
             network.heal_all()
 

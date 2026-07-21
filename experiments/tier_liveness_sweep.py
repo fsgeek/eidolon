@@ -32,6 +32,7 @@ from demo_step_9 import (
     ExperimentConfig,
     ReconciliationStats,
     build_topology,
+    mars_blackout_pairs,
     _p95,
 )
 from entity import EntityRegistry
@@ -245,27 +246,23 @@ def run_tier_experiment(
             yield env.timeout(cfg.reconcile_interval_s)
 
     def conjunction_controller():
-        mars_locs = [f"mars-{i}" for i in range(3)]
-        earth_path_locs = ["na-west", "europe", "moon"]
+        pairs = mars_blackout_pairs(network)
 
         yield env.timeout(cfg.blackout_start_s)
 
         if with_repeater:
-            for src in earth_path_locs:
-                for dst in mars_locs:
-                    network.update_link(src, dst, latency=240.0, jitter=12.0)
+            for src, dst in pairs:
+                network.update_link(src, dst, latency=240.0, jitter=12.0)
         else:
-            for src in earth_path_locs:
-                for dst in mars_locs:
-                    network.partition_locations(src, dst)
+            for src, dst in pairs:
+                network.partition_locations(src, dst)
 
         yield env.timeout(cfg.blackout_duration_s)
 
         if with_repeater:
-            for src in earth_path_locs:
-                for dst in mars_locs:
-                    base = cfg.mars_base_latency_s + (1.28 if src == "moon" else 0.0)
-                    network.update_link(src, dst, latency=base, jitter=5.0)
+            for src, dst in pairs:
+                base = cfg.mars_base_latency_s + (1.28 if src == "moon" else 0.0)
+                network.update_link(src, dst, latency=base, jitter=5.0)
         else:
             network.heal_all()
 

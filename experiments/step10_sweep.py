@@ -16,6 +16,7 @@ from entity import EntityRegistry
 from paxos import Acceptor, FlexibleQuorum, MajorityQuorum, Proposer
 from quorums import CrumblingWallQuorum
 from demo_step_10 import build_topology, ReconciliationStats
+from demo_step_9 import mars_blackout_pairs
 
 
 def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
@@ -126,17 +127,15 @@ def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
             yield env.timeout(120.0)
 
     def controller():
-        mars_locs = [f"mars-{i}" for i in range(3)]
+        pairs = mars_blackout_pairs(network)
         yield env.timeout(blackout_start)
 
         if with_repeater:
-            for s in ["na-west", "europe", "moon"]:
-                for d in mars_locs:
-                    network.update_link(s, d, latency=240.0, jitter=12.0)
+            for s, d in pairs:
+                network.update_link(s, d, latency=240.0, jitter=12.0)
         else:
-            for s in ["na-west", "europe", "moon"]:
-                for d in mars_locs:
-                    network.partition_locations(s, d)
+            for s, d in pairs:
+                network.partition_locations(s, d)
 
         crash_targets = ["africa", "sa-east", "asia", "europe", "na-west"][:crash_count]
         if crash_targets:
@@ -149,10 +148,9 @@ def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
         yield env.timeout(blackout_dur)
 
         if with_repeater:
-            for s in ["na-west", "europe", "moon"]:
-                for d in mars_locs:
-                    base = mars_latency + (1.28 if s == "moon" else 0)
-                    network.update_link(s, d, latency=base, jitter=5.0)
+            for s, d in pairs:
+                base = mars_latency + (1.28 if s == "moon" else 0)
+                network.update_link(s, d, latency=base, jitter=5.0)
         else:
             network.heal_all()
 
