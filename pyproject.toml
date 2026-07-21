@@ -8,3 +8,12 @@ dependencies = [
     "opentimestamps-client>=0.7.2",
     "simpy>=4.1.1",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

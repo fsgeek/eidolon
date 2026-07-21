@@ -234,6 +234,16 @@ class CrumblingWallQuorum(QuorumSystem):
         """Return the tier index for a given node ID."""
         return self._node_to_tier[node_id]
 
+    @property
+    def phase2_threshold(self) -> int:
+        """The k in k-of-|fast tier| required for Phase 2."""
+        return self._phase2_threshold
+
+    @property
+    def min_earth_in_q1(self) -> int:
+        """Minimum fast-tier nodes any Q1 needs: |E| - k + 1 (hitting set)."""
+        return self._min_earth_in_q1
+
     def phase1_quorum_size(self, initiator_tier: int | None = None) -> int:
         """Phase 1 size depends on the initiating tier.
 
