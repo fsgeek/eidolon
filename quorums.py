@@ -245,16 +245,19 @@ class CrumblingWallQuorum(QuorumSystem):
         return self._min_earth_in_q1
 
     def phase1_quorum_size(self, initiator_tier: int | None = None) -> int:
-        """Phase 1 size depends on the initiating tier.
+        """Minimum Phase 1 quorum size for the initiating tier.
 
-        A proposer at tier i needs one node from each tier j where j >= i
-        (its own tier and all tiers below it in the wall).
+        A proposer at tier i needs one node from each intermediate tier
+        j in [i, num_tiers-1) plus min_earth_in_q1 fast-tier nodes (the
+        |E|-k+1 hitting set that guarantees Q1/Q2 intersection). For
+        strict Phase 2 the hitting set is 1 and this equals the tier
+        count; under relaxed k it is strictly larger.
         """
         if initiator_tier is None:
             # Top of wall (Mars) — worst case, for backwards compatibility
             initiator_tier = 0
-        # Count of tiers at or below the initiator
-        return sum(1 for j in range(initiator_tier, self.num_tiers))
+        intermediate = self.num_tiers - 1 - initiator_tier
+        return intermediate + self._min_earth_in_q1
 
     def phase2_quorum_size(self) -> int:
         return self._phase2_size
@@ -289,7 +292,8 @@ class CrumblingWallQuorum(QuorumSystem):
         p2_desc = ("fast tier" if self._phase2_threshold == len(self.fast_tier)
                    else f"{self._phase2_threshold}-of-{len(self.fast_tier)} fast tier")
         return (f"CrumblingWall(tiers=[{tier_desc}]): "
-                f"Phase1=read-down (top needs {self.num_tiers}, bottom needs 1), "
+                f"Phase1=read-down (top needs {self.phase1_quorum_size(0)}, "
+                f"bottom needs {self.phase1_quorum_size(self.num_tiers - 1)}), "
                 f"Phase2={self._phase2_size} ({p2_desc})")
 
     def describe_tiers(self, tier_names: list[str]) -> str:
@@ -297,9 +301,9 @@ class CrumblingWallQuorum(QuorumSystem):
         lines = []
         for i, (name, tier) in enumerate(zip(tier_names, self.tiers)):
             speed = "FAST" if i == len(self.tiers) - 1 else "slow"
-            q1_needs = self.num_tiers - i
+            q1_needs = self.phase1_quorum_size(i)
             lines.append(f"    Tier {i} ({name}): {len(tier)} nodes [{speed}], "
-                         f"Phase 1 reads {q1_needs} tier(s) downward")
+                         f"Phase 1 minimum {q1_needs} (reads downward)")
         lines.append(f"    Phase 2: {self._phase2_size} (fast tier)")
         return "\n".join(lines)
 
