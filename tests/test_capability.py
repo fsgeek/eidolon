@@ -2,7 +2,7 @@
 
 import pytest
 
-from capability import classify
+from capability import classify, format_missing
 from quorums import CrumblingWallQuorum
 
 MARS = [100, 101, 102]
@@ -58,3 +58,51 @@ def test_obligations_report_each_wall_row():
 def test_out_of_range_tier_raises():
     with pytest.raises(ValueError):
         classify(make_wall(), 4, ALL_NODES)
+
+
+def test_witnesses_are_valid_quorums():
+    wall = make_wall(3)
+    report = classify(wall, MARS_TIER, ALL_NODES)
+    assert wall.is_phase1_quorum(set(report.r1_witness), MARS_TIER)
+    assert wall.is_phase2_quorum(set(report.r2_witness))
+
+
+def test_witness_sizes_match_paper_tradeoff_table():
+    # arXiv/NINeS tradeoff table Phase 1 minima (Earth-init / Mars-init):
+    # k=5 -> 1/4, k=4 -> 2/5, k=3 -> 3/6
+    for k, earth_min, mars_min in [(5, 1, 4), (4, 2, 5), (3, 3, 6)]:
+        wall = make_wall(k)
+        assert len(classify(wall, EARTH_TIER, ALL_NODES).r1_witness) == earth_min
+        assert len(classify(wall, MARS_TIER, ALL_NODES).r1_witness) == mars_min
+
+
+def test_unreachable_phases_have_no_witness():
+    report = classify(make_wall(), MARS_TIER, set(MARS))
+    assert report.r1_witness is None
+    assert report.r2_witness is None
+
+
+def test_missing_is_typed_and_identifies_each_obligation():
+    report = classify(make_wall(), MARS_TIER, set(MARS))
+    # Blocked at Moon (tier 1), LEO (tier 2), Earth (tier 3) for
+    # Phase 1, plus the Phase 2 obligation.
+    assert [(o.phase, o.tier_index) for o in report.missing] \
+        == [(1, 1), (1, 2), (1, 3), (2, 3)]
+    moon_row = report.missing[0]
+    assert moon_row.required == 1
+    assert moon_row.witnesses == frozenset()
+    assert moon_row.unreachable == frozenset({200})
+
+
+def test_format_missing_renders_cli_text():
+    report = classify(make_wall(), MARS_TIER, set(MARS))
+    lines = format_missing(report)
+    assert len(lines) == 4
+    assert any("tier 1" in line and "200" in line for line in lines)
+    assert any(line.startswith("Phase 2") for line in lines)
+
+
+def test_fully_capable_report_has_empty_missing():
+    report = classify(make_wall(), EARTH_TIER, ALL_NODES)
+    assert report.missing == ()
+    assert format_missing(report) == ()

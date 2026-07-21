@@ -58,6 +58,24 @@ class CapabilityReport:
     r2: bool
     r1_obligations: tuple[TierObligation, ...]
     r2_obligation: TierObligation
+    r1_witness: frozenset[int] | None
+    r2_witness: frozenset[int] | None
+
+    @property
+    def missing(self) -> tuple[TierObligation, ...]:
+        """The unsatisfied obligations, as typed records."""
+        unmet = [o for o in self.r1_obligations if not o.satisfied]
+        if not self.r2_obligation.satisfied:
+            unmet.append(self.r2_obligation)
+        return tuple(unmet)
+
+
+def _minimal_witness(obligations: list[TierObligation]) -> frozenset[int]:
+    """Deterministic minimal quorum: lowest node IDs satisfying each row."""
+    picked: set[int] = set()
+    for o in obligations:
+        picked.update(sorted(o.witnesses)[:o.required])
+    return frozenset(picked)
 
 
 def classify(wall: CrumblingWallQuorum, initiator_tier: int,
@@ -93,10 +111,29 @@ def classify(wall: CrumblingWallQuorum, initiator_tier: int,
     )
     r2 = r2_obligation.satisfied
 
+    r1_witness = _minimal_witness(obligations) if r1 else None
+    if r1_witness is not None:
+        assert wall.is_phase1_quorum(set(r1_witness), initiator_tier)
+    r2_witness = (frozenset(sorted(r2_obligation.witnesses)[:wall.phase2_threshold])
+                  if r2 else None)
+    if r2_witness is not None:
+        assert wall.is_phase2_quorum(set(r2_witness))
+
     return CapabilityReport(
         initiator_tier=initiator_tier,
         r1=r1,
         r2=r2,
         r1_obligations=tuple(obligations),
         r2_obligation=r2_obligation,
+        r1_witness=r1_witness,
+        r2_witness=r2_witness,
     )
+
+
+def format_missing(report: CapabilityReport) -> tuple[str, ...]:
+    """Human-readable rendering of missing obligations (CLI boundary)."""
+    return tuple(
+        f"Phase {o.phase} obligation at tier {o.tier_index}: require "
+        f"{o.required}, reachable {len(o.witnesses)}; "
+        f"unreachable candidates {sorted(o.unreachable)}"
+        for o in report.missing)
