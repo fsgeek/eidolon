@@ -432,7 +432,7 @@ Moon succeeds in both topologies because it has links to all five Earth ground s
 The strict Phase~2 choice $\mathcal{Q}_2 = \{E\}$ introduces a fragility: a single crashed Earth acceptor blocks all global Phase~2 progress. This section relaxes that choice.
 
 \subsection{Relaxed Construction}
-Let the relaxed Phase~2 family require $k$ of $|E|$ Earth nodes. We evaluate $k = 4$ (tolerates one crash) and $k = 3$ (tolerates two). Phase~1 requires correspondingly more Earth nodes to maintain intersection: if Phase~2 requires $k$-of-$|E|$ Earth nodes, then any two Phase~2 quorums overlap in at least $|E| - k + 1$ nodes (by pigeonhole). Phase~1 must contain at least $|E| - k + 1$ Earth nodes to guarantee intersection with every Phase~2 quorum. For $k = 4$ out of 5 Earth nodes, this means at least 2 Earth nodes in every $Q_1$; for $k = 3$, at least 3. Both constructions were verified exhaustively in TLA+.
+Let the relaxed Phase~2 family require $k$ of $|E|$ Earth nodes. We evaluate $k = 4$ (tolerates one crash) and $k = 3$ (tolerates two). Phase~1 requires correspondingly more Earth nodes to maintain intersection: a $k$-of-$|E|$ Phase~2 quorum omits at most $|E| - k$ Earth nodes, so any set of $|E| - k + 1$ Earth nodes intersects every Phase~2 quorum (pigeonhole). Phase~1 must therefore contain at least $|E| - k + 1$ Earth nodes. For $k = 4$ out of 5 Earth nodes, this means at least 2 Earth nodes in every $Q_1$; for $k = 3$, at least 3. Both constructions were verified exhaustively in TLA+.
 
 The relaxed Phase~1 family for tier~$i$ is:
 \[
@@ -463,22 +463,23 @@ strict & std & 1 & 100.0\% & --- & 0.0\% & n/a \\
 
 \textbf{Strict Phase~2 is completely crash-intolerant.} A single Earth crash produces permanent global liveness loss (row~2).
 
-\textbf{The weakest link migrates.} At two crashes with standard Earth-local quorums, the \emph{global} construction (3-of-5, spanning all tiers) maintains 98\% during-blackout success but the \emph{Earth-local} construction drops to 49.7\% because it cannot form a Phase~1 quorum of 4 with only 3 remaining Earth nodes (rows~5--6). The global construction's crash-tolerance advantage is arithmetic: the global quorum draws from 10 nodes rather than 5, permitting more failures before quorum loss. The structural insight is not the count but the legibility, which crashes matter depends on their tier, not just their number.
+\textbf{The weakest link migrates.} At two crashes with standard Earth-local quorums, the \emph{global} construction ($k = 3$) maintains 98\% during-blackout success but the \emph{Earth-local} construction drops to 49.7\% because it cannot form a Phase~1 quorum of 4 with only 3 remaining Earth nodes (rows~5--6). The global construction's advantage is not that it spans more nodes---for the Earth-initiated proposer used here, both phases of the relaxed global construction touch only Earth nodes---but that its Earth requirements are smaller: at $k = 3$, both global phases need only the three surviving Earth nodes, while the Earth-local configuration still demands four. The structural insight is the legibility of the migration: which crashes matter depends on which quorum family's requirements they intersect, and the wall makes each family's requirements explicit.
 
-\textbf{Coordinated relaxation restores resilience.} Relaxing the Earth-local quorum to majority ($q_1 = q_2 = 3$) recovers 100\% local success while maintaining 92\% global success (row~6). The tradeoff curve:
+\textbf{Coordinated relaxation restores resilience.} Relaxing the Earth-local quorum to majority ($q_1 = q_2 = 3$) recovers 100\% local success while maintaining 92\% global success (row~6). The tradeoff curve, with Phase~1 minima shown for the bottom-initiated (Earth) and top-initiated (Mars) proposers:
 
 \begin{center}
 \small
 \begin{tabular}{lrrrl}
 \toprule
-Regime & Phase~1 min & Phase~2 & Crash tol. & Commit cost \\
+Regime & Phase~1 min (E/M) & Phase~2 & Crash tol. & Commit cost \\
 \midrule
-Strict ($k = 5$) & 6 / 10 & 5 / 5 & 0 & 2-node Earth \\
-Relaxed ($k = 4$) & 7 / 10 & 4 / 5 & 1 & 2-node Earth \\
-Relaxed ($k = 3$) + maj & 8 / 10 & 3 / 5 & 2 & 3-node Earth \\
+Strict ($k = 5$) & 1 / 4 & 5-of-5 & 0 & 2-node Earth \\
+Relaxed ($k = 4$) & 2 / 5 & 4-of-5 & 1 & 2-node Earth \\
+Relaxed ($k = 3$) + maj & 3 / 6 & 3-of-5 & 2 & 3-node Earth \\
 \bottomrule
 \end{tabular}
 \end{center}
+An Earth-initiated $Q_1$ needs only the $|E| - k + 1$ Earth nodes; a Mars-initiated $Q_1$ adds one witness from each of the three upper tiers. Relaxation buys crash tolerance by growing the cold path, never the hot one: Phase~2 shrinks as Phase~1's Earth requirement grows.
 
 
 \section{Threats to Validity and Limitations}
@@ -503,7 +504,7 @@ All results are design-level, not deployment-level.
 
 \textbf{Separation of inter-tier obligation from intra-tier replication.} The separation introduced in Section~1 has a concrete cost consequence: the wall's per-tier Phase~1 obligation (one witness from the tier) is strictly cheaper than requiring intra-tier consensus. Mars's three nodes are independent witnesses---any one satisfies the wall's requirement. A Mars-internal majority would require two of three, adding a quorum obligation the wall does not need. The anchor tier is the sole exception: Phase~2 coherence requires it to behave as a single logical entity, achievable through internal replication (the standard 2PC coordinator trick). Non-anchor tiers benefit from redundancy without paying the cost of within-tier agreement. The TLA+ verification provides independent evidence for this separation: the reduced 6-node topology ($3E + 1L + 1U + 1M$) is not merely a computational shortcut but a model of the collapsed-tier design---shrinking Earth from five nodes to three preserves all quorum intersection properties precisely because safety depends on tier membership, not tier size. The same structural invariant that makes the reduction valid makes the deployment collapse cheap.
 
-\textbf{Topology-scoped consistency.} During blackout, the wall partitions the system into tiers that are linearizable with respect to the global log and tiers that retain only sequential consistency locally. Earth, LEO, and Moon can still complete global Phase~1, discover all committed values, and write new ones that are ordered with respect to the full history---they remain linearizable. Mars nodes can still read their local replicas and those reads respect the order of locally observed writes, but there are Earth-committed values that Mars cannot discover until connectivity resumes. Mars is sequentially consistent but not linearizable with respect to the global log. The wall tells you exactly which regime each tier is in: a tier at position~$i$ is globally linearizable if and only if it can reach every tier $j \le i$; otherwise its consistency degrades to local sequential consistency in a way the wall makes explicit. At interplanetary distances, the gap between the two regimes is twenty-two minutes wide---the distinction that distributed systems students struggle with as an abstract definition becomes a physical fact you could set a timer by.
+\textbf{Topology-scoped consistency.} During blackout, the wall separates tiers by which \emph{capabilities} they retain. Earth, LEO, and Moon can still form both global quorums: they can complete Phase~1 (discover every committed value---any Phase~1 quorum intersects every Phase~2 quorum, so nothing committed can be missed) and Phase~2 (extend the global log); under the standard Paxos client discipline, their operations on the global log remain linearizable. Mars retains neither capability: there are Earth-committed values Mars cannot discover until connectivity resumes, so it is confined to reading its local replica---a stale but locally ordered prefix of the global history. Mars is sequentially consistent locally but not linearizable with respect to the global log. The two capabilities are independent, and both matter: the Phase~1 condition (reaching every tier $j \le i$) lets a tier \emph{learn} the global history, while \emph{extending} it additionally requires reaching the Phase~2 quorum. Under the sparse topology of Section~\ref{sec:reachability}, LEO satisfies its Phase~1 obligation and can still learn the global history, but cannot reach the strict Phase~2 quorum and so cannot extend it. The wall tells you exactly which capabilities each tier holds, and hence which consistency regime it can sustain. At interplanetary distances, the gap between the global and local regimes is twenty-two minutes wide---the distinction that distributed systems students struggle with as an abstract definition becomes a physical fact you could set a timer by.
 
 \textbf{Leadership hierarchy.} The wall imposes a cost gradient on Multi-Paxos leader election that symmetric quorum constructions cannot express. The exhaustive TLA+ enumeration quantifies this: Figure~\ref{fig:gradient} shows the number of valid Phase~1 quorums per tier. Earth has 4.6$\times$ more valid Phase~1 quorums than Mars. In Multi-Paxos, where leader election \emph{is} Phase~1, this means Earth leader election is not only faster (sub-second vs.\ minutes) but has more valid quorum configurations, increasing the number of crash patterns under which election can still succeed. The gradient is monotonic as leadership flexibility increases from top to bottom of the wall.
 
