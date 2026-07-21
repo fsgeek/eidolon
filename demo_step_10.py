@@ -20,7 +20,7 @@ from statistics import mean
 
 import simpy
 
-from datacenter import five_dc_topology
+from demo_step_9 import build_topology
 from entity import EntityRegistry
 from paxos import Acceptor, FlexibleQuorum, MajorityQuorum, Proposer
 from quorums import CrumblingWallQuorum
@@ -73,44 +73,6 @@ def _p95(values: list[float]) -> float | None:
     ordered = sorted(values)
     idx = max(0, int(0.95 * (len(ordered) - 1)))
     return ordered[idx]
-
-
-def build_topology(env: simpy.Environment, mars_base_latency_s: float, seed: int = 42):
-    """5 Earth DCs + LEO + Moon + 3 Mars sites + Lagrange relay."""
-    network = five_dc_topology(env, seed=seed)
-
-    network.add_location("leo-sat")
-    network.add_link("na-west", "leo-sat", latency=0.020, jitter=0.005)
-    network.add_link("europe", "leo-sat", latency=0.030, jitter=0.005)
-    network.add_link("asia", "leo-sat", latency=0.035, jitter=0.005)
-
-    network.add_location("moon")
-    for loc in ["na-west", "europe", "asia", "sa-east", "africa"]:
-        network.add_link(loc, "moon", latency=1.28, jitter=0.01)
-    network.add_link("leo-sat", "moon", latency=1.28, jitter=0.01)
-
-    for i in range(3):
-        network.add_location(f"mars-{i}")
-    network.add_link("mars-0", "mars-1", latency=0.005, jitter=0.001)
-    network.add_link("mars-0", "mars-2", latency=0.005, jitter=0.001)
-    network.add_link("mars-1", "mars-2", latency=0.005, jitter=0.001)
-
-    for earth_loc in ["na-west", "europe"]:
-        for i in range(3):
-            network.add_link(
-                earth_loc, f"mars-{i}",
-                latency=mars_base_latency_s, jitter=5.0,
-            )
-    for i in range(3):
-        network.add_link("moon", f"mars-{i}", latency=mars_base_latency_s + 1.28, jitter=5.0)
-
-    network.add_location("lagrange-relay")
-    network.add_link("na-west", "lagrange-relay", latency=0.350, jitter=0.01)
-    network.add_link("europe", "lagrange-relay", latency=0.360, jitter=0.01)
-    for i in range(3):
-        network.add_link("lagrange-relay", f"mars-{i}", latency=220.0, jitter=10.0)
-
-    return network
 
 
 def _wire_system(env: simpy.Environment, cfg: ExperimentConfig):

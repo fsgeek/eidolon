@@ -100,6 +100,10 @@ class DatacenterNetwork(Network):
 
         return self._links.get((src_loc, dst_loc))
 
+    def has_link(self, a: str, b: str) -> bool:
+        """True if a direct link exists between locations a and b."""
+        return (a, b) in self._links or (b, a) in self._links
+
     def partition_locations(self, loc_a: str, loc_b: str):
         """Partition two locations (bidirectional)."""
         self._partitioned_locations.add((loc_a, loc_b))

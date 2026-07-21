@@ -196,6 +196,13 @@ def build_topology(env: simpy.Environment, mars_base_latency_s: float, seed: int
     for i in range(3):
         network.add_link("moon", f"mars-{i}", latency=mars_base_latency_s + 1.28, jitter=5.0)
 
+    # Mars <-> LEO relay: required for Mars-initiated Phase 1 (the wall
+    # reads down through every tier). Same order of magnitude as the
+    # direct Mars-Earth path; the LEO satellite is in the Earth system.
+    for i in range(3):
+        network.add_link("leo-sat", f"mars-{i}",
+                         latency=mars_base_latency_s, jitter=5.0)
+
     # Control-plane abstraction for the refinement scenario.
     network.add_location("lagrange-relay")
     network.add_link("na-west", "lagrange-relay", latency=0.350, jitter=0.01)
