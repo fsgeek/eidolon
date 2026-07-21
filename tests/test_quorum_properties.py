@@ -1,5 +1,7 @@
 """Public accessors and size reporting on CrumblingWallQuorum."""
 
+import pytest
+
 from quorums import CrumblingWallQuorum
 
 MARS = [100, 101, 102]
@@ -42,3 +44,8 @@ def test_describe_reports_relaxed_phase1_minima():
     text = make_wall(3).describe()
     assert "top needs 6" in text
     assert "bottom needs 3" in text
+
+
+def test_overlapping_tiers_raise_value_error():
+    with pytest.raises(ValueError, match=r"\b300\b"):
+        CrumblingWallQuorum([MARS, MOON, LEO, EARTH + [300]])

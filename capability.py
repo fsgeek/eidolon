@@ -17,6 +17,13 @@ acceptors when they are up. The classifier does not decide *why* a
 node is absent (scheduled disconnection, failed relay, short timeout);
 the caller must report the cause.
 
+R1 and R2 are decided by testing the reachable set itself against the
+quorum predicates' per-tier obligations, which is equivalent to "some
+quorum is a subset of Reach" precisely because both predicates are
+upward-closed (monotone) in their respondent set — this equivalence is
+what the exhaustive test in tests/test_capability_exhaustive.py relies
+on.
+
 Spec: docs/superpowers/specs/2026-07-19-four-layer-capability-model-design.md
 """
 

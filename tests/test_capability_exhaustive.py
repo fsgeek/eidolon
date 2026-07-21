@@ -38,6 +38,10 @@ def test_classifier_agrees_with_quorum_predicates_exhaustively():
                     # Minimal witness matches the corrected size formula.
                     assert len(report.r1_witness) \
                         == wall.phase1_quorum_size(tier)
+                    assert wall.is_phase1_quorum(set(report.r1_witness), tier)
+                if report.r2:
+                    assert wall.is_phase2_quorum(set(report.r2_witness))
+                    assert len(report.r2_witness) == wall.phase2_threshold
 
 
 def test_hazard_flags_follow_matrix_exhaustively():

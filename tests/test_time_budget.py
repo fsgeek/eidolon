@@ -3,6 +3,8 @@
 examples: close approach ~186 s one-way, so a fresh two-phase round is
 ~744 s before margin and a 600 s pre-window cannot contain one."""
 
+import pytest
+
 from time_budget import (
     ExperimentWindow,
     classify_attempt,
@@ -67,3 +69,10 @@ def test_attempt_regimes_by_full_containment():
     # A packet sent before the boundary may arrive after it.
     assert classify_attempt(900, 1100, 1000, 1900) == "transition"
     assert classify_attempt(1800, 2000, 1000, 1900) == "transition"
+
+
+def test_classify_attempt_rejects_inverted_intervals():
+    with pytest.raises(ValueError):
+        classify_attempt(1100, 1000, 1000, 1900)
+    with pytest.raises(ValueError):
+        classify_attempt(0, 999, 1900, 1000)

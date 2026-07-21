@@ -71,7 +71,20 @@ def classify_attempt(start: float, end: float, blackout_start: float,
     The network tests a partition when a packet is sent, so a packet
     sent before a boundary may arrive after it; attempts that cross a
     boundary must be excluded from steady-regime success rates.
+
+    Boundary convention: boundaries are exclusive of the blackout, so
+    an attempt with end == blackout_start is "pre" and an attempt with
+    start == blackout_end is "post".
+
+    Raises:
+        ValueError: if start > end or blackout_start > blackout_end.
     """
+    if start > end:
+        raise ValueError(f"start ({start}) must not exceed end ({end})")
+    if blackout_start > blackout_end:
+        raise ValueError(
+            f"blackout_start ({blackout_start}) must not exceed "
+            f"blackout_end ({blackout_end})")
     if end <= blackout_start:
         return "pre"
     if start >= blackout_end:

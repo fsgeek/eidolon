@@ -194,8 +194,19 @@ class CrumblingWallQuorum(QuorumSystem):
                    e.g., 4 for 4-of-5 Earth (relaxed).
         """
         all_nodes = []
+        seen: set[int] = set()
+        duplicates: set[int] = set()
         for tier in tiers:
+            for node_id in tier:
+                if node_id in seen:
+                    duplicates.add(node_id)
+                seen.add(node_id)
             all_nodes.extend(tier)
+        if duplicates:
+            raise ValueError(
+                f"tiers must be pairwise disjoint; node id(s) "
+                f"{sorted(duplicates)} appear in more than one tier"
+            )
         super().__init__(all_nodes)
 
         self.tiers = tiers

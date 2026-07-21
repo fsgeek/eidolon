@@ -1,4 +1,8 @@
-"""Core R1/R2 envelope of the crumbling-wall capability classifier."""
+"""Core R1/R2 envelope of the crumbling-wall capability classifier.
+
+Covers the R1/R2 envelope, minimal witnesses, missing obligations,
+hazard flags, the runtime-authority predicates, and provenance.
+"""
 
 import pytest
 
