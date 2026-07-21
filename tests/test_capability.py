@@ -2,7 +2,7 @@
 
 import pytest
 
-from capability import classify, format_missing
+from capability import EvidenceChannel, Hazard, classify, format_missing
 from quorums import CrumblingWallQuorum
 
 MARS = [100, 101, 102]
@@ -106,3 +106,45 @@ def test_fully_capable_report_has_empty_missing():
     report = classify(make_wall(), EARTH_TIER, ALL_NODES)
     assert report.missing == ()
     assert format_missing(report) == ()
+
+
+def test_10_state_flags_disruptive_election():
+    report = classify(make_wall(), LEO_TIER, {300, 1, 2, 3})
+    assert report.hazards == (Hazard.DISRUPTIVE_ELECTION,)
+    assert report.requires_preexisting_authority is False
+
+
+def test_01_state_isolates_broken_intermediate_row():
+    # Moon and the Earth anchor reachable; ONLY the LEO row is broken
+    # (spec: "broken intermediate Phase-1 obligation with anchor
+    # reachable"). Reaching only Earth would break two rows at once
+    # and not isolate the intermediate obligation.
+    report = classify(make_wall(), MOON_TIER, set(MOON) | set(EARTH))
+    assert (report.r1, report.r2) == (False, True)
+    assert report.hazards == (Hazard.INCUMBENT_ONLY,)
+    assert report.requires_preexisting_authority is True
+    assert report.can_acquire_or_recover_authority is False
+    assert report.can_exercise_existing_authority is True
+    assert [(o.phase, o.tier_index) for o in report.missing] == [(1, 2)]
+
+
+def test_11_and_00_states_have_no_hazards():
+    wall = make_wall()
+    full = classify(wall, EARTH_TIER, ALL_NODES)
+    cut = classify(wall, MARS_TIER, set(MARS))
+    assert full.hazards == () and cut.hazards == ()
+    assert full.requires_preexisting_authority is False
+    assert cut.requires_preexisting_authority is False
+
+
+def test_provenance_gives_joint_evidence_channels():
+    prov = classify(make_wall(), EARTH_TIER, ALL_NODES).provenance
+    assert prov["quorum_families"] == {EvidenceChannel.CONFIGURATION}
+    structural = {EvidenceChannel.CONFIGURATION, EvidenceChannel.CONNECTIVITY}
+    for key in ("r1", "r2", "r1_witness", "r2_witness", "missing",
+                "hazards", "requires_preexisting_authority"):
+        assert prov[key] == structural, key
+    assert prov["operational_progress"] == {
+        EvidenceChannel.CONFIGURATION, EvidenceChannel.CONNECTIVITY,
+        EvidenceChannel.RUNTIME}
+    assert prov["service_contract"] == {EvidenceChannel.POLICY}

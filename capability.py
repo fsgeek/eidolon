@@ -23,8 +23,60 @@ Spec: docs/superpowers/specs/2026-07-19-four-layer-capability-model-design.md
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 
 from quorums import CrumblingWallQuorum
+
+
+class EvidenceChannel(Enum):
+    """Kinds of evidence a conclusion can rest on (stratified legibility).
+
+    RUNTIME denotes FRESH runtime evidence — e.g. that an incumbent's
+    ballot is still un-preempted now, not merely that it once was.
+    """
+
+    CONFIGURATION = "configuration"
+    CONNECTIVITY = "connectivity"
+    RUNTIME = "runtime"
+    POLICY = "policy"
+
+
+class Hazard(Enum):
+    """Hazardous-action labels from the R1 x R2 matrix.
+
+    DISRUPTIVE_ELECTION marks where the disruptive action is
+    structurally REACHABLE: actually disrupting an incumbent further
+    requires completing a higher-ballot Phase 1 whose slot/epoch scope
+    covers the incumbent's — runtime facts the classifier cannot see.
+    INCUMBENT_ONLY marks that progress continues only while some
+    incumbent's authority remains valid — likewise runtime state.
+    """
+
+    DISRUPTIVE_ELECTION = "disruptive-election"
+    INCUMBENT_ONLY = "incumbent-only"
+
+
+#: Evidence channels each conclusion JOINTLY requires. Structural
+#: conclusions need the quorum configuration AND a connectivity
+#: summary. Two boundary markers extend beyond computed report fields,
+#: as the spec requires provenance to mark where structural legibility
+#: ends: operational progress additionally needs fresh runtime
+#: authority evidence, and the client-visible contract is a service
+#: policy declaration, never a classifier output.
+_STRUCTURAL = frozenset({EvidenceChannel.CONFIGURATION,
+                         EvidenceChannel.CONNECTIVITY})
+PROVENANCE: dict[str, frozenset[EvidenceChannel]] = {
+    "quorum_families": frozenset({EvidenceChannel.CONFIGURATION}),
+    "r1": _STRUCTURAL,
+    "r2": _STRUCTURAL,
+    "r1_witness": _STRUCTURAL,
+    "r2_witness": _STRUCTURAL,
+    "missing": _STRUCTURAL,
+    "hazards": _STRUCTURAL,
+    "requires_preexisting_authority": _STRUCTURAL,
+    "operational_progress": _STRUCTURAL | {EvidenceChannel.RUNTIME},
+    "service_contract": frozenset({EvidenceChannel.POLICY}),
+}
 
 
 @dataclass(frozen=True)
@@ -60,6 +112,8 @@ class CapabilityReport:
     r2_obligation: TierObligation
     r1_witness: frozenset[int] | None
     r2_witness: frozenset[int] | None
+    hazards: tuple[Hazard, ...]
+    requires_preexisting_authority: bool
 
     @property
     def missing(self) -> tuple[TierObligation, ...]:
@@ -68,6 +122,23 @@ class CapabilityReport:
         if not self.r2_obligation.satisfied:
             unmet.append(self.r2_obligation)
         return tuple(unmet)
+
+    @property
+    def can_acquire_or_recover_authority(self) -> bool:
+        """Structural: a Phase 1 quorum is reachable (spec Layer 3)."""
+        return self.r1
+
+    @property
+    def can_exercise_existing_authority(self) -> bool:
+        """Structural precondition ONLY: a Phase 2 quorum is reachable.
+        Actually exercising it also requires a valid incumbent
+        authority, which is runtime evidence the classifier never sees.
+        """
+        return self.r2
+
+    @property
+    def provenance(self) -> dict[str, frozenset[EvidenceChannel]]:
+        return dict(PROVENANCE)
 
 
 def _minimal_witness(obligations: list[TierObligation]) -> frozenset[int]:
@@ -119,6 +190,13 @@ def classify(wall: CrumblingWallQuorum, initiator_tier: int,
     if r2_witness is not None:
         assert wall.is_phase2_quorum(set(r2_witness))
 
+    hazards = []
+    if r1 and not r2:
+        hazards.append(Hazard.DISRUPTIVE_ELECTION)
+    if r2 and not r1:
+        hazards.append(Hazard.INCUMBENT_ONLY)
+    requires_preexisting_authority = r2 and not r1
+
     return CapabilityReport(
         initiator_tier=initiator_tier,
         r1=r1,
@@ -127,6 +205,8 @@ def classify(wall: CrumblingWallQuorum, initiator_tier: int,
         r2_obligation=r2_obligation,
         r1_witness=r1_witness,
         r2_witness=r2_witness,
+        hazards=tuple(hazards),
+        requires_preexisting_authority=requires_preexisting_authority,
     )
 
 
