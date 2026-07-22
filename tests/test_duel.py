@@ -236,3 +236,45 @@ def test_classify_outcome_branches():
                             None) == "leo_blocked"
     assert classify_outcome(None, done_fail, None, False, 0, 0,
                             None) == "no_decision"
+
+
+def test_offset_grid_shape():
+    import sys as _sys
+    from pathlib import Path as _P
+    _sys.path.insert(0, str(_P(__file__).resolve().parents[1] / "experiments"))
+    from duel_sweep import offset_grid
+    grid = offset_grid()
+    assert 0.0 not in grid
+    assert min(grid) == -12.0
+    assert max(grid) <= 118.0
+    fine = [o for o in grid if -12.0 <= o <= 6.0]
+    diffs = {round(b - a, 3) for a, b in zip(fine, fine[1:])}
+    assert diffs == {0.05} or diffs == {0.05, 0.1}  # 0.1 gap where 0.0 was removed
+    assert all(o > 6.0 for o in grid if o not in fine)
+
+
+def test_wilson_ci_known_values():
+    from duel_sweep import wilson_ci
+    lo, hi = wilson_ci(0, 0)
+    assert lo is None and hi is None
+    lo, hi = wilson_ci(50, 50)
+    assert hi == 1.0 and lo > 0.9   # no fake ±0.0 certainty
+    lo, hi = wilson_ci(0, 50)
+    assert lo == 0.0 and hi < 0.1
+    lo, hi = wilson_ci(25, 50)
+    assert 0.36 < lo < 0.5 < hi < 0.64
+
+
+def test_trial_row_carries_full_config():
+    from duel import run_duel_trial
+    from duel_sweep import trial_row
+    t = run_duel_trial(offset=30.0, polarity="leo_high", k=5)
+    row = trial_row(t)
+    for col in ("offset", "polarity", "k", "earth_max_rounds",
+                "leo_max_rounds", "jitter_scale", "seed", "leo_enabled",
+                "livelock_min_preempted_rounds", "outcome", "decided_by",
+                "rounds_overlapped", "earth_success", "earth_rounds",
+                "earth_p1_nacks", "earth_p2_nacks", "earth_late_nacks",
+                "leo_p1_quorums", "leo_p2_failures",
+                "earth_commit_latency_s"):
+        assert col in row, col
