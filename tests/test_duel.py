@@ -211,3 +211,28 @@ def test_k3_someone_commits_and_safety_holds():
                        earth_max_rounds=5)
     assert t.outcome in ("earth_commit", "leo_commit")
     assert t.decided_value is not None
+
+
+def test_censored_outcome_on_short_horizon():
+    from duel import run_duel_trial
+    t = run_duel_trial(offset=-0.5, polarity="leo_high", k=5, tail=0.05)
+    assert t.outcome == "censored"
+
+
+def test_classify_outcome_branches():
+    # Pure-function coverage of the full A8 taxonomy (as amended: mutual
+    # livelock, total-not-consecutive counts) without razor-edge dynamics.
+    from duel import classify_outcome
+    from paxos import ConsensusResult
+    done_ok = ConsensusResult(success=True, slot=1)
+    done_fail = ConsensusResult(success=False, slot=1)
+    assert classify_outcome(None, None, done_ok, True, 0, 0, None) == "censored"
+    assert classify_outcome(None, done_fail, None, True, 0, 0, None) == "censored"
+    assert classify_outcome((5502, "leo-1"), done_fail, done_ok, True, 1, 0,
+                            "leo") == "leo_commit"
+    assert classify_outcome(None, done_fail, done_fail, True, 3, 1,
+                            None) == "livelock"
+    assert classify_outcome(None, done_fail, done_fail, True, 3, 0,
+                            None) == "leo_blocked"
+    assert classify_outcome(None, done_fail, None, False, 0, 0,
+                            None) == "no_decision"

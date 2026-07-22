@@ -246,6 +246,40 @@ def _overlapped(a: ConsensusResult, b: ConsensusResult) -> bool:
                for (s2, e2) in _intervals(b))
 
 
+def _preempted_rounds(result: ConsensusResult | None) -> int:
+    if result is None:
+        return 0
+    return sum(1 for e in result.round_log
+               if (e["p1_nacks"] or 0) + (e["p2_nacks"] or 0) > 0)
+
+
+def classify_outcome(cert, earth_r, leo_r, leo_enabled,
+                     preempted_earth, preempted_leo, decided_by) -> str:
+    """Outcome taxonomy (premortem A8, as amended 2026-07-22).
+
+    'livelock' requires MUTUAL starvation: Earth preempted in >=
+    LIVELOCK_MIN_PREEMPTED_ROUNDS rounds AND LEO preempted in >= 1 round,
+    with no decision and both proposers finished. Documented
+    simplification: preempted rounds are counted in TOTAL, not
+    consecutively — with earth_max_rounds <= 5 the two coincide in
+    practice, and consecutive-run detection buys nothing at this scale.
+    One-sided starvation (only Earth preempted) is 'leo_blocked': the
+    spoiler prevented a decision — the asymmetric regime the premortem's
+    §B3 names, where classic mutual livelock is not even available to LEO.
+    """
+    if earth_r is None or (leo_enabled and leo_r is None):
+        return "censored"
+    if cert is not None:
+        return f"{decided_by}_commit"
+    if (leo_enabled and not earth_r.success and not leo_r.success
+            and preempted_earth >= LIVELOCK_MIN_PREEMPTED_ROUNDS
+            and preempted_leo >= 1):
+        return "livelock"
+    if leo_enabled and not earth_r.success and preempted_earth > 0:
+        return "leo_blocked"
+    return "no_decision"
+
+
 @dataclass
 class DuelTrialResult:
     offset: float
@@ -263,6 +297,7 @@ class DuelTrialResult:
     decided_ballot: int | None
     rounds_overlapped: bool
     preempted_earth_rounds: int
+    preempted_leo_rounds: int
     earth_result: ConsensusResult | None   # None = censored at horizon
     leo_result: ConsensusResult | None     # None = disabled or censored
     earth_late_nacks: int
@@ -313,23 +348,10 @@ def run_duel_trial(*, offset: float, polarity: str, k: int,
         assert cert is not None and decided_value == leo_r.value, (
             "leo proposer claims success without a matching certificate")
 
-    preempted = 0
-    if earth_r is not None:
-        preempted = sum(1 for e in earth_r.round_log
-                        if (e["p1_nacks"] or 0) + (e["p2_nacks"] or 0) > 0)
-
-    censored = (earth_r is None) or (leo_enabled and leo_r is None)
-    if censored:
-        outcome = "censored"
-    elif cert is not None:
-        outcome = f"{decided_by}_commit"
-    elif (leo_enabled and preempted >= LIVELOCK_MIN_PREEMPTED_ROUNDS
-          and not earth_r.success and not leo_r.success):
-        outcome = "livelock"
-    elif not earth_r.success and leo_enabled and preempted > 0:
-        outcome = "leo_blocked"       # spoiler prevented a decision
-    else:
-        outcome = "no_decision"
+    preempted = _preempted_rounds(earth_r)
+    preempted_leo = _preempted_rounds(leo_r)
+    outcome = classify_outcome(cert, earth_r, leo_r, leo_enabled,
+                               preempted, preempted_leo, decided_by)
 
     return DuelTrialResult(
         offset=offset, polarity=polarity, k=k,
@@ -340,6 +362,7 @@ def run_duel_trial(*, offset: float, polarity: str, k: int,
         rounds_overlapped=(earth_r is not None and leo_r is not None
                            and _overlapped(earth_r, leo_r)),
         preempted_earth_rounds=preempted,
+        preempted_leo_rounds=preempted_leo,
         earth_result=earth_r, leo_result=leo_r,
         earth_late_nacks=sys_.earth_prop.stats["late_nacks"],
         leo_late_nacks=(sys_.leo_prop.stats["late_nacks"]
