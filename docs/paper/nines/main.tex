@@ -600,8 +600,8 @@ Table~\ref{tab:traceability} maps the paper's main claims to executable artifact
 \toprule
 Claim & Evidence & Artifact(s) \\
 \midrule
-Flat construction: 0\% during blackout across all 18 sweep points. & Old construction sweep results. & \texttt{results/step9/} (prior sweep data). \\
-Crumbling wall: 100\% during blackout across all 18 sweep points, 183~ms latency. & All rows show 100\% during-blackout. & \texttt{results/step9\_crumbling/\allowbreak step9\_sweep.csv}; \texttt{experiments/\allowbreak step9\_sweep.py}. \\
+Flat construction: 0\% during blackout across all 18 sweep points. & Flat-mode sweep under the validated harness (\texttt{--global-quorum flat}). & \texttt{results/step9\_flat/\allowbreak step9\_sweep.csv}; \texttt{experiments/\allowbreak step9\_sweep.py}. \\
+Crumbling wall: 100\% during blackout across all 18 sweep points, 183~ms latency. & All rows show 100\% during-blackout. & \texttt{results/step9/\allowbreak step9\_sweep.csv}; \texttt{experiments/\allowbreak step9\_sweep.py}. \\
 Per-tier liveness: 3 of 4 tiers retain global consensus during blackout. & Per-tier sweep, both topologies. & \texttt{results/tier\_liveness/\allowbreak tier\_sweep\_ci.csv}; \texttt{experiments/\allowbreak tier\_liveness\_sweep.py}. \\
 Sparse topology: LEO drops to 0\%. & Sparse rows in per-tier sweep. & Same as above. \\
 Weakest-link migration and coordinated relaxation. & Crash-tolerance sweep rows. & \texttt{results/step10/\allowbreak step10\_sweep\_ci.csv}; \texttt{experiments/\allowbreak step10\_sweep.py}. \\
