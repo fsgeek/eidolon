@@ -38,6 +38,7 @@ from demo_step_9 import (
 from entity import EntityRegistry
 from paxos import Acceptor, FlexibleQuorum, MajorityQuorum, Proposer
 from quorums import CrumblingWallQuorum
+from time_budget import classify_attempt
 
 
 # Tier definitions: index, name, and the network location for the proposer.
@@ -62,6 +63,8 @@ class TierResult:
     during_total: int
     post_success: int
     post_total: int
+    transition_success: int
+    transition_total: int
     avg_latency_s: float | None
     first_post_blackout_s: float | None
     earth_local_success: int
@@ -192,6 +195,7 @@ def run_tier_experiment(
             "pre": ReconciliationStats(),
             "during": ReconciliationStats(),
             "post": ReconciliationStats(),
+            "transition": ReconciliationStats(),
             "latencies": [],
             "first_post": None,
         }
@@ -230,12 +234,11 @@ def run_tier_experiment(
             result = yield prop.propose(slot=slot, value=f"reconcile-t{tier_idx}-{slot}")
             slot += 1
 
-            if started < cfg.blackout_start_s:
-                bucket = stats["pre"]
-            elif started < blackout_end:
-                bucket = stats["during"]
-            else:
-                bucket = stats["post"]
+            ended = env.now
+            bucket = {"pre": stats["pre"], "during": stats["during"],
+                      "post": stats["post"], "transition": stats["transition"]}[
+                classify_attempt(started, ended,
+                                 cfg.blackout_start_s, blackout_end)]
             bucket.total += 1
             if result.success:
                 bucket.success += 1
@@ -290,6 +293,8 @@ def run_tier_experiment(
             during_total=stats["during"].total,
             post_success=stats["post"].success,
             post_total=stats["post"].total,
+            transition_success=stats["transition"].success,
+            transition_total=stats["transition"].total,
             avg_latency_s=mean(lats) if lats else None,
             first_post_blackout_s=stats["first_post"],
             earth_local_success=earth_success,
@@ -325,6 +330,7 @@ CSV_HEADER = [
     "pre_success", "pre_total",
     "during_success", "during_total",
     "post_success", "post_total",
+    "transition_success", "transition_total",
     "avg_latency_s", "first_post_blackout_s",
     "earth_local_success", "earth_local_total",
     "mars_local_success", "mars_local_total",
@@ -385,6 +391,7 @@ def run_sweep(args):
                                     r.pre_success, r.pre_total,
                                     r.during_success, r.during_total,
                                     r.post_success, r.post_total,
+                                    r.transition_success, r.transition_total,
                                     f"{r.avg_latency_s:.6f}" if r.avg_latency_s is not None else "",
                                     f"{r.first_post_blackout_s:.6f}" if r.first_post_blackout_s is not None else "",
                                     r.earth_local_success, r.earth_local_total,

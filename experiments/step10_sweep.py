@@ -17,6 +17,7 @@ from paxos import Acceptor, FlexibleQuorum, MajorityQuorum, Proposer
 from quorums import CrumblingWallQuorum
 from demo_step_10 import build_topology, ReconciliationStats
 from demo_step_9 import mars_blackout_pairs
+from time_budget import classify_attempt
 
 
 def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
@@ -75,6 +76,7 @@ def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
     g_pre = ReconciliationStats()
     g_during = ReconciliationStats()
     g_post = ReconciliationStats()
+    g_transition = ReconciliationStats()
     first_recovery = None
     global_latencies = []
     earth_latencies = []
@@ -112,12 +114,10 @@ def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
             started = env.now
             r = yield global_prop.propose(slot=slot, value=f"g{slot}")
             slot += 1
-            if started < blackout_start:
-                bucket = g_pre
-            elif started < blackout_end:
-                bucket = g_during
-            else:
-                bucket = g_post
+            ended = env.now
+            bucket = {"pre": g_pre, "during": g_during, "post": g_post,
+                      "transition": g_transition}[
+                classify_attempt(started, ended, blackout_start, blackout_end)]
             bucket.total += 1
             if r.success:
                 bucket.success += 1
@@ -179,6 +179,8 @@ def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
         "global_pre_rate": g_pre_rate,
         "global_during_rate": g_d_rate,
         "global_post_rate": g_p_rate,
+        "global_transition_success": g_transition.success,
+        "global_transition_total": g_transition.total,
         "recovery_lag_s": first_recovery,
         "avg_global_latency_s": avg_glat,
         "avg_earth_latency_s": avg_elat,

@@ -19,6 +19,7 @@ from datacenter import five_dc_topology
 from entity import EntityRegistry
 from paxos import Acceptor, FlexibleQuorum, MajorityQuorum, Proposer
 from quorums import CrumblingWallQuorum
+from time_budget import classify_attempt
 
 
 @dataclass(frozen=True)
@@ -49,6 +50,7 @@ class ExperimentResult:
     pre_blackout: ReconciliationStats
     during_blackout: ReconciliationStats
     post_blackout: ReconciliationStats
+    transition: ReconciliationStats
     first_success_after_blackout_s: float | None
     avg_global_latency_s: float | None
     earth_local_avg_latency_s: float | None
@@ -319,6 +321,7 @@ def run_conjunction_experiment(
     pre = ReconciliationStats()
     during = ReconciliationStats()
     post = ReconciliationStats()
+    transition = ReconciliationStats()
     global_latencies = []
     earth_latencies = []
     mars_latencies = []
@@ -358,12 +361,11 @@ def run_conjunction_experiment(
             result = yield global_prop.propose(slot=slot, value=f"reconcile-{slot}")
             slot += 1
 
-            if started < cfg.blackout_start_s:
-                bucket = pre
-            elif started < blackout_end:
-                bucket = during
-            else:
-                bucket = post
+            ended = env.now
+            bucket = {"pre": pre, "during": during, "post": post,
+                      "transition": transition}[
+                classify_attempt(started, ended,
+                                 cfg.blackout_start_s, blackout_end)]
             bucket.total += 1
             if result.success:
                 bucket.success += 1
@@ -412,6 +414,7 @@ def run_conjunction_experiment(
         pre_blackout=pre,
         during_blackout=during,
         post_blackout=post,
+        transition=transition,
         first_success_after_blackout_s=first_success_after_blackout,
         avg_global_latency_s=(
             sum(global_latencies) / len(global_latencies) if global_latencies else None
@@ -457,6 +460,7 @@ def run_conjunction_experiment(
         print(f"    Pre-blackout:    {pre.success}/{pre.total}")
         print(f"    During blackout: {during.success}/{during.total}")
         print(f"    Post-blackout:   {post.success}/{post.total}")
+        print(f"    Transition:      {transition.success}/{transition.total}")
         if result.avg_global_latency_s is not None:
             print(f"    Avg latency:     {result.avg_global_latency_s:.1f}s")
         if result.first_success_after_blackout_s is not None:
@@ -557,6 +561,8 @@ def write_summary_csv(
                 "global_during_total",
                 "global_post_success",
                 "global_post_total",
+                "global_transition_success",
+                "global_transition_total",
                 "first_success_after_blackout_s",
                 "avg_global_latency_s",
                 "earth_local_avg_latency_s",
@@ -602,6 +608,8 @@ def write_summary_csv(
                     r.during_blackout.total,
                     r.post_blackout.success,
                     r.post_blackout.total,
+                    r.transition.success,
+                    r.transition.total,
                     (
                         f"{r.first_success_after_blackout_s:.6f}"
                         if r.first_success_after_blackout_s is not None
