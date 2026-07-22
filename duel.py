@@ -193,3 +193,158 @@ def wire_duel(env: simpy.Environment, *, k: int, polarity: str,
                       earth_prop=earth_prop, leo_prop=leo_prop,
                       acceptors=acceptors, earth_ids=earth_ids,
                       all_ids=all_ids, k=k, polarity=polarity)
+
+
+# Explicit livelock criterion (premortem A8): declared, not horizon-implied.
+LIVELOCK_MIN_PREEMPTED_ROUNDS = 3
+
+
+def decision_certificate(acceptors: list[Acceptor], wall: CrumblingWallQuorum,
+                         slot: int):
+    """Return (ballot, value) for the decided-or-inevitable value, or None.
+
+    This is the four-layer model's learner discipline: a value is chosen
+    only when quorum evidence says so — never inferred from a proposer's
+    own success flag (which is cross-checked against this certificate).
+
+    Groups by VALUE, not exact ballot: value carry-over means a spoiler's
+    higher-ballot re-accept can legitimately advance part of a quorum
+    past the ballot the value was first chosen at (premortem A8 expects
+    exactly this). A value v held as the LATEST acceptance by a full
+    Phase 2 quorum is unique (any two Q2s intersect, and an acceptor has
+    one latest value), and by carry-over every future decision must be
+    v — i.e. v is decided or inevitable. The returned ballot is the
+    highest among v's certifying acceptances.
+    """
+    by_value: dict[Any, set[int]] = {}
+    ballots: dict[Any, int] = {}
+    for acc in acceptors:
+        got = acc._accepted.get(slot)
+        if got is not None:
+            ballot, value = got
+            by_value.setdefault(value, set()).add(acc.entity.id)
+            ballots[value] = max(ballots.get(value, 0), ballot)
+    for value, voters in by_value.items():
+        if wall.is_phase2_quorum(voters):
+            return ballots[value], value
+    return None
+
+
+def _intervals(result: ConsensusResult) -> list[tuple[float, float]]:
+    spans = []
+    for e in result.round_log:
+        end = e["p2_end"] if e["p2_end"] is not None else e["p1_end"]
+        if end is None:
+            end = e["p1_start"]  # round censored mid-phase at horizon
+        spans.append((e["p1_start"], end))
+    return spans
+
+
+def _overlapped(a: ConsensusResult, b: ConsensusResult) -> bool:
+    return any(s1 < e2 and s2 < e1
+               for (s1, e1) in _intervals(a)
+               for (s2, e2) in _intervals(b))
+
+
+@dataclass
+class DuelTrialResult:
+    offset: float
+    polarity: str
+    k: int
+    earth_max_rounds: int
+    leo_max_rounds: int
+    jitter_scale: float
+    seed: int
+    leo_enabled: bool
+    outcome: str          # earth_commit | leo_commit | leo_blocked |
+                          # no_decision | livelock | censored
+    decided_value: str | None
+    decided_by: str | None    # "earth" | "leo" | None (from value provenance)
+    decided_ballot: int | None
+    rounds_overlapped: bool
+    preempted_earth_rounds: int
+    earth_result: ConsensusResult | None   # None = censored at horizon
+    leo_result: ConsensusResult | None     # None = disabled or censored
+    earth_late_nacks: int
+    leo_late_nacks: int
+    earth_commit_latency: float | None
+
+
+def run_duel_trial(*, offset: float, polarity: str, k: int,
+                   earth_max_rounds: int = 1, leo_max_rounds: int = 8,
+                   jitter_scale: float = 0.0, seed: int = 0,
+                   leo_enabled: bool = True, earth_start: float = 5.0,
+                   tail: float = 45.0) -> DuelTrialResult:
+    """One single-slot duel. offset = leo_start - earth_start (s)."""
+    assert offset != 0.0, "offset must be strictly nonzero (premortem A10)"
+    leo_start = earth_start + offset
+    assert min(earth_start, leo_start) > 0.0, (
+        "both start times must be positive; widen earth_start")
+
+    env = simpy.Environment()
+    sys_ = wire_duel(env, k=k, polarity=polarity,
+                     earth_max_rounds=earth_max_rounds,
+                     leo_max_rounds=leo_max_rounds,
+                     jitter_scale=jitter_scale, seed=seed)
+    slot = 1
+    results: dict[str, ConsensusResult] = {}
+
+    def drive(name: str, prop: PriorityProposer, start: float, value: str):
+        yield env.timeout(start)
+        results[name] = yield prop.propose(slot=slot, value=value)
+
+    env.process(drive("earth", sys_.earth_prop, earth_start, f"earth-{slot}"))
+    if leo_enabled:
+        env.process(drive("leo", sys_.leo_prop, leo_start, f"leo-{slot}"))
+
+    env.run(until=max(earth_start, leo_start) + tail)
+
+    earth_r = results.get("earth")
+    leo_r = results.get("leo") if leo_enabled else None
+    cert = decision_certificate(sys_.acceptors, sys_.wall, slot)
+    decided_ballot, decided_value = cert if cert else (None, None)
+    decided_by = (decided_value.split("-")[0] if decided_value else None)
+
+    # Cross-check proposer claims against quorum evidence.
+    if earth_r is not None and earth_r.success:
+        assert cert is not None and decided_value == earth_r.value, (
+            "earth proposer claims success without a matching certificate")
+    if leo_r is not None and leo_r.success:
+        assert cert is not None and decided_value == leo_r.value, (
+            "leo proposer claims success without a matching certificate")
+
+    preempted = 0
+    if earth_r is not None:
+        preempted = sum(1 for e in earth_r.round_log
+                        if (e["p1_nacks"] or 0) + (e["p2_nacks"] or 0) > 0)
+
+    censored = (earth_r is None) or (leo_enabled and leo_r is None)
+    if censored:
+        outcome = "censored"
+    elif cert is not None:
+        outcome = f"{decided_by}_commit"
+    elif (leo_enabled and preempted >= LIVELOCK_MIN_PREEMPTED_ROUNDS
+          and not earth_r.success and not leo_r.success):
+        outcome = "livelock"
+    elif not earth_r.success and leo_enabled and preempted > 0:
+        outcome = "leo_blocked"       # spoiler prevented a decision
+    else:
+        outcome = "no_decision"
+
+    return DuelTrialResult(
+        offset=offset, polarity=polarity, k=k,
+        earth_max_rounds=earth_max_rounds, leo_max_rounds=leo_max_rounds,
+        jitter_scale=jitter_scale, seed=seed, leo_enabled=leo_enabled,
+        outcome=outcome, decided_value=decided_value, decided_by=decided_by,
+        decided_ballot=decided_ballot,
+        rounds_overlapped=(earth_r is not None and leo_r is not None
+                           and _overlapped(earth_r, leo_r)),
+        preempted_earth_rounds=preempted,
+        earth_result=earth_r, leo_result=leo_r,
+        earth_late_nacks=sys_.earth_prop.stats["late_nacks"],
+        leo_late_nacks=(sys_.leo_prop.stats["late_nacks"]
+                        if leo_enabled else 0),
+        earth_commit_latency=(earth_r.total_time
+                              if earth_r is not None and earth_r.success
+                              else None),
+    )

@@ -157,3 +157,57 @@ def test_wire_duel_k3_is_failover_regime():
     rep = classify(sys_.wall, 2, leo_reach)
     assert rep.r1 and rep.r2 and not rep.hazards
     assert sys_.earth_prop.ballot_rank > sys_.leo_prop.ballot_rank
+
+
+def test_far_offset_earth_commits_clean():
+    from duel import run_duel_trial
+    t = run_duel_trial(offset=30.0, polarity="leo_high", k=5)
+    assert t.outcome == "earth_commit"
+    assert t.decided_by == "earth"
+    assert t.earth_result.phase2_nacks == 0
+    assert not t.rounds_overlapped
+    # LEO completed elections but could never commit (R2=0).
+    assert t.leo_result.phase1_quorums >= 1
+    assert t.leo_result.phase2_failures == t.leo_result.phase1_quorums
+    assert not t.leo_result.success
+
+
+def test_overlap_offset_leo_high_single_shot_preempts_earth():
+    # The lemma-predicted regime: Earth starts 0.5s into LEO's ~9s span
+    # of repeated election attempts; LEO's higher ballot has already
+    # poisoned its 3 reachable Earth nodes, so single-shot Earth cannot
+    # commit (k=5 needs all five). The offset sits deep inside the
+    # collision band, robust to link-latency tweaks — the map sweep
+    # charts the razor edges; unit tests must not sit on them. (A +0.05
+    # offset misses the window by ~7.5ms given concrete link latencies.)
+    from duel import run_duel_trial
+    t = run_duel_trial(offset=-0.5, polarity="leo_high", k=5,
+                       earth_max_rounds=1)
+    assert t.rounds_overlapped
+    assert t.outcome in ("no_decision", "leo_blocked")
+    assert not t.earth_result.success
+    assert (t.earth_result.phase1_nacks + t.earth_result.phase2_nacks
+            + t.earth_late_nacks) >= 1
+
+
+def test_baseline_arm_has_no_leo_interference():
+    from duel import run_duel_trial
+    t = run_duel_trial(offset=0.05, polarity="leo_high", k=5,
+                       leo_enabled=False)
+    assert t.outcome == "earth_commit"
+    assert t.leo_result is None
+
+
+def test_zero_offset_rejected():
+    from duel import run_duel_trial
+    import pytest as _pytest
+    with _pytest.raises(AssertionError):
+        run_duel_trial(offset=0.0, polarity="leo_high", k=5)
+
+
+def test_k3_someone_commits_and_safety_holds():
+    from duel import run_duel_trial
+    t = run_duel_trial(offset=-0.5, polarity="leo_high", k=3,
+                       earth_max_rounds=5)
+    assert t.outcome in ("earth_commit", "leo_commit")
+    assert t.decided_value is not None
