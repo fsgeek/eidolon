@@ -39,6 +39,10 @@ class ExperimentConfig:
     global_timeout_s: float = 500.0
     global_max_rounds: int = 1
     seed: int = 42
+    global_quorum: str = "wall"  # "wall" (current, initiator_tier=3) or
+    # "flat" (historical aae70f7 construction: no initiator_tier, so
+    # CrumblingWallQuorum.is_phase1_quorum defaults to requiring every
+    # tier -- the paper's Q1^flat).
 
 
 @dataclass
@@ -296,16 +300,35 @@ def _wire_system(env: simpy.Environment, cfg: ExperimentConfig,
         [leo_entity.id],
         earth_ids,
     ])
-    global_prop = Proposer(
-        env,
-        global_prop_entity,
-        network,
-        all_ids,
-        wall,
-        timeout=global_timeout_s,
-        max_rounds=cfg.global_max_rounds,
-        initiator_tier=3,  # Earth = bottom of wall
-    )
+    if cfg.global_quorum == "wall":
+        global_prop = Proposer(
+            env,
+            global_prop_entity,
+            network,
+            all_ids,
+            wall,
+            timeout=global_timeout_s,
+            max_rounds=cfg.global_max_rounds,
+            initiator_tier=3,  # Earth = bottom of wall
+        )
+    elif cfg.global_quorum == "flat":
+        # Historical construction (git show aae70f7:demo_step_9.py):
+        # same quorum class and tiers, but no initiator_tier -- Proposer's
+        # default (None) makes CrumblingWallQuorum.is_phase1_quorum
+        # require a respondent from every tier (the paper's Q1^flat).
+        global_prop = Proposer(
+            env,
+            global_prop_entity,
+            network,
+            all_ids,
+            wall,
+            timeout=global_timeout_s,
+            max_rounds=cfg.global_max_rounds,
+        )
+    else:
+        raise ValueError(
+            f"global_quorum must be 'wall' or 'flat', got {cfg.global_quorum!r}"
+        )
 
     return network, earth_prop, mars_prop, global_prop
 
@@ -745,6 +768,18 @@ def _parse_args():
     parser.add_argument("--global-timeout-s", type=float, default=500.0)
     parser.add_argument("--global-max-rounds", type=int, default=1)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--global-quorum",
+        type=str,
+        choices=["wall", "flat"],
+        default="wall",
+        help=(
+            "Global-proposer quorum mode: 'wall' (default, current "
+            "initiator_tier=3 construction) or 'flat' (historical "
+            "aae70f7 construction, no initiator_tier -- requires every "
+            "tier in Phase 1)."
+        ),
+    )
     parser.add_argument("--csv", type=str, default="")
     parser.add_argument("--quiet", action="store_true")
     return parser.parse_args()
@@ -761,6 +796,7 @@ def main():
         global_timeout_s=args.global_timeout_s,
         global_max_rounds=args.global_max_rounds,
         seed=args.seed,
+        global_quorum=args.global_quorum,
     )
     baseline, repeater = compare_blackout_vs_repeater(cfg, verbose=not args.quiet)
     if args.csv:
