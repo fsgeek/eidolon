@@ -5,8 +5,10 @@ Design contract: docs/superpowers/notes/2026-07-22-dueling-proposer-premortem.md
 """
 import random
 
+import pytest
 import simpy
 
+from capability import Hazard, classify
 from datacenter import DatacenterNetwork, five_dc_topology
 from network import NetworkConfig
 
@@ -91,3 +93,67 @@ def test_consensus_result_round_log_and_counters():
     assert r.phase2_failures == 0
     assert r.phase1_nacks == 0 and r.phase2_nacks == 0
     assert "late_responses" in prop.stats and "late_nacks" in prop.stats
+
+
+def test_priority_proposer_ballot_uses_rank():
+    from duel import PriorityProposer
+    env = simpy.Environment()
+    net = DatacenterNetwork(env, NetworkConfig(seed=1))
+    net.add_location("dc")
+    reg = EntityRegistry()
+    e = reg.create(name="p")
+    net.assign_entity(e.id, "dc")
+    p = PriorityProposer(env, e, net, [e.id], MajorityQuorum([e.id]),
+                         ballot_rank=501)
+    assert p._next_proposal_number() == 1 * 1000 + 501
+    assert p._next_proposal_number() == 2 * 1000 + 501
+
+
+def test_priority_proposer_rejects_bad_rank():
+    from duel import PriorityProposer
+    env = simpy.Environment()
+    net = DatacenterNetwork(env, NetworkConfig(seed=1))
+    reg = EntityRegistry()
+    e = reg.create(name="p")
+    with pytest.raises(AssertionError):
+        PriorityProposer(env, e, net, [e.id], MajorityQuorum([e.id]),
+                         ballot_rank=1000)
+
+
+def test_scale_jitter_zeroes_all_links():
+    from duel import scale_jitter
+    env = simpy.Environment()
+    net = five_dc_topology(env, seed=3)
+    scale_jitter(net, 0.0)
+    assert all(l.jitter == 0.0 for l in net._links.values())
+    assert net._default_local_link.jitter == 0.0
+    assert net.config.delay_jitter == 0.0
+
+
+def test_wire_duel_gates_and_shared_wall():
+    from duel import wire_duel
+    env = simpy.Environment()
+    sys_ = wire_duel(env, k=5, polarity="leo_high", earth_max_rounds=1,
+                     leo_max_rounds=8, jitter_scale=0.0, seed=0)
+    # A1: literally the same quorum object.
+    assert sys_.earth_prop.quorum is sys_.leo_prop.quorum
+    # A2: explicit distinct ranks; leo_high means LEO wins equal-counter ties.
+    assert sys_.leo_prop.ballot_rank > sys_.earth_prop.ballot_rank
+    # A7: LEO really is in the hazard state, derived from actual links.
+    leo_reach = {a for a in sys_.all_ids
+                 if sys_.network.get_link(sys_.leo_prop.entity.id, a) is not None}
+    rep = classify(sys_.wall, 2, leo_reach)
+    assert rep.r1 and not rep.r2
+    assert Hazard.DISRUPTIVE_ELECTION in rep.hazards
+
+
+def test_wire_duel_k3_is_failover_regime():
+    from duel import wire_duel
+    env = simpy.Environment()
+    sys_ = wire_duel(env, k=3, polarity="earth_high", earth_max_rounds=1,
+                     leo_max_rounds=8, jitter_scale=0.0, seed=0)
+    leo_reach = {a for a in sys_.all_ids
+                 if sys_.network.get_link(sys_.leo_prop.entity.id, a) is not None}
+    rep = classify(sys_.wall, 2, leo_reach)
+    assert rep.r1 and rep.r2 and not rep.hazards
+    assert sys_.earth_prop.ballot_rank > sys_.leo_prop.ballot_rank
