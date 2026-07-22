@@ -564,6 +564,38 @@ attributed to a named commit.
 
 ---
 
+## 13. Probe resolutions (2026-07-22, post-acceptance)
+
+Three probes run after acceptance (commit c423435) resolve §10c's asterisk
+and §12a's caveat, and correct part of §10's attribution:
+
+1. **HEAD spot check, disjoint seeds 90–139:** every accepted 100%±0 row
+   stays 100%±0; recovery lags ~93–95s match the accepted data. The
+   regenerated numbers are robust across seed sets.
+2. **PRE (`9947fe3`), disjoint seeds 90–139:** relax3_maj_2crash = 100%,
+   recovery ~63s. The old 92% does not reproduce on fresh seeds.
+3. **PRE (`9947fe3`), ORIGINAL seeds 40–89 (decoupling probe):** 100%
+   during, recovery 62.56–63.91s — **byte-identical to the T1/T2/T3
+   ablation values** (e.g. relax3_maj 63.914075668439665). The repairs
+   T1–T3 did not move these numbers at all.
+
+**Corrected attribution:** the committed step10 CSVs (92.0%±7.6,
+~489–513s recoveries) were produced at `dfc26fc` (2026-03-18, "Capture
+current Eidolon work") — the same March commit that produced
+`results/step9_crumbling/` — not at `9947fe3`. The 92%→100% move and the
+~500s→~63s recovery drop therefore happened between March and `9947fe3`,
+OUTSIDE the ablation window, and §10's "isolates to T1-topology" verdict
+for those two rows is **withdrawn** (both §12a's RNG-perturbation
+hypothesis and the Mars-LEO-routing mechanism are dead: the values were
+already 100%/~63s at PRE with the original seeds). What survives of §10
+unchanged: the ~63s→~94s recovery rise **is** T4's cadence realignment
+(identical values at T1/T2/T3, only T4 behavioral before HEAD), and Mars
+post-blackout 0%→100% remains cleanly T1's route fix (tier sweep, directly
+measured). Paper consequence: the old tab:relaxed numbers are March-era
+artifacts with the same provenance status as `step9_crumbling` —
+historical, pinned to `dfc26fc`, superseded; the accepted regenerated
+values are the citable ones and are now doubly seed-validated.
+
 ## ESCALATION VERDICT: **BLOCKED**
 
 Multiple rows are `claim-affected` (§9, 15 items), including one
