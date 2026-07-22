@@ -106,19 +106,19 @@ Scenarios tested: strict (all 5 Earth) and relaxed Phase 2 quorums (4-of-5 or 3-
 ## Output Files
 
 ### Step 9 Crumbling Wall Sweep
-- `results/step9/step9_sweep.csv` — raw per-seed results (22 columns)
+- `results/step9/step9_sweep.csv` — raw per-seed results (45 columns)
 - `results/step9/step9_sweep_ci.csv` — mean ± 95% CI aggregated per (scenario, mars_latency, blackout_duration)
 
 ### Step 9 Liveness Envelope
 - `results/step9/step9_liveness.csv` — raw per-seed results (phase-timeout sweep)
-- `results/step9/step9_liveness_ci.csv` — mean ± 95% CI aggregated per (timeout, scenario, mars_latency, blackout_duration)
+- `results/step9/step9_liveness_ci.csv` — mean ± 95% CI aggregated per (scenario, timeout, blackout_duration)
 
 ### Per-Tier Liveness Sweep
-- `results/tier_liveness/tier_sweep.csv` — raw per-seed results (20 columns, both topologies × 2 scenarios per run)
+- `results/tier_liveness/tier_sweep.csv` — raw per-seed results (25 columns, both topologies × 2 scenarios per run)
 - `results/tier_liveness/tier_sweep_ci.csv` — mean ± 95% CI aggregated per (scenario, topology, tier, mars_latency, blackout_duration)
 
 ### Crash-Tolerance Sweep
-- `results/step10/step10_sweep.csv` — raw per-seed results (18 columns, 6 scenarios)
+- `results/step10/step10_sweep.csv` — raw per-seed results (19 columns, 6 scenarios)
 - `results/step10/step10_sweep_ci.csv` — mean ± 95% CI aggregated per scenario
 
 ### Plots
