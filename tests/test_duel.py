@@ -46,3 +46,48 @@ def test_per_link_rng_directional_and_distinct():
     net2.enable_per_link_rng()
     b = [net2._rng_for(2, 1).random() for _ in range(4)]
     assert a != b  # ordered pairs get distinct streams
+
+
+from entity import EntityRegistry
+from paxos import Acceptor, MajorityQuorum, Proposer
+
+
+def _tiny_consensus(max_rounds=3):
+    env = simpy.Environment()
+    net = DatacenterNetwork(env, NetworkConfig(seed=1))
+    net.add_location("dc")
+    reg = EntityRegistry()
+    accs = []
+    for i in range(3):
+        e = reg.create(name=f"a{i}")
+        net.assign_entity(e.id, "dc")
+        accs.append(Acceptor(env, e, net))
+    pe = reg.create(name="prop")
+    net.assign_entity(pe.id, "dc")
+    prop = Proposer(env, pe, net, [a.entity.id for a in accs],
+                    MajorityQuorum([a.entity.id for a in accs]),
+                    timeout=0.5, max_rounds=max_rounds)
+    holder = {}
+
+    def go():
+        holder["r"] = yield prop.propose(slot=0, value="v")
+    env.process(go())
+    env.run(until=10.0)
+    return holder["r"], prop
+
+
+def test_consensus_result_round_log_and_counters():
+    r, prop = _tiny_consensus()
+    assert r.success
+    assert len(r.round_log) == r.rounds
+    first = r.round_log[0]
+    for key in ("round", "proposal_number", "p1_start", "p1_end",
+                "p1_quorum", "p1_nacks", "p2_start", "p2_end",
+                "p2_quorum", "p2_nacks"):
+        assert key in first
+    assert first["p1_quorum"] is True
+    assert first["p2_quorum"] is True
+    assert r.phase1_quorums == 1
+    assert r.phase2_failures == 0
+    assert r.phase1_nacks == 0 and r.phase2_nacks == 0
+    assert "late_responses" in prop.stats and "late_nacks" in prop.stats
