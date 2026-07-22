@@ -48,6 +48,28 @@ class DatacenterNetwork(Network):
         self._partitioned_locations: set[tuple[str, str]] = set()
         self._partition_drops = 0
 
+        # Opt-in per-link RNG isolation (pre-mortem contract A3).
+        # None = legacy behavior: all draws come from the module-global
+        # `random` in packet-send order. Enabled: each ordered (src, dst)
+        # entity pair gets its own stream seeded from (config seed, pair),
+        # so one seed defines a reproducible noise field independent of
+        # event interleaving.
+        self._per_link_rng: dict[tuple[int | None, int], random.Random] | None = None
+
+    def enable_per_link_rng(self):
+        """Give each ordered (src, dst) entity pair an independent RNG stream."""
+        self._per_link_rng = {}
+
+    def _rng_for(self, src_id, dst_id):
+        if self._per_link_rng is None:
+            return random  # legacy: module-global, byte-identical call order
+        key = (src_id, dst_id)
+        rng = self._per_link_rng.get(key)
+        if rng is None:
+            rng = random.Random(f"{self.config.seed}|{src_id}->{dst_id}")
+            self._per_link_rng[key] = rng
+        return rng
+
     def add_location(self, name: str):
         """Add a named location (datacenter, orbit point, etc)."""
         if name not in self._locations:
@@ -169,7 +191,7 @@ class DatacenterNetwork(Network):
             return
 
         # Check link-level loss
-        if link and link.loss > 0 and random.random() < link.loss:
+        if link and link.loss > 0 and self._rng_for(source_id, destination_id).random() < link.loss:
             self._stats["dropped"] += 1
             self._packet_log.append({
                 "time": self.env.now,
@@ -183,13 +205,14 @@ class DatacenterNetwork(Network):
         if link:
             delay = link.latency
             if link.jitter > 0:
-                delay += random.uniform(-link.jitter, link.jitter)
+                delay += self._rng_for(source_id, destination_id).uniform(-link.jitter, link.jitter)
             delay = max(0.0001, delay)  # Minimum 0.1ms
         else:
             # Fallback to base config for unlocated entities
             delay = self.config.base_delay
             if self.config.delay_jitter > 0:
-                delay += random.uniform(-self.config.delay_jitter, self.config.delay_jitter)
+                delay += self._rng_for(source_id, destination_id).uniform(
+                    -self.config.delay_jitter, self.config.delay_jitter)
             delay = max(0.001, delay)
 
         yield self.env.timeout(delay)
