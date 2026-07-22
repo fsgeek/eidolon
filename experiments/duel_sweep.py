@@ -31,6 +31,12 @@ POLARITIES = ("leo_high", "earth_high")
 KS = (5, 3)                 # k=4 omitted: capability-identical to k=5
 EARTH_RETRIES = (1, 5)      # single-shot vs bounded-retry (premortem A6)
 LEO_MAX_ROUNDS = 8
+# Both start times must be strictly positive (run_duel_trial asserts it,
+# premortem A10) and the fine grid reaches offset -12.0, so the sweep
+# starts Earth well past |min offset|. Deterministic dynamics depend only
+# on relative times; translation invariance is verified empirically in
+# the Task 7 preamble, not assumed.
+EARTH_START = 20.0
 
 # Reduced offsets for the jitter sweep: full fine coverage is the
 # deterministic map's job; here we sample the collision band and a few
@@ -79,6 +85,8 @@ def trial_row(t: DuelTrialResult) -> dict:
         "jitter_scale": t.jitter_scale,
         "seed": t.seed,
         "leo_enabled": int(t.leo_enabled),
+        "earth_start": t.earth_start,
+        "tail": t.tail,
         "livelock_min_preempted_rounds": LIVELOCK_MIN_PREEMPTED_ROUNDS,
         "outcome": t.outcome,
         "decided_by": t.decided_by or "",
@@ -104,7 +112,8 @@ def trial_row(t: DuelTrialResult) -> dict:
 
 FIELDNAMES = [
     "offset", "polarity", "k", "earth_max_rounds", "leo_max_rounds",
-    "jitter_scale", "seed", "leo_enabled", "livelock_min_preempted_rounds",
+    "jitter_scale", "seed", "leo_enabled", "earth_start", "tail",
+    "livelock_min_preempted_rounds",
     "outcome", "decided_by", "decided_ballot", "rounds_overlapped",
     "preempted_earth_rounds", "preempted_leo_rounds", "earth_success", "earth_rounds",
     "earth_p1_nacks", "earth_p2_nacks", "earth_late_nacks",
@@ -133,7 +142,8 @@ def run_map(output: Path):
                     rows.append(trial_row(run_duel_trial(
                         offset=off, polarity=polarity, k=k,
                         earth_max_rounds=retries,
-                        leo_max_rounds=LEO_MAX_ROUNDS)))
+                        leo_max_rounds=LEO_MAX_ROUNDS,
+                        earth_start=EARTH_START)))
                 done += 1
                 print(f"  map {done}/{total}: {polarity} k={k} "
                       f"retries={retries} ({len(grid)} offsets)")
@@ -143,7 +153,7 @@ def run_map(output: Path):
             rows.append(trial_row(run_duel_trial(
                 offset=30.0, polarity="leo_high", k=k,
                 earth_max_rounds=retries, leo_max_rounds=LEO_MAX_ROUNDS,
-                leo_enabled=False)))
+                leo_enabled=False, earth_start=EARTH_START)))
     _write_rows(output, rows)
     print(f"Wrote map: {output} ({len(rows)} rows)")
 
@@ -159,14 +169,16 @@ def run_jitter(output: Path, aggregate_output: Path, seeds: list[int]):
                             offset=off, polarity=polarity, k=k,
                             earth_max_rounds=retries,
                             leo_max_rounds=LEO_MAX_ROUNDS,
-                            jitter_scale=1.0, seed=seed)))
+                            jitter_scale=1.0, seed=seed,
+                            earth_start=EARTH_START)))
     for k in KS:
         for retries in EARTH_RETRIES:
             for seed in seeds:
                 rows.append(trial_row(run_duel_trial(
                     offset=30.0, polarity="leo_high", k=k,
                     earth_max_rounds=retries, leo_max_rounds=LEO_MAX_ROUNDS,
-                    jitter_scale=1.0, seed=seed, leo_enabled=False)))
+                    jitter_scale=1.0, seed=seed, leo_enabled=False,
+                    earth_start=EARTH_START)))
     _write_rows(output, rows)
     print(f"Wrote raw: {output} ({len(rows)} rows)")
 

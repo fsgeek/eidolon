@@ -290,6 +290,8 @@ class DuelTrialResult:
     jitter_scale: float
     seed: int
     leo_enabled: bool
+    earth_start: float
+    tail: float
     outcome: str          # earth_commit | leo_commit | leo_blocked |
                           # no_decision | livelock | censored
     decided_value: str | None
@@ -357,6 +359,7 @@ def run_duel_trial(*, offset: float, polarity: str, k: int,
         offset=offset, polarity=polarity, k=k,
         earth_max_rounds=earth_max_rounds, leo_max_rounds=leo_max_rounds,
         jitter_scale=jitter_scale, seed=seed, leo_enabled=leo_enabled,
+        earth_start=earth_start, tail=tail,
         outcome=outcome, decided_value=decided_value, decided_by=decided_by,
         decided_ballot=decided_ballot,
         rounds_overlapped=(earth_r is not None and leo_r is not None

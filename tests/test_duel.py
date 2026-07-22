@@ -272,6 +272,7 @@ def test_trial_row_carries_full_config():
     row = trial_row(t)
     for col in ("offset", "polarity", "k", "earth_max_rounds",
                 "leo_max_rounds", "jitter_scale", "seed", "leo_enabled",
+                "earth_start", "tail",
                 "livelock_min_preempted_rounds", "outcome", "decided_by",
                 "rounds_overlapped", "earth_success", "earth_rounds",
                 "earth_p1_nacks", "earth_p2_nacks", "earth_late_nacks",
