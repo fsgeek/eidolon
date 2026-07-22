@@ -19,7 +19,14 @@ from datacenter import five_dc_topology
 from entity import EntityRegistry
 from paxos import Acceptor, FlexibleQuorum, MajorityQuorum, Proposer
 from quorums import CrumblingWallQuorum
-from time_budget import classify_attempt
+from time_budget import (
+    ExperimentWindow,
+    classify_attempt,
+    phase_time,
+    round_time,
+    scaled_window,
+    validate_time_budget,
+)
 
 
 @dataclass(frozen=True)
@@ -51,6 +58,10 @@ class ExperimentResult:
     during_blackout: ReconciliationStats
     post_blackout: ReconciliationStats
     transition: ReconciliationStats
+    phase_timeout_s: float
+    pre_window_s: float
+    post_window_s: float
+    temporally_scaled: bool
     first_success_after_blackout_s: float | None
     avg_global_latency_s: float | None
     earth_local_avg_latency_s: float | None
@@ -215,7 +226,16 @@ def build_topology(env: simpy.Environment, mars_base_latency_s: float, seed: int
     return network
 
 
-def _wire_system(env: simpy.Environment, cfg: ExperimentConfig):
+def _wire_system(env: simpy.Environment, cfg: ExperimentConfig,
+                 global_timeout_s: float | None = None):
+    """Build the topology and the three proposers.
+
+    `global_timeout_s` overrides `cfg.global_timeout_s` for the global
+    (wall) proposer only, so callers can pass a temporally-validated,
+    possibly-scaled phase timeout without mutating the frozen config.
+    """
+    if global_timeout_s is None:
+        global_timeout_s = cfg.global_timeout_s
     registry = EntityRegistry()
     network = build_topology(env, cfg.mars_base_latency_s, seed=cfg.seed)
 
@@ -282,7 +302,7 @@ def _wire_system(env: simpy.Environment, cfg: ExperimentConfig):
         network,
         all_ids,
         wall,
-        timeout=cfg.global_timeout_s,
+        timeout=global_timeout_s,
         max_rounds=cfg.global_max_rounds,
         initiator_tier=3,  # Earth = bottom of wall
     )
@@ -305,13 +325,70 @@ def mars_blackout_pairs(network) -> list[tuple[str, str]]:
     return [(src, dst) for src in others for dst in mars_locs]
 
 
+def compute_experiment_window(cfg: ExperimentConfig) -> tuple[ExperimentWindow, bool]:
+    """Temporally-validated window for one `ExperimentConfig`.
+
+    The claim under test is Earth<->Mars global reconciliation, so the
+    primary window is sized for a fresh Mars round (`d_max =
+    cfg.mars_base_latency_s`): this is what a 600s pre-window cannot
+    contain for close-approach Mars (spec item 4). Insufficient fields
+    are scaled up by `scaled_window`'s margin rule rather than silently
+    producing unreachable-by-construction "capability loss" evidence.
+
+    Two lightweight sanity checks (not reflected in the returned window,
+    since neither ever needs scaling given current fixed proposer
+    parameters) additionally confirm: the Earth-only Phase 1 path the
+    wall actually uses here (initiator_tier=3, d_max=0.15) fits inside
+    the resulting phase timeout, and the Mars-local majority quorum's
+    own d_max=0.005 fits inside its hardcoded 1.0s timeout. The
+    post-window is further widened, if needed, so a post-blackout Mars
+    round-trip (d_max = mars_base_latency_s + 5.0 jitter) can complete
+    before the window closes -- the "recovery" claim demo_step_9 reports
+    as `first_success_after_blackout_s`.
+    """
+    initial_post_window = max(
+        cfg.sim_end_s - cfg.blackout_start_s - cfg.blackout_duration_s, 0.0)
+    window, scaled = scaled_window(
+        d_max=cfg.mars_base_latency_s, p_max=0.0,
+        blackout_duration=cfg.blackout_duration_s,
+        phase_timeout=cfg.global_timeout_s,
+        pre_window=cfg.blackout_start_s,
+        post_window=initial_post_window,
+        reconciliation_cadence=cfg.reconcile_interval_s,
+    )
+
+    assert window.phase_timeout > phase_time(0.15, 0.0)   # Earth-only Phase 1
+    assert 1.0 > phase_time(0.005, 0.0)                   # Mars-local quorum
+
+    recovery_post_needed = (
+        1.25 * round_time(cfg.mars_base_latency_s + 5.0, 0.0)
+        + cfg.reconcile_interval_s
+    )
+    if recovery_post_needed > window.post_window:
+        window = ExperimentWindow(
+            window.phase_timeout, window.pre_window, window.blackout_duration,
+            recovery_post_needed,
+            window.pre_window + window.blackout_duration + recovery_post_needed,
+            window.reconciliation_cadence,
+        )
+        scaled = True
+
+    assert validate_time_budget(window, d_max=cfg.mars_base_latency_s, p_max=0.0) == ()
+    return window, scaled
+
+
 def run_conjunction_experiment(
     with_repeater: bool,
     cfg: ExperimentConfig,
     verbose: bool = True,
 ) -> ExperimentResult:
     env = simpy.Environment()
-    network, earth_prop, mars_prop, global_prop = _wire_system(env, cfg)
+    window, temporally_scaled = compute_experiment_window(cfg)
+    effective_blackout_start_s = window.pre_window
+    effective_sim_end_s = window.horizon
+    effective_global_timeout_s = window.phase_timeout
+    network, earth_prop, mars_prop, global_prop = _wire_system(
+        env, cfg, global_timeout_s=effective_global_timeout_s)
 
     earth_total = 0
     earth_success = 0
@@ -327,12 +404,12 @@ def run_conjunction_experiment(
     mars_latencies = []
     first_success_after_blackout = None
 
-    blackout_end = cfg.blackout_start_s + cfg.blackout_duration_s
+    blackout_end = effective_blackout_start_s + cfg.blackout_duration_s
 
     def earth_local():
         nonlocal earth_total, earth_success
         slot = 0
-        while env.now < cfg.sim_end_s:
+        while env.now < effective_sim_end_s:
             result = yield earth_prop.propose(slot=slot, value=f"earth-{slot}")
             earth_total += 1
             if result.success:
@@ -344,7 +421,7 @@ def run_conjunction_experiment(
     def mars_local():
         nonlocal mars_total, mars_success
         slot = 10_000
-        while env.now < cfg.sim_end_s:
+        while env.now < effective_sim_end_s:
             result = yield mars_prop.propose(slot=slot, value=f"mars-{slot}")
             mars_total += 1
             if result.success:
@@ -356,7 +433,7 @@ def run_conjunction_experiment(
     def global_reconcile():
         nonlocal first_success_after_blackout
         slot = 20_000
-        while env.now < cfg.sim_end_s:
+        while env.now < effective_sim_end_s:
             started = env.now
             result = yield global_prop.propose(slot=slot, value=f"reconcile-{slot}")
             slot += 1
@@ -365,7 +442,7 @@ def run_conjunction_experiment(
             bucket = {"pre": pre, "during": during, "post": post,
                       "transition": transition}[
                 classify_attempt(started, ended,
-                                 cfg.blackout_start_s, blackout_end)]
+                                 effective_blackout_start_s, blackout_end)]
             bucket.total += 1
             if result.success:
                 bucket.success += 1
@@ -378,7 +455,7 @@ def run_conjunction_experiment(
     def conjunction_controller():
         pairs = mars_blackout_pairs(network)
 
-        yield env.timeout(cfg.blackout_start_s)
+        yield env.timeout(effective_blackout_start_s)
 
         if with_repeater:
             # Refinement model: link remains available but degraded.
@@ -402,7 +479,7 @@ def run_conjunction_experiment(
     env.process(mars_local())
     env.process(global_reconcile())
     env.process(conjunction_controller())
-    env.run(until=cfg.sim_end_s)
+    env.run(until=effective_sim_end_s)
     tier_metrics = _extract_tier_metrics(network, global_prop.entity.id)
 
     result = ExperimentResult(
@@ -415,6 +492,10 @@ def run_conjunction_experiment(
         during_blackout=during,
         post_blackout=post,
         transition=transition,
+        phase_timeout_s=window.phase_timeout,
+        pre_window_s=window.pre_window,
+        post_window_s=window.post_window,
+        temporally_scaled=temporally_scaled,
         first_success_after_blackout_s=first_success_after_blackout,
         avg_global_latency_s=(
             sum(global_latencies) / len(global_latencies) if global_latencies else None
@@ -447,6 +528,12 @@ def run_conjunction_experiment(
         print(label)
         print("=" * 74)
         print()
+        scaled_note = " (scaled)" if temporally_scaled else ""
+        print(
+            f"  Time budget: phase_timeout={window.phase_timeout:.1f}s "
+            f"pre_window={window.pre_window:.1f}s post_window={window.post_window:.1f}s"
+            f"{scaled_note}"
+        )
         print(
             f"  Earth local decisions: {earth_success}/{earth_total} "
             f"({(100.0 * earth_success / max(1, earth_total)):.1f}%)"
@@ -563,6 +650,10 @@ def write_summary_csv(
                 "global_post_total",
                 "global_transition_success",
                 "global_transition_total",
+                "phase_timeout_s",
+                "pre_window_s",
+                "post_window_s",
+                "temporally_scaled",
                 "first_success_after_blackout_s",
                 "avg_global_latency_s",
                 "earth_local_avg_latency_s",
@@ -610,6 +701,10 @@ def write_summary_csv(
                     r.post_blackout.total,
                     r.transition.success,
                     r.transition.total,
+                    f"{r.phase_timeout_s:.6f}",
+                    f"{r.pre_window_s:.6f}",
+                    f"{r.post_window_s:.6f}",
+                    int(r.temporally_scaled),
                     (
                         f"{r.first_success_after_blackout_s:.6f}"
                         if r.first_success_after_blackout_s is not None

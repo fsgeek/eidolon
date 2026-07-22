@@ -97,6 +97,10 @@ def main():
         "global_during_total",
         "global_post_success",
         "global_post_total",
+        "phase_timeout_s",
+        "pre_window_s",
+        "post_window_s",
+        "temporally_scaled",
         "first_success_after_blackout_s",
         "avg_global_latency_s",
         "earth_local_avg_latency_s",
@@ -159,6 +163,10 @@ def main():
                             r.during_blackout.total,
                             r.post_blackout.success,
                             r.post_blackout.total,
+                            f"{r.phase_timeout_s:.6f}",
+                            f"{r.pre_window_s:.6f}",
+                            f"{r.post_window_s:.6f}",
+                            int(r.temporally_scaled),
                             (
                                 f"{r.first_success_after_blackout_s:.6f}"
                                 if r.first_success_after_blackout_s is not None
@@ -247,20 +255,20 @@ def main():
         during_rates = [int(r[15]) / max(1, int(r[16])) for r in bucket]
         post_rates = [int(r[17]) / max(1, int(r[18])) for r in bucket]
 
-        recovery_vals = [float(r[19]) for r in bucket if r[19] != ""]
-        latency_vals = [float(r[20]) for r in bucket if r[20] != ""]
-        earth_avg_lat_vals = [float(r[21]) for r in bucket if r[21] != ""]
-        earth_p95_lat_vals = [float(r[22]) for r in bucket if r[22] != ""]
-        mars_avg_lat_vals = [float(r[23]) for r in bucket if r[23] != ""]
-        mars_p95_lat_vals = [float(r[24]) for r in bucket if r[24] != ""]
+        recovery_vals = [float(r[23]) for r in bucket if r[23] != ""]
+        latency_vals = [float(r[24]) for r in bucket if r[24] != ""]
+        earth_avg_lat_vals = [float(r[25]) for r in bucket if r[25] != ""]
+        earth_p95_lat_vals = [float(r[26]) for r in bucket if r[26] != ""]
+        mars_avg_lat_vals = [float(r[27]) for r in bucket if r[27] != ""]
+        mars_p95_lat_vals = [float(r[28]) for r in bucket if r[28] != ""]
 
         p1_earth_share_vals = []
         p2_earth_share_vals = []
         src_earth_share_vals = []
         for r in bucket:
-            p1_earth = int(r[25]); p1_leo = int(r[26]); p1_moon = int(r[27]); p1_mars = int(r[28])
-            p2_earth = int(r[29]); p2_leo = int(r[30]); p2_moon = int(r[31]); p2_mars = int(r[32])
-            src_earth = int(r[33]); src_leo = int(r[34]); src_moon = int(r[35]); src_mars = int(r[36])
+            p1_earth = int(r[29]); p1_leo = int(r[30]); p1_moon = int(r[31]); p1_mars = int(r[32])
+            p2_earth = int(r[33]); p2_leo = int(r[34]); p2_moon = int(r[35]); p2_mars = int(r[36])
+            src_earth = int(r[37]); src_leo = int(r[38]); src_moon = int(r[39]); src_mars = int(r[40])
             p1_total = p1_earth + p1_leo + p1_moon + p1_mars
             p2_total = p2_earth + p2_leo + p2_moon + p2_mars
             src_total = src_earth + src_leo + src_moon + src_mars

@@ -86,6 +86,10 @@ def main():
         "global_during_total",
         "global_post_success",
         "global_post_total",
+        "phase_timeout_s",
+        "pre_window_s",
+        "post_window_s",
+        "temporally_scaled",
         "global_during_rate",
         "global_post_rate",
         "first_success_after_blackout_s",
@@ -135,6 +139,10 @@ def main():
                             result.during_blackout.total,
                             result.post_blackout.success,
                             result.post_blackout.total,
+                            f"{result.phase_timeout_s:.6f}",
+                            f"{result.pre_window_s:.6f}",
+                            f"{result.post_window_s:.6f}",
+                            int(result.temporally_scaled),
                             f"{during_rate:.6f}",
                             f"{post_rate:.6f}",
                             (
@@ -178,10 +186,10 @@ def main():
     ]
     agg_rows = []
     for (scenario, timeout, blackout_duration), bucket in sorted(grouped.items()):
-        during = [float(r[11]) for r in bucket]
-        post = [float(r[12]) for r in bucket]
-        recovery = [float(r[13]) for r in bucket if r[13] != ""]
-        lat = [float(r[14]) for r in bucket if r[14] != ""]
+        during = [float(r[15]) for r in bucket]
+        post = [float(r[16]) for r in bucket]
+        recovery = [float(r[17]) for r in bucket if r[17] != ""]
+        lat = [float(r[18]) for r in bucket if r[18] != ""]
         during_mu, during_ci = _mean_ci95(during)
         post_mu, post_ci = _mean_ci95(post)
         rec_mu, rec_ci = _mean_ci95(recovery)

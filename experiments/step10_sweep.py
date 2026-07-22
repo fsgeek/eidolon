@@ -17,11 +17,23 @@ from paxos import Acceptor, FlexibleQuorum, MajorityQuorum, Proposer
 from quorums import CrumblingWallQuorum
 from demo_step_10 import build_topology, ReconciliationStats
 from demo_step_9 import mars_blackout_pairs
-from time_budget import classify_attempt
+from time_budget import classify_attempt, scaled_window
 
 
 def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
                mars_latency=186.0, blackout_dur=900.0, with_repeater=True):
+    # Temporal budget: validate (and, if necessary, scale) the window
+    # before anything else is built, so the proposer's timeout and the
+    # blackout schedule below use the effective, guaranteed-valid values.
+    window, temporally_scaled = scaled_window(
+        d_max=mars_latency, p_max=0.0,
+        blackout_duration=blackout_dur,
+        phase_timeout=500.0,
+        pre_window=600.0,
+        post_window=max(4000.0 - 600.0 - blackout_dur, 0.0),
+        reconciliation_cadence=120.0,
+    )
+
     env = simpy.Environment()
     network = build_topology(env, mars_base_latency_s=mars_latency, seed=seed)
     registry = EntityRegistry()
@@ -69,7 +81,7 @@ def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
         [mars_ids, [moon.id], [leo.id], earth_ids],
         phase2_threshold=global_q2_thresh)
     global_prop = Proposer(env, gp, network, all_ids, wall,
-        timeout=500.0, max_rounds=1, initiator_tier=3)
+        timeout=window.phase_timeout, max_rounds=1, initiator_tier=3)
 
     earth_ok, earth_n = 0, 0
     mars_ok, mars_n = 0, 0
@@ -81,9 +93,9 @@ def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
     global_latencies = []
     earth_latencies = []
 
-    blackout_start = 600.0
+    blackout_start = window.pre_window
     blackout_end = blackout_start + blackout_dur
-    sim_end = 4000.0
+    sim_end = window.horizon
 
     def earth_local():
         nonlocal earth_ok, earth_n
@@ -181,6 +193,10 @@ def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
         "global_post_rate": g_p_rate,
         "global_transition_success": g_transition.success,
         "global_transition_total": g_transition.total,
+        "phase_timeout_s": window.phase_timeout,
+        "pre_window_s": window.pre_window,
+        "post_window_s": window.post_window,
+        "temporally_scaled": int(temporally_scaled),
         "recovery_lag_s": first_recovery,
         "avg_global_latency_s": avg_glat,
         "avg_earth_latency_s": avg_elat,

@@ -38,7 +38,7 @@ from demo_step_9 import (
 from entity import EntityRegistry
 from paxos import Acceptor, FlexibleQuorum, MajorityQuorum, Proposer
 from quorums import CrumblingWallQuorum
-from time_budget import classify_attempt
+from time_budget import ExperimentWindow, classify_attempt, scaled_window
 
 
 # Tier definitions: index, name, and the network location for the proposer.
@@ -48,6 +48,49 @@ TIERS = [
     (2, "leo", "leo-sat"),
     (3, "earth", "na-west"),
 ]
+
+# Slowest required one-way path + jitter for each initiator tier's Phase 1
+# quorum (mars_base_latency_s is added for tier 0, the only tier whose
+# d_max varies with the swept Mars latency).
+_TIER_JITTER_D_MAX = {1: 1.3, 2: 0.05, 3: 0.15}
+
+
+def compute_tier_windows(cfg: ExperimentConfig):
+    """Per-tier temporally-validated windows plus the shared, max-of-all
+    window used to actually run the (single, shared-horizon) simulation.
+
+    Returns (per_tier: dict[int, tuple[ExperimentWindow, bool]], shared:
+    tuple[ExperimentWindow, bool]) where `shared` takes the field-wise max
+    across tiers so every tier's proposer gets enough budget, and
+    `per_tier[i][1]` is tier i's own scaled flag computed independently
+    (i.e. whether tier i's own requirement -- not the shared one -- needed
+    scaling from the input config).
+    """
+    d_max_by_tier = {0: cfg.mars_base_latency_s + 5.0, **_TIER_JITTER_D_MAX}
+    initial_post_window = max(
+        cfg.sim_end_s - cfg.blackout_start_s - cfg.blackout_duration_s, 0.0)
+
+    per_tier = {}
+    for tier_idx, d_max in d_max_by_tier.items():
+        per_tier[tier_idx] = scaled_window(
+            d_max=d_max, p_max=0.0,
+            blackout_duration=cfg.blackout_duration_s,
+            phase_timeout=cfg.global_timeout_s,
+            pre_window=cfg.blackout_start_s,
+            post_window=initial_post_window,
+            reconciliation_cadence=cfg.reconcile_interval_s,
+        )
+
+    shared_phase_timeout = max(w.phase_timeout for w, _ in per_tier.values())
+    shared_pre_window = max(w.pre_window for w, _ in per_tier.values())
+    shared_post_window = max(w.post_window for w, _ in per_tier.values())
+    shared_horizon = shared_pre_window + cfg.blackout_duration_s + shared_post_window
+    shared_window = ExperimentWindow(
+        shared_phase_timeout, shared_pre_window, cfg.blackout_duration_s,
+        shared_post_window, shared_horizon, cfg.reconcile_interval_s)
+    shared_scaled = any(scaled for _, scaled in per_tier.values())
+
+    return per_tier, (shared_window, shared_scaled)
 
 
 @dataclass
@@ -65,6 +108,10 @@ class TierResult:
     post_total: int
     transition_success: int
     transition_total: int
+    phase_timeout_s: float
+    pre_window_s: float
+    post_window_s: float
+    temporally_scaled: bool
     avg_latency_s: float | None
     first_post_blackout_s: float | None
     earth_local_success: int
@@ -93,8 +140,11 @@ def _add_full_coverage_links(network, mars_base_latency_s: float):
 
 
 def _wire_system_multitier(env: simpy.Environment, cfg: ExperimentConfig,
-                           full_coverage: bool = False):
+                           full_coverage: bool = False,
+                           global_timeout_s: float | None = None):
     """Build topology with one global proposer per tier."""
+    if global_timeout_s is None:
+        global_timeout_s = cfg.global_timeout_s
     registry = EntityRegistry()
     network = build_topology(env, cfg.mars_base_latency_s, seed=cfg.seed)
 
@@ -160,7 +210,7 @@ def _wire_system_multitier(env: simpy.Environment, cfg: ExperimentConfig,
         network.assign_entity(prop_entity.id, tier_loc)
         prop = Proposer(
             env, prop_entity, network, all_ids, wall,
-            timeout=cfg.global_timeout_s,
+            timeout=global_timeout_s,
             max_rounds=cfg.global_max_rounds,
             initiator_tier=tier_idx,
         )
@@ -177,8 +227,12 @@ def run_tier_experiment(
 ) -> list[TierResult]:
     """Run one scenario, measuring all four tiers' global proposers."""
     env = simpy.Environment()
+    per_tier_windows, (shared_window, shared_scaled) = compute_tier_windows(cfg)
+    effective_blackout_start_s = shared_window.pre_window
+    effective_sim_end_s = shared_window.horizon
     network, earth_prop, mars_prop, global_proposers = _wire_system_multitier(
         env, cfg, full_coverage=full_coverage,
+        global_timeout_s=shared_window.phase_timeout,
     )
 
     earth_total = 0
@@ -186,7 +240,7 @@ def run_tier_experiment(
     mars_total = 0
     mars_success = 0
 
-    blackout_end = cfg.blackout_start_s + cfg.blackout_duration_s
+    blackout_end = effective_blackout_start_s + cfg.blackout_duration_s
 
     # Per-tier tracking
     tier_stats: dict[int, dict] = {}
@@ -203,7 +257,7 @@ def run_tier_experiment(
     def earth_local():
         nonlocal earth_total, earth_success
         slot = 0
-        while env.now < cfg.sim_end_s:
+        while env.now < effective_sim_end_s:
             result = yield earth_prop.propose(slot=slot, value=f"earth-{slot}")
             earth_total += 1
             if result.success:
@@ -214,7 +268,7 @@ def run_tier_experiment(
     def mars_local():
         nonlocal mars_total, mars_success
         slot = 10_000
-        while env.now < cfg.sim_end_s:
+        while env.now < effective_sim_end_s:
             result = yield mars_prop.propose(slot=slot, value=f"mars-{slot}")
             mars_total += 1
             if result.success:
@@ -229,7 +283,7 @@ def run_tier_experiment(
         # Each tier uses a different slot range to avoid conflicts.
         slot_base = 20_000 + tier_idx * 10_000
         slot = slot_base
-        while env.now < cfg.sim_end_s:
+        while env.now < effective_sim_end_s:
             started = env.now
             result = yield prop.propose(slot=slot, value=f"reconcile-t{tier_idx}-{slot}")
             slot += 1
@@ -238,7 +292,7 @@ def run_tier_experiment(
             bucket = {"pre": stats["pre"], "during": stats["during"],
                       "post": stats["post"], "transition": stats["transition"]}[
                 classify_attempt(started, ended,
-                                 cfg.blackout_start_s, blackout_end)]
+                                 effective_blackout_start_s, blackout_end)]
             bucket.total += 1
             if result.success:
                 bucket.success += 1
@@ -251,7 +305,7 @@ def run_tier_experiment(
     def conjunction_controller():
         pairs = mars_blackout_pairs(network)
 
-        yield env.timeout(cfg.blackout_start_s)
+        yield env.timeout(effective_blackout_start_s)
 
         if with_repeater:
             for src, dst in pairs:
@@ -274,7 +328,7 @@ def run_tier_experiment(
     for tier_idx, _, _ in TIERS:
         env.process(global_reconcile_for_tier(tier_idx))
     env.process(conjunction_controller())
-    env.run(until=cfg.sim_end_s)
+    env.run(until=effective_sim_end_s)
 
     scenario_name = "with_repeater" if with_repeater else "blackout_only"
     topo_name = "full_coverage" if full_coverage else "sparse"
@@ -282,6 +336,7 @@ def run_tier_experiment(
     for tier_idx, tier_name, _ in TIERS:
         stats = tier_stats[tier_idx]
         lats = stats["latencies"]
+        _, tier_scaled = per_tier_windows[tier_idx]
         results.append(TierResult(
             tier_index=tier_idx,
             tier_name=tier_name,
@@ -295,6 +350,10 @@ def run_tier_experiment(
             post_total=stats["post"].total,
             transition_success=stats["transition"].success,
             transition_total=stats["transition"].total,
+            phase_timeout_s=shared_window.phase_timeout,
+            pre_window_s=shared_window.pre_window,
+            post_window_s=shared_window.post_window,
+            temporally_scaled=tier_scaled,
             avg_latency_s=mean(lats) if lats else None,
             first_post_blackout_s=stats["first_post"],
             earth_local_success=earth_success,
@@ -331,6 +390,7 @@ CSV_HEADER = [
     "during_success", "during_total",
     "post_success", "post_total",
     "transition_success", "transition_total",
+    "phase_timeout_s", "pre_window_s", "post_window_s", "temporally_scaled",
     "avg_latency_s", "first_post_blackout_s",
     "earth_local_success", "earth_local_total",
     "mars_local_success", "mars_local_total",
@@ -392,6 +452,8 @@ def run_sweep(args):
                                     r.during_success, r.during_total,
                                     r.post_success, r.post_total,
                                     r.transition_success, r.transition_total,
+                                    f"{r.phase_timeout_s:.6f}", f"{r.pre_window_s:.6f}",
+                                    f"{r.post_window_s:.6f}", int(r.temporally_scaled),
                                     f"{r.avg_latency_s:.6f}" if r.avg_latency_s is not None else "",
                                     f"{r.first_post_blackout_s:.6f}" if r.first_post_blackout_s is not None else "",
                                     r.earth_local_success, r.earth_local_total,

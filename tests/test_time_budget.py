@@ -76,3 +76,35 @@ def test_classify_attempt_rejects_inverted_intervals():
         classify_attempt(1100, 1000, 1000, 1900)
     with pytest.raises(ValueError):
         classify_attempt(0, 999, 1900, 1000)
+
+
+def test_scaled_window_passes_validation_by_construction():
+    from time_budget import scaled_window
+    window, scaled = scaled_window(
+        d_max=186.0, p_max=0.0, blackout_duration=900.0,
+        phase_timeout=500.0, pre_window=600.0, post_window=900.0,
+        reconciliation_cadence=120.0)
+    assert scaled is True                      # 600 < 1.25 * 744
+    assert window.pre_window == 930.0          # 1.25 * round_time(186, 0)
+    assert validate_time_budget(window, d_max=186.0, p_max=0.0) == ()
+
+
+def test_scaled_window_leaves_valid_configs_untouched():
+    from time_budget import scaled_window
+    window, scaled = scaled_window(
+        d_max=0.15, p_max=0.0, blackout_duration=900.0,
+        phase_timeout=500.0, pre_window=600.0, post_window=900.0,
+        reconciliation_cadence=120.0)
+    assert scaled is False
+    assert (window.phase_timeout, window.pre_window, window.post_window) \
+        == (500.0, 600.0, 900.0)
+
+
+def test_scaled_window_scales_far_mars_timeout():
+    from time_budget import scaled_window
+    window, scaled = scaled_window(
+        d_max=1342.0, p_max=0.0, blackout_duration=900.0,
+        phase_timeout=500.0, pre_window=600.0, post_window=900.0)
+    assert scaled is True
+    assert window.phase_timeout > 2 * 1342.0   # exceeds phase_time
+    assert validate_time_budget(window, d_max=1342.0, p_max=0.0) == ()

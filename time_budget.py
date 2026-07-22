@@ -92,3 +92,27 @@ def classify_attempt(start: float, end: float, blackout_start: float,
     if start >= blackout_start and end <= blackout_end:
         return "during"
     return "transition"
+
+
+def scaled_window(*, d_max: float, p_max: float, blackout_duration: float,
+                  phase_timeout: float, pre_window: float,
+                  post_window: float, reconciliation_cadence: float = 0.0,
+                  margin: float = 1.25) -> tuple[ExperimentWindow, bool]:
+    """Return a temporally valid window, scaling insufficient fields.
+
+    Spec: configurations that cannot contain their claimed capabilities
+    must be rejected or scaled — this implements the scaling arm and
+    reports whether scaling occurred so results can be labeled. The
+    margin covers jitter and processing slack beyond the analytic bound.
+    """
+    pt = phase_time(d_max, p_max)
+    rt = round_time(d_max, p_max)
+    eff_timeout = max(phase_timeout, margin * pt)
+    pre = max(pre_window, margin * rt)
+    post = max(post_window, margin * rt + reconciliation_cadence)
+    horizon = pre + blackout_duration + post
+    window = ExperimentWindow(eff_timeout, pre, blackout_duration, post,
+                              horizon, reconciliation_cadence)
+    assert validate_time_budget(window, d_max, p_max) == ()
+    scaled = (eff_timeout, pre, post) != (phase_timeout, pre_window, post_window)
+    return window, scaled
