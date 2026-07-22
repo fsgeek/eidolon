@@ -136,6 +136,7 @@ Scenarios tested: strict (all 5 Earth) and relaxed Phase 2 quorums (4-of-5 or 3-
 
 ## Dueling-proposer experiment (duel.py)
 
+```bash
 # Deterministic offset->outcome map (primary)
 uv run python experiments/duel_sweep.py --mode map --output results/duel/duel_map.csv
 
@@ -144,3 +145,4 @@ uv run python experiments/duel_sweep.py --mode jitter \
   --output results/duel/duel_jitter.csv \
   --aggregate-output results/duel/duel_jitter_ci.csv \
   --seeds "40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59"
+```
