@@ -133,3 +133,14 @@ Scenarios tested: strict (all 5 Earth) and relaxed Phase 2 quorums (4-of-5 or 3-
 - `scenario=with_repeater` models degraded continuity via repeater.
 - Aggregated CSV files (ending in `_ci.csv`) report means and 95% confidence intervals over the specified seed set.
 - The **temporal window is automatically scaled** by each script to satisfy the time budget constraints (one complete round-trip plus buffer for processing). The columns `phase_timeout_s`, `pre_window_s`, `post_window_s`, and `temporally_scaled` in the raw output document whether scaling was applied.
+
+## Dueling-proposer experiment (duel.py)
+
+# Deterministic offset->outcome map (primary)
+uv run python experiments/duel_sweep.py --mode map --output results/duel/duel_map.csv
+
+# Jitter robustness sweep (secondary; per-link RNG, Wilson CIs)
+uv run python experiments/duel_sweep.py --mode jitter \
+  --output results/duel/duel_jitter.csv \
+  --aggregate-output results/duel/duel_jitter_ci.csv \
+  --seeds "40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59"
