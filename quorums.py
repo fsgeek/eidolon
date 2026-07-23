@@ -319,6 +319,52 @@ class CrumblingWallQuorum(QuorumSystem):
         return "\n".join(lines)
 
 
+class AnchoredMajorityQuorum(QuorumSystem):
+    """Majority Phase 1 over all nodes, Phase 2 anchored to a fast tier.
+
+    Competitive Flexible Paxos baseline for the wall comparison: Phase 1
+    accepts any majority (floor(n/2)+1) of the full node set with no tier
+    structure, while Phase 2 requires every anchor node — the same strict
+    fast-tier Phase 2 the wall uses, so the two constructions differ only
+    in Phase 1 shape.
+
+    Intersection: Phase 2 is exactly the anchor set, so safety needs
+    every majority to contain an anchor node, i.e.
+    floor(n/2) + 1 > n - len(anchor).
+    """
+
+    def __init__(self, nodes: list[int], anchor: list[int]):
+        super().__init__(nodes)
+        self.anchor = list(anchor)
+        self._anchor_set = set(anchor)
+        if not self._anchor_set <= set(nodes):
+            raise ValueError("anchor must be a subset of nodes")
+        if self.phase1_quorum_size() <= self.n - len(self.anchor):
+            raise ValueError(
+                f"majority Q1 does not intersect the anchor Q2: "
+                f"{self.phase1_quorum_size()} <= {self.n} - {len(self.anchor)}"
+            )
+
+    def phase1_quorum_size(self) -> int:
+        return self.n // 2 + 1
+
+    def phase2_quorum_size(self) -> int:
+        return len(self.anchor)
+
+    def is_phase1_quorum(self, respondents: set[int], initiator_tier: int | None = None) -> bool:
+        """Any majority of the full node set; tier structure is ignored."""
+        return len(respondents & set(self.nodes)) >= self.phase1_quorum_size()
+
+    def is_phase2_quorum(self, respondents: set[int]) -> bool:
+        """Every anchor node must respond (strict fast-tier Phase 2)."""
+        return self._anchor_set <= respondents
+
+    def describe(self) -> str:
+        return (f"AnchoredMajority(n={self.n}): "
+                f"Phase1=any {self.phase1_quorum_size()}, "
+                f"Phase2=all {len(self.anchor)} anchor nodes")
+
+
 def compare_quorum_sizes():
     """Show how quorum sizes scale with n."""
     print(f"  {'n':>4}  {'Majority':>10}  {'Grid':>10}  {'Grid dims':>12}")

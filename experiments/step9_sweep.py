@@ -51,11 +51,13 @@ def _parse_args():
     parser.add_argument(
         "--global-quorum",
         type=str,
-        choices=["wall", "flat"],
+        choices=["wall", "flat", "majority"],
         default="wall",
         help=(
             "Global-proposer quorum mode passed through to ExperimentConfig: "
-            "'wall' (default) or 'flat' (historical aae70f7 construction)."
+            "'wall' (default), 'flat' (historical aae70f7 construction), or "
+            "'majority' (competitive baseline: 6-of-10 Phase 1, all-Earth "
+            "Phase 2)."
         ),
     )
     parser.add_argument(
@@ -71,9 +73,18 @@ def _parse_args():
     parser.add_argument(
         "--aggregate-output",
         type=str,
-        default="results/step9/step9_sweep_ci.csv",
+        default=None,
+        help=(
+            "Aggregate (CI) CSV path. Defaults to <output stem>_ci.csv next "
+            "to --output, so redirecting --output cannot silently overwrite "
+            "another run's aggregate."
+        ),
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.aggregate_output is None:
+        out = Path(args.output)
+        args.aggregate_output = str(out.with_name(out.stem + "_ci.csv"))
+    return args
 
 
 def main():

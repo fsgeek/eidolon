@@ -18,7 +18,7 @@ import simpy
 from datacenter import five_dc_topology
 from entity import EntityRegistry
 from paxos import Acceptor, FlexibleQuorum, MajorityQuorum, Proposer
-from quorums import CrumblingWallQuorum
+from quorums import AnchoredMajorityQuorum, CrumblingWallQuorum
 from time_budget import (
     ExperimentWindow,
     classify_attempt,
@@ -39,10 +39,11 @@ class ExperimentConfig:
     global_timeout_s: float = 500.0
     global_max_rounds: int = 1
     seed: int = 42
-    global_quorum: str = "wall"  # "wall" (current, initiator_tier=3) or
+    global_quorum: str = "wall"  # "wall" (current, initiator_tier=3),
     # "flat" (historical aae70f7 construction: no initiator_tier, so
     # CrumblingWallQuorum.is_phase1_quorum defaults to requiring every
-    # tier -- the paper's Q1^flat).
+    # tier -- the paper's Q1^flat), or "majority" (competitive baseline:
+    # AnchoredMajorityQuorum, any 6-of-10 Phase 1, all-Earth Phase 2).
 
 
 @dataclass
@@ -325,9 +326,23 @@ def _wire_system(env: simpy.Environment, cfg: ExperimentConfig,
             timeout=global_timeout_s,
             max_rounds=cfg.global_max_rounds,
         )
+    elif cfg.global_quorum == "majority":
+        # Competitive baseline (review ADV-A-001): majority-Q1 Flexible
+        # Paxos over all ten nodes with the same strict all-Earth Phase 2
+        # the wall uses, so the constructions differ only in Phase 1 shape.
+        global_prop = Proposer(
+            env,
+            global_prop_entity,
+            network,
+            all_ids,
+            AnchoredMajorityQuorum(all_ids, anchor=earth_ids),
+            timeout=global_timeout_s,
+            max_rounds=cfg.global_max_rounds,
+        )
     else:
         raise ValueError(
-            f"global_quorum must be 'wall' or 'flat', got {cfg.global_quorum!r}"
+            f"global_quorum must be 'wall', 'flat', or 'majority', "
+            f"got {cfg.global_quorum!r}"
         )
 
     return network, earth_prop, mars_prop, global_prop
@@ -771,13 +786,14 @@ def _parse_args():
     parser.add_argument(
         "--global-quorum",
         type=str,
-        choices=["wall", "flat"],
+        choices=["wall", "flat", "majority"],
         default="wall",
         help=(
             "Global-proposer quorum mode: 'wall' (default, current "
-            "initiator_tier=3 construction) or 'flat' (historical "
+            "initiator_tier=3 construction), 'flat' (historical "
             "aae70f7 construction, no initiator_tier -- requires every "
-            "tier in Phase 1)."
+            "tier in Phase 1), or 'majority' (competitive baseline: "
+            "any 6-of-10 Phase 1, all-Earth Phase 2)."
         ),
     )
     parser.add_argument("--csv", type=str, default="")
