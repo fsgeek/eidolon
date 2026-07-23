@@ -14,7 +14,7 @@
 
 EXTENDS Integers, FiniteSets
 
-CONSTANTS Strict, Relaxed
+CONSTANTS Strict, Relaxed, Relaxed3
 
 VARIABLES construction, initiator, q1, q2, result
 
@@ -38,16 +38,23 @@ StrictQ2 == {Earth}
 \* Q1 per tier: spans tiers from initiator down, at least 1 Earth
 StrictQ1(tier) == {S \in SUBSET AllNodes : SpansTiersFrom(S, tier)}
 
-\* ------ Relaxed Construction ------
+\* ------ Relaxed Construction (k = 4) ------
 \* Q2: any 4-of-5 Earth
 RelaxedQ2 == {S \in SUBSET Earth : Cardinality(S) >= 4}
 \* Q1 per tier: spans tiers from initiator down, at least 2 Earth (pigeonhole)
 RelaxedQ1(tier) == {S \in SUBSET AllNodes : SpansTiersFrom(S, tier) /\ Cardinality(S \cap Earth) >= 2}
 
+\* ------ Relaxed Construction (k = 3) ------
+\* Q2: any 3-of-5 Earth
+Relaxed3Q2 == {S \in SUBSET Earth : Cardinality(S) >= 3}
+\* Q1 per tier: spans tiers from initiator down, at least 3 Earth
+\* (pigeonhole: |E| - k + 1 = 5 - 3 + 1 = 3)
+Relaxed3Q1(tier) == {S \in SUBSET AllNodes : SpansTiersFrom(S, tier) /\ Cardinality(S \cap Earth) >= 3}
+
 vars == <<construction, initiator, q1, q2, result>>
 
 Init ==
-    /\ construction \in {Strict, Relaxed}
+    /\ construction \in {Strict, Relaxed, Relaxed3}
     /\ initiator \in 1..NumTiers
     /\ q1 = {}
     /\ q2 = {}
@@ -71,7 +78,16 @@ PickRelaxed ==
         /\ result' = "checked"
     /\ UNCHANGED <<construction, initiator>>
 
-Next == PickStrict \/ PickRelaxed
+PickRelaxed3 ==
+    /\ construction = Relaxed3
+    /\ result = "init"
+    /\ \E s1 \in Relaxed3Q1(initiator), s2 \in Relaxed3Q2 :
+        /\ q1' = s1
+        /\ q2' = s2
+        /\ result' = "checked"
+    /\ UNCHANGED <<construction, initiator>>
+
+Next == PickStrict \/ PickRelaxed \/ PickRelaxed3
 
 \* SAFETY: whenever we've picked a pair, they must intersect
 Safety == result = "checked" => q1 \cap q2 /= {}
