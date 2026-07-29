@@ -46,6 +46,42 @@ Also dead, from the same round:
 new failure class" is gone. "We give it an exact reachability criterion"
 stands.
 
+### What §4.3 actually says, read in full
+
+Read directly rather than via the agent, after the kill. Both passages
+give the state **positive valence**:
+
+- Row failure: "FPaxos would be able to complete Q1 and thus recover all
+  past decisions, it can then safely fall back to a reconfiguration
+  protocol to remove or replace the failed acceptors."
+- The $|Q_1|{=}1, |Q_2|{=}N$ configuration: "If any acceptors are still
+  up, then we can complete Q1 and learn past decisions. As it has been
+  previously observed [25, 23], such a construction allows us to tolerate
+  $f$ failures with only $f+1$ acceptors instead of $2f+1$."
+
+Howard reads (1,0) as a **recovery affordance**. Three things §4.3 does
+not do:
+
+1. It gives no **recognizer**. The prescribed response — fall back to
+   reconfiguration — presumes the system knows it is in the state. In a
+   crash-failure model with a known failure set that is a fair
+   assumption; under connectivity it is not.
+2. It never asks the **design-time existence question**: for a given
+   construction, does such a state arise at all? That is the containment
+   criterion, and it is what this work supplies.
+3. It never suggests the state **costs** anything.
+
+So the honest relationship is three-part: Howard identifies the state and
+a use for it; this work characterizes exactly when it arises; the cost
+question is unmeasured. Item 3 is the residual disagreement — Howard's
+valence is positive, this work's framing is negative, and *nothing has
+been run that adjudicates between them*. That makes the valence question,
+not the existence question, the load-bearing wall between "we complete
+Howard's picture" and "we merely re-shade it."
+
+Owed: FPaxos cites [25, 23] for the $f{+}1$ observation. Those are
+further prior art and have not been resolved.
+
 ## DIED: the deployed-systems claim
 
 The claim that (1,0) appears wherever a system pairs a *numeric* election
@@ -70,10 +106,45 @@ Corrections that came out of the refutation and are independently sourced:
   heuristic phrased as "numeric election, structural commit" has a known
   false positive here.
 
-A parallel review by a different model family (Claude desktop) reached the
-opposite conclusion on both Cassandra and MongoDB from documentation
-prose. That divergence is unresolved; the source-level citations above
-are the stronger evidence but have not been reconciled with it.
+A parallel review running in Claude desktop reached the opposite
+conclusion on both Cassandra and MongoDB from documentation prose. On
+review it conceded MongoDB on the merits: with three of five voters in
+one DC, replication majority-commits the write — it is durable, survives
+failover, will not roll back, and only the *client acknowledgment gate*
+stalls. That is committed-but-unacknowledged, a real pathology but not a
+capability state of any consensus instance's phase families.
+
+The concession sharpens the definition rather than merely settling a
+dispute. Three systems now exhibit three *distinct* gaps: Cassandra's
+consensus-layer (1,0) with a genuinely consumed ballot; Kafka's
+intent-versus-predicate gap; MongoDB's acknowledgment-versus-commit gap.
+Only the first is this work's object. That the definition cleanly
+excludes the other two is the definition demonstrating its edges.
+
+Residual check before Cassandra takes the witness stand: pin the branch
+those `StorageProxy`/`ConsistencyLevel` line numbers came from, and
+determine whether Paxos v2 (CEP-14, 4.1+) preserves the EACH_QUORUM
+commit path — v2 restructures exactly the commit round the claim lives
+in. Source outranks documentation prose, but source has versions.
+
+## Correction: a mislabelled independence claim
+
+An earlier draft of this note called the boundary-theorem convergence
+with the desktop review **cross-family replication**. It is not. Both
+participants are Claude. Different harness, different context, different
+tooling buys real independence, but not the kind that controls for
+shared model priors — which is precisely the confound an independent
+check is meant to control.
+
+Consequences, recorded rather than quietly fixed:
+
+- The containment-lemma convergence is **within-family** and should not
+  be cited as cross-model replication.
+- The deployed-systems **divergence** becomes more interesting, not
+  less: two instances of one model family disagreeing about MongoDB is
+  not noise between families.
+- The genuinely cross-model input in this project's history remains the
+  OpenAI review and the rikuy panels, not this exchange.
 
 ## SURVIVED
 
@@ -87,7 +158,10 @@ are the stronger evidence but have not been reconciled with it.
 - **The containment lemma.** `(1,0)` is unreachable iff every $Q_1$
   contains some $Q_2$. This is the general statement; the arithmetic
   boundary is its instantiation for this construction. Independently
-  derived by the parallel desktop review — cross-family convergence.
+  derived by a parallel review running in Claude desktop. **This is
+  within-family, not cross-family, replication** — see the correction
+  below; it is worth less as evidence than shared model priors would
+  let it appear.
 - **Model checking.** `tla/CapabilityReachability.tla`: 20,480 distinct
   states, exhaustive; `NoHazard` holds at $k=1,2,3$ (4,096 states each),
   violated at $k=4,5$ with counterexamples that decode back through
