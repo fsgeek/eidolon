@@ -165,15 +165,23 @@ class CrumblingWallQuorum(QuorumSystem):
       Mars proposer:  one from Mars + one from Moon + one from LEO + one from Earth
       Moon proposer:  one from Moon + one from LEO + one from Earth
       LEO proposer:   one from LEO + one from Earth
-      Earth proposer: full Earth row (Phase 1 = Phase 2 at the bottom)
+      Earth proposer: |E|-k+1 Earth nodes — a SINGLE Earth node under
+                      strict Phase 2 (k=|E|)
+
+    The |E|-k+1 Earth floor (min_earth_in_q1) applies to EVERY row above,
+    not just the Earth one: under relaxed k the "one from Earth" in each
+    line becomes |E|-k+1 from Earth.
 
     Phase 2 quorum (commits, hot path):
       All nodes (or k-of-n) from the fastest tier (Earth).
 
     Intersection guarantee:
-      Every tier's Phase 1 reads down to Earth, so every Phase 1
-      quorum contains at least one Earth node. Phase 2 contains all
-      (or k-of-n) Earth nodes. Therefore every Q1 intersects every Q2.
+      Every Phase 1 quorum contains at least |E|-k+1 Earth nodes and
+      every Phase 2 quorum contains at least k, and
+      (|E|-k+1) + k > |E|, so by pigeonhole they share an Earth node.
+      Note that "reads down to Earth" alone is NOT sufficient: at k < |E|
+      a Q1 holding one Earth node can be disjoint from a valid k-of-|E|
+      Q2.  The Earth floor, not the downward chain, carries safety.
 
     Liveness consequence:
       During Mars blackout, only Mars-initiated Phase 1 is blocked.

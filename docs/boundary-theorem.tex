@@ -1,0 +1,306 @@
+% ---------------------------------------------------------------------------
+% The capability-state boundary theorem for the crumbling-wall quorum system.
+% Drop-in LaTeX.  Requires amsthm/amsmath and the usual theorem environments:
+%   \newtheorem{theorem}{Theorem}[section]
+%   \newtheorem{lemma}[theorem]{Lemma}
+%   \newtheorem{proposition}[theorem]{Proposition}
+%   \newtheorem{corollary}[theorem]{Corollary}
+%   \theoremstyle{definition} \newtheorem{definition}[theorem]{Definition}
+%   \theoremstyle{remark}     \newtheorem{remark}[theorem]{Remark}
+% ---------------------------------------------------------------------------
+
+\subsection{Capability states and the preemption hazard}
+
+\begin{definition}[Wall]
+\label{def:wall}
+A \emph{wall} is a finite node set $V$ together with an ordered list of
+\emph{tiers} $T_0,\dots,T_{m-1}$ with $T_j\subseteq V$ and
+$\bigcup_j T_j=V$.  The last tier $E:=T_{m-1}$ is the \emph{anchor}
+(``Earth''); write $n_E:=|E|$.  Tiers are listed slow-to-fast, matching the
+code convention of \texttt{CrumblingWallQuorum}; the paper's indexing is the
+reverse.  Fix a \emph{Phase~2 threshold} $k$ and set
+\[
+  a \;:=\; n_E-k+1 ,
+\]
+the minimum number of anchor nodes any Phase~1 quorum must contain
+(\texttt{min\_earth\_in\_q1}).  For a respondent set $R\subseteq V$ and an
+initiator tier $i\in\{0,\dots,m-1\}$ define
+\begin{align}
+  \Phi_1^{\,i}(R) &\;:\Longleftrightarrow\;
+    \Bigl(\forall j,\; i\le j\le m-1:\; R\cap T_j\neq\emptyset\Bigr)
+    \;\wedge\; |R\cap E|\ \ge\ a ,
+    \label{eq:p1}\\[2pt]
+  \Phi_2(R) &\;:\Longleftrightarrow\; |R\cap E|\ \ge\ k .
+    \label{eq:p2}
+\end{align}
+The \emph{capability state} of a tier-$i$ proposer whose reachable set is $R$
+is the pair $\chi^i(R):=\bigl(\Phi_1^{\,i}(R),\Phi_2(R)\bigr)\in\{0,1\}^2$.
+The state $(1,0)$ --- able to complete Phase~1, hence able to raise the ballot
+high-water mark and preempt incumbents, but unable to complete Phase~2, hence
+unable to commit --- is the \emph{preemption hazard}.
+\end{definition}
+
+Equations \eqref{eq:p1}--\eqref{eq:p2} are a literal transcription of
+\texttt{CrumblingWallQuorum.is\_phase1\_quorum} and
+\texttt{is\_phase2\_quorum} in \texttt{quorums.py}.
+
+\begin{lemma}[Monotonicity]
+\label{lem:mono}
+For every $i$, both $\Phi_1^{\,i}$ and $\Phi_2$ are monotone: if
+$R\subseteq R'$ and $\Phi(R)$ then $\Phi(R')$.  Consequently a tier-$i$
+proposer can \emph{assemble} a Phase~$p$ quorum from a reachable set $R$ if
+and only if $R$ itself satisfies $\Phi_p$.
+\end{lemma}
+
+\begin{proof}
+Each conjunct of \eqref{eq:p1} and \eqref{eq:p2} is of the form
+``$R\cap S\neq\emptyset$'' or ``$|R\cap S|\ge c$'' for a fixed $S$ and
+constant $c$, and both are preserved under enlarging $R$.  For the
+consequence: if some $Q\subseteq R$ satisfies $\Phi_p$ then so does $R$ by
+monotonicity; conversely $R\subseteq R$.
+\end{proof}
+
+Lemma~\ref{lem:mono} is what licenses the phrase ``reachable capability
+state'': we may quantify over respondent sets rather than over quorums.
+
+\subsection{The boundary}
+
+\begin{theorem}[Capability boundary]
+\label{thm:boundary}
+Let a wall be given with anchor $E$, $n_E\ge 1$, and threshold $k$ with
+\begin{description}
+  \item[(W1)] $1\le k\le n_E$ \quad(equivalently $1\le a\le n_E$), and
+  \item[(W2)] $T_j\setminus E\neq\emptyset$ for every $j$ with
+    $0\le j\le m-2$ \quad(every non-anchor tier owns at least one node the
+    anchor does not).
+\end{description}
+Then for every initiator tier $i$,
+\[
+  \bigl(\exists R\subseteq V:\ \chi^i(R)=(1,0)\bigr)
+  \quad\Longleftrightarrow\quad
+  a<k
+  \quad\Longleftrightarrow\quad
+  n_E-k+1<k
+  \quad\Longleftrightarrow\quad
+  k>\Bigl\lceil \tfrac{n_E}{2}\Bigr\rceil .
+\]
+Equivalently: the hazard is unreachable if and only if
+$n_E-k+1\ge k$, i.e.\ $k\le\lceil n_E/2\rceil$.
+\end{theorem}
+
+\begin{proof}
+The arithmetic equivalences first.  Since $a=n_E-k+1$ we have
+$a\ge k\iff n_E+1\ge 2k\iff k\le\lfloor (n_E+1)/2\rfloor$, and
+$\lfloor (n_E+1)/2\rfloor=\lceil n_E/2\rceil$ for every integer $n_E$.
+Note also the identity $a+k=n_E+1$: the two thresholds partition
+$n_E+1$, and $a\ge k$ says exactly that Phase~2 receives the smaller half.
+
+\smallskip
+\emph{Sufficiency ($a\ge k$ $\Rightarrow$ no hazard).}
+Suppose $\Phi_1^{\,i}(R)$ holds.  Its second conjunct gives
+$|R\cap E|\ge a\ge k$, which is precisely $\Phi_2(R)$.  Hence
+$\chi^i(R)\in\{(0,0),(0,1),(1,1)\}$ and $(1,0)$ is unreachable.  This
+direction uses \emph{only} the anchor-count conjunct: it holds for every $i$,
+every $m$, every choice of tier sizes, and with or without (W1) and (W2).
+
+\smallskip
+\emph{Necessity ($a<k$ $\Rightarrow$ hazard).}
+Assume $a\le k-1$.  By (W1), $1\le a\le n_E$, so we may choose $A\subseteq E$
+with $|A|=a$.  By (W2), for each $j$ with $i\le j\le m-2$ choose a witness
+$w_j\in T_j\setminus E$.  Put
+\[
+  R \;:=\; A\ \cup\ \{\,w_j \;:\; i\le j\le m-2\,\}, \qquad
+  |R| \;=\; (m-1-i)+a .
+\]
+\emph{$R$ satisfies $\Phi_1^{\,i}$.}  For $i\le j\le m-2$ we have
+$w_j\in R\cap T_j$, so that tier is hit.  For $j=m-1$ we have
+$A\subseteq R\cap E$ and $|A|=a\ge1$, so the anchor is hit.  Finally
+$|R\cap E|\ge|A|=a$.
+\emph{$R$ violates $\Phi_2$.}  Every $w_j$ lies outside $E$, so
+$R\cap E=A$ exactly and $|R\cap E|=a\le k-1<k$.
+Hence $\chi^i(R)=(1,0)$.
+\end{proof}
+
+\begin{remark}[What the theorem does \emph{not} depend on]
+\label{rem:independence}
+Three quantities that one might expect to matter do not appear in the
+criterion.
+\begin{enumerate}
+\item \textbf{The number of tiers $m$.}  It appears only in the size
+  $(m-1-i)+a$ of the witness set, never in the predicate that decides
+  reachability.  The per-tier conjuncts of \eqref{eq:p1} are
+  \emph{hitting} constraints on sets disjoint from $E$ (by (W2)); satisfying
+  them costs nodes, but costs zero \emph{anchor} nodes, so they are inert with
+  respect to the only quantity $\Phi_2$ measures.
+\item \textbf{The sizes of the non-anchor tiers.}  Only emptiness matters
+  ((W2)); a tier of size $1$ and a tier of size $10^6$ impose the same
+  constraint ``contribute one node, none of them in $E$''.  Tier sizes do
+  change the \emph{number} of hazard states --- each non-anchor tier
+  multiplies the count of hazardous respondent sets --- but not their
+  existence.
+\item \textbf{The initiator tier $i$.}  Sufficiency is uniform in $i$ because
+  the anchor-count conjunct of \eqref{eq:p1} is the same for all $i$.
+  Necessity for tier $i$ needs (W2) only for $j\ge i$, which is implied by
+  (W2) for $j\ge 0$.  So all tiers cross the boundary at the same $k$: the
+  wall has one boundary, not one per tier.
+\end{enumerate}
+The criterion is therefore a statement about a single coordinate --- the
+number of anchor nodes in $R$ --- projected out of an otherwise
+higher-dimensional constraint system.
+\end{remark}
+
+\begin{remark}[Self-inclusion]
+Whether a proposer counts itself among the respondents is immaterial:
+adding a fixed node to $R$ preserves $\Phi_1^{\,i}$ by
+Lemma~\ref{lem:mono}, and in the necessity construction one may take the
+proposer's own node as the witness $w_i$ (if $i\le m-2$) or as a member of
+$A$ (if $i=m-1$) without changing $|R\cap E|$ or the argument.
+\end{remark}
+
+\subsection{The flat-threshold companion}
+
+\begin{corollary}[Threshold quorums]
+\label{cor:flat}
+Let $\Phi_1(R)\iff|R|\ge q_1$ and $\Phi_2(R)\iff|R|\ge q_2$ over $n$ nodes,
+with $1\le q_1,q_2\le n$.  Then $(1,0)$ is unreachable if and only if
+$q_1\ge q_2$.
+\end{corollary}
+
+\begin{proof}
+If $q_1\ge q_2$ then $|R|\ge q_1\ge q_2$, so $\Phi_1(R)\Rightarrow\Phi_2(R)$.
+If $q_1<q_2$, any $R$ with $|R|=q_1\ (\le n)$ satisfies $\Phi_1$ and violates
+$\Phi_2$.
+\end{proof}
+
+Corollary~\ref{cor:flat} is Theorem~\ref{thm:boundary} with $m=1$ (no
+non-anchor tiers, so (W2) is vacuous), $E=V$, $a=q_1$, $k=q_2$.  The two
+results are one lemma --- \emph{two thresholds on a common set are
+comparable, and the hazard is exactly the gap between them} --- and the
+crumbling wall is the flat rule applied \emph{inside the anchor}: the
+Flexible Paxos condition $q_1+q_2>n$ instantiated on $E$ reads
+$a+k>n_E$, and the construction takes the minimum such $a=n_E-k+1$.  Under
+that choice $a\ge k$ is literally $q_1\ge q_2$ restricted to the anchor.
+The hazard is reachable exactly when Phase~1 is \emph{cheaper} than Phase~2
+on the anchor.
+
+\subsection{Degenerate walls: a sharp form}
+
+Hypotheses (W1)--(W2) are not cosmetic; Section~\ref{sec:cx} exhibits walls
+violating them where the ``only if'' direction of
+Theorem~\ref{thm:boundary} fails.  The following proposition is exact for all
+walls, degenerate or not, and shows precisely how the boundary deforms.
+
+\begin{definition}
+For an initiator tier $i$ let
+$\mathcal F_i:=\{\,T_j : i\le j\le m-2,\ T_j\subseteq E\,\}$ be the family of
+non-anchor tiers swallowed by the anchor, and let $h_i$ be the minimum size of
+a set $S\subseteq E$ meeting every member of $\mathcal F_i$ (the
+\emph{hitting number}), with $h_i:=0$ if $\mathcal F_i=\emptyset$ and
+$h_i:=\infty$ if some member of $\mathcal F_i$ is empty.  Put
+\[
+  c_i \;:=\;
+  \begin{cases}
+    \infty, & \text{if } T_j=\emptyset \text{ for some } i\le j\le m-1,\\
+    \max\{a,\ h_i,\ 1\}, & \text{otherwise.}
+  \end{cases}
+\]
+\end{definition}
+
+\begin{proposition}[Sharp boundary]
+\label{prop:sharp}
+For every wall, every $k\in\mathbb Z$ and every $i$,
+\[
+  \bigl(\exists R:\ \chi^i(R)=(1,0)\bigr)
+  \quad\Longleftrightarrow\quad
+  c_i<k .
+\]
+\end{proposition}
+
+\begin{proof}
+($\Rightarrow$) Let $\Phi_1^{\,i}(R)$ and $\neg\Phi_2(R)$.  Each tier
+$T_j$, $i\le j\le m-1$, meets $R$, hence is nonempty, so the first case of
+the definition of $c_i$ does not apply.  Write $D:=R\cap E$.  Then
+$|D|\ge a$; $D\neq\emptyset$ because the anchor conjunct $R\cap T_{m-1}
+\neq\emptyset$ holds, so $|D|\ge1$; and for $T_j\in\mathcal F_i$ we have
+$\emptyset\neq R\cap T_j\subseteq R\cap E=D$, so $D$ hits $\mathcal F_i$ and
+$|D|\ge h_i$.  Therefore $|D|\ge\max\{a,h_i,1\}=c_i$.  Since
+$\neg\Phi_2(R)$ gives $|D|\le k-1$, we get $c_i\le k-1<k$.
+
+($\Leftarrow$) Let $c_i<k$; in particular $c_i$ is finite, so every $T_j$
+with $i\le j\le m-1$ is nonempty and $E\neq\emptyset$.  Choose a minimum
+hitting set $S\subseteq E$ for $\mathcal F_i$, $|S|=h_i\le c_i$.  We claim
+$c_i\le n_E$: if $k\le n_E$ then $c_i\le k-1<n_E$; if $k>n_E$ then $a\le 0$
+and $c_i=\max\{h_i,1\}\le n_E$ since $h_i\le n_E$ and $n_E\ge1$.  Hence we may
+extend $S$ to $A\subseteq E$ with $|A|=c_i$.  For each $j$ with
+$i\le j\le m-2$ and $T_j\not\subseteq E$ choose $w_j\in T_j\setminus E$, and
+set $R:=A\cup\{w_j\}$.  Every tier $T_j$, $i\le j\le m-2$, is met: by $w_j$ if
+$T_j\not\subseteq E$, by $S\subseteq A$ otherwise.  The anchor is met because
+$|A|=c_i\ge1$.  Also $R\cap E=A$, so $|R\cap E|=c_i\ge a$, giving
+$\Phi_1^{\,i}(R)$; and $|R\cap E|=c_i<k$, giving $\neg\Phi_2(R)$.
+\end{proof}
+
+\begin{corollary}
+Under (W1) and (W2), $\mathcal F_i=\emptyset$ so $h_i=0$, every tier from $i$
+down is nonempty, and $a\ge1$; hence $c_i=a$ and
+Proposition~\ref{prop:sharp} reduces to Theorem~\ref{thm:boundary}.
+\end{corollary}
+
+\subsection{Sharpness: how each hypothesis fails}
+\label{sec:cx}
+
+Each item below breaks the ``only if'' direction of
+Theorem~\ref{thm:boundary} (the ``if'' direction is unconditional).
+
+\begin{enumerate}
+\item \textbf{An empty tier} (violates (W2); \emph{accepted} by the shipped
+  constructor).  Tiers $\langle\emptyset,\{u\},\{v\},E\rangle$ with
+  $n_E=5$, $k=5$, so $a=1<k$.  For $i=0$ the read-down conjunct demands a
+  respondent from the empty tier, so $\Phi_1^{\,0}$ is unsatisfiable and
+  \emph{no} capability state other than $(0,\cdot)$ is reachable: the hazard
+  is absent for the wrong reason.  Proposition~\ref{prop:sharp} agrees:
+  $c_0=\infty$.  For $i\ge1$ the hazard returns.
+\item \textbf{A tier contained in the anchor} (violates (W2); \emph{rejected}
+  by the shipped constructor's disjointness check).  Tiers
+  $\langle\{e_1\},\{e_2\},\{e_3\},\{e_4\},E\rangle$ with
+  $E=\{e_1,\dots,e_5\}$ and $k=4$, so $a=2<k$.  A tier-$0$ Phase~1 quorum
+  must contain $e_1,\dots,e_4$, i.e.\ four anchor nodes, which already
+  satisfies $\Phi_2$; the hazard is unreachable at $i=0$ despite $a<k$.
+  Here $h_0=4$ and $c_0=4\not<4$.  For $i\ge1$, $h_i\le3<4$ and the hazard
+  reappears --- the one configuration in which the boundary genuinely
+  differs from tier to tier.
+\item \textbf{Partial overlap is harmless.}  If each non-anchor tier retains
+  one node outside $E$ --- e.g.\ $\langle\{e_1,x_1\},\dots\rangle$ --- then
+  $\mathcal F_i=\emptyset$, $c_i=a$, and the boundary is restored.  The
+  operative hypothesis is $T_j\setminus E\neq\emptyset$, which is
+  \emph{weaker} than the pairwise disjointness the implementation enforces:
+  overlaps \emph{among non-anchor tiers} are irrelevant, since witnesses may
+  coincide.
+\item \textbf{$k$ outside $[1,n_E]$} (violates (W1)) does \emph{not} break the
+  criterion.  For $k>n_E$ we get $a\le0$, $\Phi_2$ is unsatisfiable, and every
+  Phase~1 quorum is hazardous --- consistent with $a<k$.  For $k\le0$,
+  $\Phi_2$ is universally true and the hazard is impossible --- consistent
+  with $a\ge k$.  (W1) is needed only to make the specific witness set of
+  Theorem~\ref{thm:boundary} well defined;
+  Proposition~\ref{prop:sharp} covers the rest.
+\item \textbf{$E=\emptyset$.}  The anchor conjunct of \eqref{eq:p1} is
+  unsatisfiable, so no state with first coordinate $1$ is reachable; the
+  criterion holds vacuously.
+\item \textbf{Non-monotone predicates.}  Lemma~\ref{lem:mono} is what makes
+  ``reachable set'' and ``quorum'' interchangeable.  A Phase~1 rule with an
+  upper bound (``exactly $t$ anchor respondents'', ``at most $t$'') would
+  destroy this, and with it the identification of capability states with
+  respondent sets; neither the theorem nor its proof survives that change.
+\end{enumerate}
+
+\begin{remark}[Operational reading]
+The unreachability condition $k\le\lceil n_E/2\rceil$ is not free.  Since
+$a+k=n_E+1$, demanding $a\ge k$ demands that Phase~1 touch at least as many
+anchor nodes as Phase~2 --- exactly the Flexible Paxos asymmetry, inverted, on
+the anchor.  For the $5/1/1/3$ topology ($n_E=5$) the hazard-free regime is
+$k\le3$; the strict configuration $k=5$ sits at the far end of the hazardous
+range, where $a=1$ and a Phase~1 quorum needs a single Earth node while a
+commit needs all five.  Theorem~\ref{thm:boundary} says nothing about how
+often a proposer \emph{occupies} the hazard state, nor whether occupying it
+costs liveness in a given protocol --- it establishes only that the shape of
+the quorum system admits the state.
+\end{remark}
