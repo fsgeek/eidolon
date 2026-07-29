@@ -161,10 +161,16 @@ def wire_duel(env: simpy.Environment, *, k: int, polarity: str,
     assert max(e.id for e in registry._entities.values()) < 1000, (
         "entity ids must stay below the ballot multiplier")
 
-    # Capability gate: derive reachability from ACTUAL links, then demand
-    # the classifier certify the regime this trial claims to exercise.
+    # Capability gate: derive reachability from ACTUAL deliverability —
+    # links AND current partition state — then demand the classifier
+    # certify the regime this trial claims to exercise.
+    #
+    # This used to read get_link, which is partition-blind, so the gate
+    # kept certifying (1,1) after any partition was applied.  Harmless
+    # for the original duel campaign, which partitioned nothing; fatal
+    # for any trial that flips connectivity mid-round.
     leo_reach = {a for a in all_ids
-                 if network.get_link(leo_prop_entity.id, a) is not None}
+                 if network.is_reachable(leo_prop_entity.id, a)}
     leo_report = classify(wall, 2, leo_reach)
     if k in (5, 4):
         assert leo_report.r1 and not leo_report.r2, (
@@ -174,7 +180,7 @@ def wire_duel(env: simpy.Environment, *, k: int, polarity: str,
     else:  # k == 3: relaxation converts the spoiler into a failover peer
         assert leo_report.r1 and leo_report.r2 and not leo_report.hazards
     earth_reach = {a for a in all_ids
-                   if network.get_link(earth_prop_entity.id, a) is not None}
+                   if network.is_reachable(earth_prop_entity.id, a)}
     earth_report = classify(wall, 3, earth_reach)
     assert earth_report.r1 and earth_report.r2
 

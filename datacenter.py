@@ -126,6 +126,26 @@ class DatacenterNetwork(Network):
         """True if a direct link exists between locations a and b."""
         return (a, b) in self._links or (b, a) in self._links
 
+    def is_reachable(self, src_id: int, dst_id: int) -> bool:
+        """True if a packet sent now from src_id could reach dst_id.
+
+        Composes exactly the two conditions ``send`` applies, in the same
+        order: location-level partition first, then link existence.
+
+        Use this — NOT ``get_link`` — whenever deriving the reachable set
+        that a quorum predicate will be evaluated against.  ``get_link``
+        answers a topology question and is deliberately partition-blind,
+        so a reachability set built from it silently keeps certifying
+        nodes that are currently unreachable.
+        """
+        src_loc = self._entity_location.get(src_id)
+        dst_loc = self._entity_location.get(dst_id)
+        if src_loc is None or dst_loc is None:
+            return False
+        if (src_loc, dst_loc) in self._partitioned_locations:
+            return False
+        return self.get_link(src_id, dst_id) is not None
+
     def partition_locations(self, loc_a: str, loc_b: str):
         """Partition two locations (bidirectional)."""
         self._partitioned_locations.add((loc_a, loc_b))
