@@ -146,5 +146,15 @@ already carries two.
 
 ## Deviations
 
-*(To be appended if the plan changes after this document is committed.
-Any deviation is recorded here with its reason, not silently absorbed.)*
+Five, all recorded with reasons in
+`2026-07-29-midround-flip-results.md` §Deviations: D1 flip timing moved
+from the Phase 2 return leg to pre-fan-out (a return-leg flip tests the
+acknowledgment gap, not a capability state); D2 control C2 realized as
+(0,1) rather than (0,0), which is unrealizable while still poisoning the
+anchor; D3 incumbent is Moon-tier because an Earth-tier incumbent cannot
+be put in a Phase-1-failing state; D4 an arm was added because P4 as
+registered was untestable; D5 k=5 only, because the boundary theorem
+means the experiment does not exist at k<=3.
+
+**Outcome: P1 falsified in reverse, P2 falsified, P3 and P4 confirmed.**
+The declared consequence of a null applies.
