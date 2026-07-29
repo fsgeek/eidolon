@@ -186,8 +186,41 @@ Consequences, recorded rather than quietly fixed:
   Earth-proposer Phase 1 size, and an "Intersection guarantee" paragraph
   that argued from "every Q1 contains one Earth node" — which does not
   imply intersection for any $k < |E|$. The code was correct for a
-  different reason. Three further contradictions remain unfixed and are
-  listed in the ledger.
+  different reason.
+
+### Remaining prose/code contradictions (unfixed)
+
+Recorded here rather than left in the workflow ledger, which is
+session-scoped and does not survive. Each re-verified directly against the
+code, not accepted on the agent's report.
+
+1. **`quorums.py:58` — "Intersection guaranteed" is false as implemented.**
+   `GridQuorum` computes grid dimensions but overrides neither
+   `is_phase1_quorum` nor `is_phase2_quorum`, so both are the inherited
+   pure-cardinality tests. Demonstrated at n=16 (4x4, both phase sizes 7):
+   the disjoint sets `{0..6}` and `{7..13}` both pass both predicates.
+   **Inert today** — the only instantiation is `demo_step_4.py:155` at n=5,
+   where the grid is 2x3, both phase sizes are 4, and 4+4>5 forces
+   intersection by cardinality alone. A latent trap for anyone who reuses
+   the class at larger n.
+2. **`quorums.py:69-77` — `self._grid` is built and never read.** Every
+   occurrence is an assignment; no code consumes it. Consistent with (1):
+   the grid structure is decorative.
+3. **`quorums.py:40-57` — unedited reasoning shipped as a docstring**,
+   including the literal line "Wait - do they intersect?" and two
+   competing definitions of a grid quorum (`:15` vs `:48-50`).
+4. **`quorums.py:111-113` — `FlexibleGridQuorum` documents a column
+   constraint that does not exist** in its predicates. The class is never
+   instantiated anywhere in the repository.
+5. **`paxos.py:330` comment is wrong.** It says "(round * 1000) +
+   proposer_id"; `_next_proposal_number` (:374-376) increments a
+   *cumulative* counter per call, not per round. The distinction matters
+   because ballot uniqueness depends on `entity.id < 1000`, asserted only
+   in `duel.py` (and now `flip.py`), never in `paxos.py` itself.
+
+Reported by the sweep but **not** re-verified here: a claim that
+`capability.py:69-72` says "two boundary markers" where three provenance
+keys lack a report field. Left as unverified rather than repeated.
 - **Briefing error by the controlling instance.** Three agents were told
   the `(0,1)` state had never been checked. `capability.py` already
   implements the four-state model and names `(0,1)` as
