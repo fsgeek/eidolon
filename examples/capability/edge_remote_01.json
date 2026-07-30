@@ -1,0 +1,27 @@
+{
+  "configuration_source": "example:remote/metro/cloud wall",
+  "connectivity_source": "example:remote and cloud reachable; metro absent",
+  "initiating_tier": "remote",
+  "phase2_threshold": 3,
+  "reachable": [
+    1,
+    2,
+    3,
+    100,
+    101
+  ],
+  "tiers": [
+    {
+      "name": "remote",
+      "nodes": [100, 101]
+    },
+    {
+      "name": "metro",
+      "nodes": [200]
+    },
+    {
+      "name": "cloud",
+      "nodes": [1, 2, 3]
+    }
+  ]
+}

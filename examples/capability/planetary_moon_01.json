@@ -1,0 +1,32 @@
+{
+  "configuration_source": "example:planetary-wall-5/1/1/3",
+  "connectivity_source": "example:Moon and Earth reachable; LEO absent",
+  "initiating_tier": "Moon",
+  "phase2_threshold": 5,
+  "reachable": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    200
+  ],
+  "tiers": [
+    {
+      "name": "Mars",
+      "nodes": [100, 101, 102]
+    },
+    {
+      "name": "Moon",
+      "nodes": [200]
+    },
+    {
+      "name": "LEO",
+      "nodes": [300]
+    },
+    {
+      "name": "Earth",
+      "nodes": [1, 2, 3, 4, 5]
+    }
+  ]
+}

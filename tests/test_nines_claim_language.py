@@ -63,3 +63,9 @@ def test_relocated_corollary_and_operational_boundaries_are_present():
     assert "Demand for Phase~1 is correlated with its price" in text
     assert "fresh runtime authority" in text
     assert "chosen client contract" in text
+
+
+def test_wall_readout_is_labeled_as_demonstration_not_evidence():
+    text = PAPER.read_text(encoding="utf-8")
+    assert "demonstration artifact, not empirical evidence" in text
+    assert "experiments/\\allowbreak capability\\_readout.py" in text
