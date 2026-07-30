@@ -30,6 +30,11 @@
 \newcounter{prop}
 \newcounter{cor}
 
+% Tighten list and float-adjacent whitespace. Two-column body is length-bound;
+% these recover vertical space without cutting text.
+\setlist[itemize]{topsep=2pt,itemsep=1pt,parsep=0pt,partopsep=0pt}
+\setlist[enumerate]{topsep=2pt,itemsep=1pt,parsep=0pt,partopsep=0pt}
+
 \title{Legible Consensus: Capability Gaps in Flexible Quorums}
 \author{Paper \#98}
 \date{}
@@ -50,9 +55,9 @@ Planetary distance makes the hidden distinction impossible to ignore. During a M
 
 The approximation has a precise historical source. If the same quorum family is used for Phase~1 and Phase~2, then authority acquisition and commit formability are the same predicate over every connectivity state. Majority quorums are the familiar instance, but majority is not the cause; phase symmetry is. Flexible Paxos~\cite{howard2016} retains only cross-phase intersection for safety, allowing a rare Phase~1 to be made expensive so that the Phase~2 hot path stays local and fast. That frequency arbitrage spends the operational coincidence that one reachability count once provided. Demand for Phase~1 is correlated with its price: authority must often be reacquired precisely when degraded connectivity makes the larger family hardest to form.
 
-We characterize the result exactly. Let $R_1(C)$ and $R_2(C)$ say that reachable set $C$ contains a Phase~1 or Phase~2 quorum. We call the mixed states $(R_1,R_2)=(1,0)$ and $(0,1)$ \emph{capability gaps}. The $(1,0)$ gap is empty exactly when every Phase~1 quorum contains a Phase~2 quorum; the $(0,1)$ gap is empty under the mirrored containment. The induced predicates therefore have four mutually exclusive relations: equality admits neither gap; either strict implication admits exactly its opposite-direction gap; and incomparable predicates admit both. Thus differing families do not in general select exactly one gap---their predicate order determines whether one or both are reachable. The characterization is elementary; its proof is three lines of monotonicity. We take that to be the point rather than a limitation: while both phases drew on a single family the criterion had nothing to decide, which is why decades of refinement of the intersection condition never had occasion to state it.
+We characterize the result exactly. Let $R_1(C)$ and $R_2(C)$ say that reachable set $C$ contains a Phase~1 or Phase~2 quorum. We call the mixed states $(R_1,R_2)=(1,0)$ and $(0,1)$ \emph{capability gaps}. The $(1,0)$ gap is empty exactly when every Phase~1 quorum contains a Phase~2 quorum; the $(0,1)$ gap is empty under the mirrored containment. The induced predicates therefore have four mutually exclusive relations: equality admits neither gap; either strict implication admits exactly its opposite-direction gap; and incomparable predicates admit both. Thus differing families do not in general select exactly one gap---their predicate order determines whether one or both are reachable. The criterion is vacuous under a single phase-symmetric family and becomes informative exactly when flexible quorums permit the families to diverge.
 
-The directions are not operationally interchangeable. In our pre-registered single-decree simulations, an acquisition-only incumbent was indistinguishable from a healthy contender on every recorded metric and injected accepted values that a subsequent acquisition had to preserve. In the dual state, a commit-capable but acquisition-incapable incumbent prevented a healthy proposer from deciding in all 50 seeds at retry budget eight under the modeled retry policy. These are bounded observations, not intrinsic labels: the first state is not inherently harmless, and the second result is retry-budget exhaustion rather than a claim of unconditional livelock. What makes the asymmetry operational is that the two gaps prescribe opposite responses to an identical symptom---writes slowing, nothing obviously wrong, every node green. The ordinary reflex of restarting the incumbent is harmless or curative in most states; in $(0,1)$ it converts a degraded-but-serving system into a stall, because no replacement can be elected. No node-health summary distinguishes the two. The connectivity data needed to distinguish them is already available to an operator; what has been missing is the predicate that reads it.
+The directions are not operationally interchangeable. In our pre-registered single-decree simulations, an acquisition-only incumbent was indistinguishable from a healthy contender on every recorded metric and injected accepted values that a subsequent acquisition had to preserve. In the dual state, a commit-capable but acquisition-incapable incumbent prevented a healthy proposer from deciding in all 50 seeds at retry budget eight under the modeled retry policy. These are bounded observations, not intrinsic labels: the first state is not inherently harmless, and the second result is retry-budget exhaustion rather than a claim of unconditional livelock. What makes the asymmetry operational is that the two gaps can prescribe opposite responses. Under Multi-Paxos a still-authorized incumbent in $(0,1)$ may continue committing, but restarting it---the ordinary reflex, harmless or curative in most states---makes fresh service impossible until Phase~1 becomes formable again. Node health alone does not reveal that failover hazard: every node can be green in either mixed state, and the capability pair does not by itself report whether authority is live. Recognition is therefore needed at two levels and we supply both: a design-time auditor identifies which gaps a quorum system admits at all, while a runtime readout evaluates the current connectivity state and names the failed obligation before failover policy acts. The connectivity data that readout consumes is already available to an operator; what has been missing is the predicate that reads it.
 
 We apply the characterization to a wall-shaped quorum construction over a 5/1/1/3 Earth/LEO/Moon/Mars topology. Phase~2 remains on the fast Earth tier, while each tier's Phase~1 family reads downward through the wall. The upper-tier witnesses are participation policy, not additional Paxos safety requirements: they are useful where local representation, administrative control, sovereignty, or fencing policy requires them. Without such a requirement, the wall is an analytical case study rather than a recommended deployment geometry. With one, its structure exposes which obligation failed and which capability remains, including the difference between scheduled planetary ephemerality and the edge's unscheduled ephemerality.
 
@@ -62,7 +67,7 @@ This paper makes three contributions:
 \item \textbf{Measured consequences of both gaps.} Pre-registered experiments isolate the sharply different behavior above and report it within the simulator's retry-policy and single-decree bounds (Section~\ref{sec:valence}).
 \item \textbf{A legible, physically tiered case study.} The wall construction exposes per-tier acquisition and commit state in $O(\text{tiers})$ time from a connectivity summary, separates participation policy from anchor safety, and makes the structural edge applicability concrete without presenting it as terrestrial evidence.
 \end{enumerate}
-Each empirical claim is tied to an executable artifact and output file (Appendix~A). All results are design-level; deployment would introduce orbital dynamics, antenna scheduling, and variable link quality not modeled here.
+Each empirical claim is tied to an executable artifact and output file (\autoref{app:traceability}). All results are design-level; deployment would introduce orbital dynamics, antenna scheduling, and variable link quality not modeled here.
 
 
 \section{Background}
@@ -320,7 +325,7 @@ Read the two rows together: \emph{no value of $k$ closes both states}. At $k \le
 
 The enumeration credits each proposer with a reachable node in its own tier, modelling a colocated acceptor; without that assumption LEO also retains $(0,1)$ at every $k$, since its single node can be severed while Earth remains whole. We state the assumption rather than absorb it: it determines whether phase symmetry is affordable at one tier or two.
 
-\textbf{Relationship to Flexible Paxos.} The $(1,0)$ state is not new, and the Flexible Paxos paper describes it twice~\cite{howard2016}: once in the $|Q_1|{=}1$, $|Q_2|{=}N$ construction, and once in the row-failure discussion, where completing $Q_1$ ``recover[s] all past decisions'' before falling back to reconfiguration. Both readings are constructive, and our measurements agree with them (Section~\ref{sec:valence}). Our relationship to that work is therefore threefold. It identifies the state and a use for it; we supply the design-time existence criterion---for a given construction, whether the state arises at all, which \S4.3 does not ask; and we find that the cost, where it exists, lies in the unexamined dual. What \S4.3 assumes is available and the connectivity setting does not supply is a \emph{recognizer}: its prescribed response presumes the system knows which state it occupies. Under a known crash-failure set that is reasonable. Under connectivity it is exactly the missing predicate, and supplying it is what the readout of Section~\ref{sec:liveness-wall} does.
+\textbf{Relationship to Flexible Paxos.} The $(1,0)$ state is not new, and the Flexible Paxos paper describes it twice~\cite{howard2016}: once in the $|Q_1|{=}1$, $|Q_2|{=}N$ construction, and once in the row-failure discussion, where completing $Q_1$ ``recover[s] all past decisions'' before falling back to reconfiguration. Both readings are constructive, and our measurements agree with them (Section~\ref{sec:valence}). Our relationship to that work is therefore threefold. It identifies the state and a use for it; we supply the design-time existence criterion---for a given construction, whether the state arises at all, which FPaxos \S4.3 does not ask; and we find that the cost, where it exists, lies in the unexamined dual. What FPaxos \S4.3 assumes is available and the connectivity setting does not supply is a \emph{recognizer}: its prescribed response presumes the system knows which state it occupies. Under a known crash-failure set that is reasonable. Under connectivity it is exactly the missing predicate, and supplying it is what the readout of Section~\ref{sec:liveness-wall} does.
 
 This is the sense in which legibility is load-bearing rather than decorative. The gradient is not an artifact we can relax away; it is a property of any wall whose non-anchor rows carry witness obligations. When a capability gap cannot be closed by construction, state-aware mitigation requires distinguishing the state. The connectivity data needed is already available to an operator; what was missing was the predicate that reads it. Enumeration and auditor artifacts are in \texttt{results/capability/} (see \autoref{app:traceability}).
 
@@ -385,6 +390,36 @@ Fixed parameters across all experiments are listed in Table~\ref{tab:params} (\a
 
 \section{Results}
 \label{sec:results}
+
+\subsection{The Valence of the Two Capability States}
+\label{sec:valence}
+
+Section~\ref{sec:capability} says when each state arises. It does not say what either costs, and the two turn out to cost very different things. We registered predictions, a falsification criterion, and the consequence of a null before the experiment existed. The registered suspect was the intuitive one---an incumbent able to win ballots it cannot use, standing between healthy proposers and progress---and we predicted it would degrade their outcomes. That prediction was falsified in the opposite direction from the one expected, and we report it as registered.
+
+The setting is single-decree Paxos. A healthy proposer competes with an incumbent whose capability state is set by a mid-round connectivity change, with the retry budget swept over $\{1, 2, 4, 8\}$ and 50 seeds per cell. The incumbent sits at the Moon tier, since an Earth-tier proposer is colocated with an Earth acceptor and no partition can fail its Phase~1 while leaving Earth reachable. The experiment exists only at $k{=}5$: by Proposition~\ref{prop:boundary}, at $k \le 3$ there is no $(1,0)$ state to place an incumbent into.
+
+\begin{center}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Incumbent state & $P(\text{ok})$ & med.\ ttfc & rounds & NACKs \\
+\midrule
+$(1,0)$, flip-induced & 1.000 & 3.420~s & 2 & 7 \\
+$(1,1)$, fully healthy & 1.000 & 3.420~s & 2 & 7 \\
+$(0,1)$ & 0.000 & --- & --- & 48--49 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The first two rows are the result. A $(1,0)$ incumbent is metric-for-metric indistinguishable from a perfectly healthy competing proposer, at every retry budget, on every column we recorded. Whatever a $(1,0)$ incumbent costs the system, an ordinary contending peer costs exactly the same: the cost is contention, not the capability state. Its arm is also flat in the retry budget while its own Phase~1 completions climb from 1 to 8. The third row is the state nobody examined: at retry budget~8 the healthy proposer fails in 50 of 50 seeds, with Wilson intervals disjoint from the row above. Where the $(0,1)$ state is placed within the round does not matter---early and late placements overlap at every budget.
+
+\textbf{Mechanism: failure is cheap, success is expensive.} A proposer that fails Phase~1 learns so immediately and retries after a short backoff. A proposer that \emph{completes} Phase~1 and then cannot form $\mathcal{Q}_2$ must wait a full phase timeout before it can try again. It is throttled by its own success. The policy-independent core is that completing a phase imposes a floor on the retry interval---at least one phase timeout, which must exceed the round trip---while failing a phase imposes no floor at all. How small the floor-free cycle is depends on the backoff policy, which we deliberately do not study; the existence of the asymmetry does not.
+
+Two things this is not. The observed blocking is exhaustion of a bounded retry budget, not livelock: we make no livelock claim. And the $(1,0)$ result is not merely an absence of harm. Its partial Phase~2 reaches four of the five Earth acceptors; the next proposer's Phase~1 surfaces that accepted value, and ordinary Paxos value adoption carries it to commitment. The $(1,0)$ proposer is a value injector rather than a spoiler, which is the constructive reading of Flexible Paxos \S4.3 observed with its mechanism visible.
+
+\textbf{Scope.} Under Multi-Paxos a $(0,1)$ tier keeps committing while its authority survives, deferring exposure to the moment authority must be re-acquired; under single-decree every decree needs Phase~1, so the block is immediate. The measured setting is the severe one.
+
+\textbf{Deviations, recorded.} Five, with reasons, in the artifact record alongside the verdict table and threats: the flip lands before Phase~2 fan-out rather than in its return leg, which would test acknowledgment loss instead of a capability state; the intended $(0,0)$ control was realized as $(0,1)$, the only state failing Phase~1 while still reaching the anchor; and one arm was added because the registered timing prediction was untestable as written.
 
 \subsection{Flat versus Crumbling Wall: Geometry Alone Changes the Outcome}
 
@@ -473,35 +508,6 @@ This makes legibility a two-step operator procedure: check the wall structure (w
 Moon succeeds in both topologies because it has links to all five Earth ground stations. The sparse topology models a single LEO satellite with limited ground coverage; the three missing ground-station links are the difference between 0\% and 100\% for LEO-initiated consensus.
 
 
-\subsection{The Valence of the Two Capability States}
-\label{sec:valence}
-
-Section~\ref{sec:capability} says when each state arises. It does not say what either costs, and the two turn out to cost very different things. We registered predictions, a falsification criterion, and the consequence of a null before the experiment existed; the primary prediction was falsified in the opposite direction from the one expected, and we report it as registered.
-
-The setting is single-decree Paxos. A healthy proposer competes with an incumbent whose capability state is set by a mid-round connectivity change, with the retry budget swept over $\{1, 2, 4, 8\}$ and 50 seeds per cell. The incumbent sits at the Moon tier, since an Earth-tier proposer is colocated with an Earth acceptor and no partition can fail its Phase~1 while leaving Earth reachable. The experiment exists only at $k{=}5$: by Proposition~\ref{prop:boundary}, at $k \le 3$ there is no $(1,0)$ state to place an incumbent into.
-
-\begin{center}
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-Incumbent state & $P(\text{ok})$ & med.\ ttfc & rounds & NACKs \\
-\midrule
-$(1,0)$, flip-induced & 1.000 & 3.420~s & 2 & 7 \\
-$(1,1)$, fully healthy & 1.000 & 3.420~s & 2 & 7 \\
-$(0,1)$ & 0.000 & --- & --- & 48--49 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-The first two rows are the result. A $(1,0)$ incumbent is metric-for-metric indistinguishable from a perfectly healthy competing proposer, at every retry budget, on every column we recorded. Whatever a $(1,0)$ incumbent costs the system, an ordinary contending peer costs exactly the same: the cost is contention, not the capability state. Its arm is also flat in the retry budget while its own Phase~1 completions climb from 1 to 8. The third row is the state nobody examined: at retry budget~8 the healthy proposer fails in 50 of 50 seeds, with Wilson intervals disjoint from the row above. Where the $(0,1)$ state is placed within the round does not matter---early and late placements overlap at every budget.
-
-\textbf{Mechanism: failure is cheap, success is expensive.} A proposer that fails Phase~1 learns so immediately and retries after a short backoff. A proposer that \emph{completes} Phase~1 and then cannot form $\mathcal{Q}_2$ must wait a full phase timeout before it can try again. It is throttled by its own success. The policy-independent core is that completing a phase imposes a floor on the retry interval---at least one phase timeout, which must exceed the round trip---while failing a phase imposes no floor at all. How small the floor-free cycle is depends on the backoff policy, which we deliberately do not study; the existence of the asymmetry does not.
-
-Two things this is not. The observed blocking is exhaustion of a bounded retry budget, not livelock: we make no livelock claim. And the $(1,0)$ result is not merely an absence of harm. Its partial Phase~2 reaches four of the five Earth acceptors; the next proposer's Phase~1 surfaces that accepted value, and ordinary Paxos value adoption carries it to commitment. The $(1,0)$ proposer is a value injector rather than a spoiler, which is the constructive reading of Flexible Paxos \S4.3 observed with its mechanism visible.
-
-\textbf{Scope.} Under Multi-Paxos a $(0,1)$ tier keeps committing while its authority survives, deferring exposure to the moment authority must be re-acquired; under single-decree every decree needs Phase~1, so the block is immediate. The measured setting is the severe one.
-
-\textbf{Deviations, recorded.} Five, with reasons, in the artifact record alongside the verdict table and threats: the flip lands before Phase~2 fan-out rather than in its return leg, which would test acknowledgment loss instead of a capability state; the intended $(0,0)$ control was realized as $(0,1)$, the only state failing Phase~1 while still reaching the anchor; and one arm was added because the registered timing prediction was untestable as written.
-
 \section{Crash Tolerance and Coordinated Relaxation}
 \label{sec:relaxed}
 
@@ -545,11 +551,10 @@ strict & std & 1 & 100.0\% & 0.0\% & 0.0\% & n/a \\
 
 \begin{center}
 \small
-\setlength{\tabcolsep}{4pt}
 \setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{lrrrl}
 \toprule
-Regime & \makebox[0pt][r]{P1 min (E/M)} & P2 & Tol. & \makebox[0pt][l]{Earth-local P2 quorum} \\
+Regime & P1 min E/M & P2 & Tol. & E-local $\mathcal{Q}_2$ \\
 \midrule
 Strict ($k = 5$) & 1 / 4 & 5-of-5 & 0 & 2-node E \\
 Relaxed ($k = 4$) & 2 / 5 & 4-of-5 & 1 & 2-node E \\
@@ -601,7 +606,7 @@ $(0,0)$ & Neither phase formable; restrict service to an explicit local or unava
 \end{center}
 Sparse LEO illustrates the distinction: Phase~1 surfaces accepted values, but knowing a value is chosen requires evidence from a complete Phase~2 quorum, and sparse LEO reaches only three of five Earth nodes. Which contract to expose remains a service-level decision; the wall supplies the capability boundary, not the policy. The chosen client contract must also account for current authority and certification evidence rather than treating structural formability as permission by itself.
 
-\textbf{Opposite remediations.} For Multi-Paxos deployments the two mixed states prescribe contradictory responses to the same symptom, and this is where legibility earns its keep operationally. In $(0,1)$ a live leader may be committing normally while no replacement can be elected; an ordinary automated failover policy that restarts the serving incumbent therefore converts a degraded-but-serving system into a stall because fresh acquisition is impossible. In most other states the same reflex is harmless or curative. The symptom an operator sees---writes slowing, nothing obviously wrong, every node green---is identical across both, and no node-health summary distinguishes them. The capability readout does.
+\textbf{Opposite remediations.} For Multi-Paxos deployments the two mixed states can prescribe contradictory responses, and this is where legibility earns its keep operationally. In $(0,1)$ a still-authorized leader may be committing normally while no replacement can be elected; an ordinary automated failover policy that restarts the serving incumbent therefore makes fresh service impossible until Phase~1 becomes formable again. In most other states the same reflex is harmless or curative. Neither mixed state announces itself---every node can be green in both---and no node-health summary distinguishes them. The capability readout does.
 
 \textbf{Leadership hierarchy.} The wall imposes a cost gradient on Multi-Paxos leader election that symmetric quorum constructions cannot express. Figure~\ref{fig:gradient} shows the number of valid Phase~1 quorums per tier. The counts admit a closed form: the tier-$i$ family contains $N_i = 2^{f_i} \prod_{j \le i} (2^{|T_j|} - 1)$ quorums, where each required tier contributes a nonempty subset and the $f_i$ nodes above tier~$i$ are unconstrained---$992 = 31 \cdot 2^5$ for Earth down to $217 = 7 \cdot 31$ for Mars. The exhaustive TLA+ enumeration confirms these counts rather than defining them. The closed form also makes the monotonicity a lemma rather than an observation: raising the initiator by one tier changes exactly one factor, tier $T_{i+1}$'s contribution, from unconstrained ($2^{|T_{i+1}|}$) to nonempty ($2^{|T_{i+1}|} - 1$), so $N_{i+1} = N_i \cdot \bigl(2^{|T_{i+1}|} - 1\bigr)/2^{|T_{i+1}|} < N_i$ for every wall, independent of tier sizes; the sequence $992 \to 496 \to 248 \to 217$ instantiates the ratios $\frac{1}{2}, \frac{1}{2}, \frac{7}{8}$. The argument survives relaxed Phase~2 unchanged, since the Earth-minimum factor is identical for every initiator tier and cancels from the ratio. The families are moreover nested---every tier-$(i{+}1)$ quorum is also a tier-$i$ quorum---so any crash pattern under which a higher tier can still elect is one under which every lower tier can too; the counts quantify the gap in valid quorum sets, not availability under a stochastic failure model. In Multi-Paxos, where leader election \emph{is} Phase~1, this makes Earth leadership both faster (sub-second vs.\ minutes) and strictly more crash-pattern-tolerant than Mars. The gradient is expressible only because the families are per-tier: any construction with a single initiator-independent Phase~1 family assigns every tier the same count by definition, which is the precise sense in which symmetric constructions cannot express it.
 
@@ -660,7 +665,7 @@ WPaxos~\cite{ailijiang2019wpaxos} uses symmetric grid quorums with uniform $Q_1$
 
 Phase symmetry once made acquisition and commit formability coincide; Flexible Paxos can spend that coincidence while preserving cross-phase safety. We give the exact predicate-level correspondence for what follows: ordered predicates admit one capability gap, incomparable predicates admit both, and a generic auditor supplies deterministic witnesses. In the wall case study no Phase~2 threshold closes both gaps at every tier. Its upper-tier participation obligations buy topology-legible authority at the price of residual exposure, while the measured consequences remain bounded to our registered single-decree experiment and retry policy.
 
-Mars makes this mistake visible; distance does not create it. Wherever quorum geometry meets changing, structured connectivity, node health and node counts can disagree with the service capabilities operators actually need. State-aware mitigation begins by exposing acquisition and commit separately, then combining that structural state with fresh runtime authority and a deliberately chosen client contract.
+Mars makes the conflation visible; distance does not create it. Wherever quorum geometry meets changing, structured connectivity, node health and node counts can disagree with the service capabilities operators actually need. State-aware mitigation begins by exposing acquisition and commit separately, then combining that structural state with fresh runtime authority and a deliberately chosen client contract.
 
 \bibliographystyle{plain}
 \bibliography{references}
