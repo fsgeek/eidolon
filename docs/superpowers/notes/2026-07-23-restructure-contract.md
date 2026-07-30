@@ -16,10 +16,15 @@ Replace weaker material with the stronger result; do not append:
 2. A static capability map per tier: acquire authority / extend /
    certify-learn / neither.
 3. Mars blackout as the clean positive example.
-4. Sparse LEO as the (1,0) hazard state — can form Phase 1, cannot reach
-   Phase 2 — structurally visible in the map.
-5. The duel result: durable promises make the (1,0) hazard operationally
-   consequential (poison outlives the poisoner).
+4. ~~Sparse LEO as the (1,0) hazard state~~ — **RETIRED 2026-07-30.** The
+   state is real and sparse LEO is still its live instance, but the word
+   "hazard" is falsified for (1,0). Survives only as the (1,0) *exhibit*,
+   with the valence removed.
+5. ~~The duel result: durable promises make the (1,0) hazard
+   operationally consequential~~ — **RETIRED 2026-07-30, falsified.**
+   The mid-round flip round tested exactly this and reversed it: a (1,0)
+   incumbent is metric-for-metric indistinguishable from a healthy one.
+   See `2026-07-29-midround-flip-results.md`. Do not reinstate.
 6. k=3 relaxation as the conversion of LEO from futile spoiler to
    legitimate failover peer.
 7. Exact safety proof primary; formal verification narrowly stated
@@ -94,8 +99,22 @@ Replace weaker material with the stronger result; do not append:
 
 ## Deadlines
 
-- 2026-08-02: fallback gate — registered draft #98 ships if the
-  restructure is not safely landed.
+- ~~2026-08-02: fallback gate — registered draft #98 ships if the
+  restructure is not safely landed.~~ **KILLED 2026-07-30, deliberately —
+  Tony's call, not a lapse.** Recorded here because a gate that is
+  forgotten and a gate that is retired look identical in six weeks, and
+  this project has already lost one ledger that way.
+
+  Reason: the gate was written to protect the 2026-07-23 restructure,
+  two of whose seven items are now retired above. It guards a door that
+  no longer stands.
+
+  Replacement is an ordering constraint, not a date: **land the bounded
+  boundary-theorem insertion first** (a day's work; §"Liveness: Reading
+  the Wall" plus the three-part §4.3 relationship), *then* attempt the
+  coincidence restructure on top of it. Under that order there is no
+  moment where stopping leaves the paper worse than the registered
+  draft, so no calendar checkpoint is needed to protect the submission.
 - 2026-08-06 AoE: full-paper deadline.
 - Page budget: 12pp two-column excluding references/appendices; current
   body is comfortably inside — the constraint is coherence, not space.
