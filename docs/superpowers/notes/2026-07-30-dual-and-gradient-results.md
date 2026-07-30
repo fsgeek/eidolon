@@ -105,6 +105,38 @@ supply. The flip campaign's D3 already leaned on colocated acceptors, so
 there is precedent for the second reading — but it must be stated, because
 the affordable unit of coincidence is one tier or two depending on it.
 
+## Addendum: the price of coincidence (post-hoc, from committed data)
+
+Not pre-registered. Derived by re-reading `dual_uniform.csv` after a
+parallel Fable session argued that under single-decree Paxos "symmetric
+majority is the equilibrium: both off-diagonal classes closed by default."
+Labelled post-hoc because it is: the data existed, the question did not.
+
+Under single-decree both phases run per decree, so both quorums want to be
+small, and intersection forces `q1 + q2 >= n + 1`. Asking whether the
+cost-minimal configurations can close both classes:
+
+| n | min q1+q2 | both closed among minimal? | cheapest both-closed |
+|---|---|---|---|
+| 3 | 4 | yes | 4 |
+| 4 | 5 | **none** | 6 |
+| 5 | 6 | yes | 6 |
+| 6 | 7 | **none** | 8 |
+| 7 | 8 | yes | 8 |
+
+**Closed-by-default holds only at odd `n`.** At even `n`, `n+1` is odd, so no
+cost-minimal split can satisfy `q1 = q2` — every cheapest configuration
+opens one class. The cheapest both-closed configuration costs `n+2`.
+
+So the price of coincidence is **0 at odd `n` and exactly 1 at even `n`.**
+This is a second, independent reason for the odd-cluster-size convention:
+the familiar one is that even `n` buys no additional fault tolerance under
+majority; this one is that even `n` cannot buy coincidence at the
+cost-minimal configuration.
+
+The claim it corrects: symmetric majority is the cost-minimal equilibrium
+at odd `n` only. The generalization to all `n` is false.
+
 ## Deviations from the registered plan
 
 - **D1 — enumeration constraint not specified in advance.** The
