@@ -1,7 +1,7 @@
 # NINeS 2027 Capability-Gaps Revision Design
 
 **Date:** 2026-07-30  
-**Status:** Proposed for author review  
+**Status:** Approved by the author after cross-model review
 **Submission deadline:** 2026-08-06 AoE  
 **Manuscript:** `docs/paper/nines/main.tex`
 
