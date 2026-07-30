@@ -273,6 +273,42 @@ The liveness failure is scoped to exactly the disconnected tier. The wall crumbl
 
 This instantiates the legibility definition of Section~1: for any tier~$i$, global Phase~1 succeeds if and only if every tier~$j \le i$ is reachable from~$i$ in~$C$---the promised $O(\text{tiers})$ check. This is what distinguishes legibility from mere computability. The claim concerns quorum formability: it bounds what a sole, timely proposer can achieve under connectivity state $C$, and does not speak to contention between concurrent proposers, whose durable promises can delay an otherwise-capable peer. Global \emph{operation}, as opposed to Phase~1 recovery, additionally requires the Phase~2 quorum to be reachable; Section~\ref{sec:reachability} shows the two conditions coming apart.
 
+\subsection{Capability States: Where the Two Conditions Come Apart}
+\label{sec:capability}
+
+Phase~1 and Phase~2 formability are two predicates over the same connectivity state, and the wall does not force them to agree. Write $R_1(i,C)$ for ``a proposer at tier~$i$ can form some $Q_1 \in \mathcal{Q}_1^{(i)}$ under connectivity state~$C$'' and $R_2(i,C)$ for ``it can form some $Q_2 \in \mathcal{Q}_2$''. The pair $(R_1, R_2)$ admits four joint states. Two are familiar: $(1,1)$ is ordinary operation, and $(0,0)$ is the cut-off tier confined to its local replica. The mixed states are the ones structure alone can hide. In $(1,0)$ a proposer can win an election but cannot commit; in $(0,1)$ it can commit but cannot win one.
+
+Under a single quorum family used for both phases---majority being the familiar case---both mixed states are empty in every connectivity state, because the two predicates are literally the same predicate. This is why counting reachable nodes was ever a sufficient diagnostic. Any construction that makes the phase families differ gives that property up, and which mixed state it admits is determined by the direction in which they differ.
+
+\textbf{Proposition 2 (containment).} $(1,0)$ is unreachable at tier~$i$ if and only if every $Q_1 \in \mathcal{Q}_1^{(i)}$ contains some $Q_2 \in \mathcal{Q}_2$. Dually, $(0,1)$ is unreachable at tier~$i$ if and only if every $Q_2 \in \mathcal{Q}_2$ contains some $Q_1 \in \mathcal{Q}_1^{(i)}$.
+
+\textit{Proof sketch.} Both predicates are monotone in $C$: adding a reachable node never revokes a capability. If some $Q_1$ contains no $Q_2$, take $C$ to be exactly that $Q_1$; then $R_1$ holds and $R_2$ fails. Conversely if every $Q_1$ contains a $Q_2$, then any $C$ admitting a $Q_1$ admits that contained $Q_2$. The dual argument is symmetric. \hfill $\square$
+
+\textbf{Proposition 3 (boundary).} For the construction of Section~\ref{sec:construction} under relaxed $\mathcal{Q}_2 = k$-of-$|E|$ (Section~\ref{sec:relaxed}), $(1,0)$ is unreachable at \emph{every} tier if and only if $|E| - k + 1 \ge k$, that is $k \le \lceil |E|/2 \rceil$. Sufficiency is unconditional---it does not depend on the number of tiers, their sizes, or the initiating tier. The converse additionally requires non-degeneracy: no empty wall row.
+
+The arithmetic is the same hitting-set bound that carries safety. A $Q_1$ holds at least $|E|-k+1$ Earth nodes and a $Q_2$ holds $k$; when $|E|-k+1 \ge k$, every $Q_1$ already contains a full $Q_2$ and Proposition~2 applies. For a threshold family used uniformly, with sizes $q_1$ and $q_2$, the same reasoning collapses to a statement about two integers: $(1,0)$ is reachable exactly when $q_1 < q_2$, $(0,1)$ exactly when $q_2 < q_1$, and both are empty exactly when $q_1 = q_2$.
+
+\textbf{The gradient.} Proposition~3 governs $(1,0)$ through the Earth floor. It says nothing about $(0,1)$, which on this construction arises from a different mechanism: the downward chain. A proposer at $T_2$ (Moon) needs one witness from $T_1$ (LEO), and this topology has exactly one LEO node. Sever it while all five Earth nodes remain reachable and $\mathcal{Q}_2$ is formable while $\mathcal{Q}_1^{(2)}$ is not. Exhaustive enumeration over all $2^{10}$ connectivity states, for every tier and every $k$, gives:
+
+\begin{center}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & $T_0$ (E) & $T_1$ (L) & $T_2$ (U) & $T_3$ (M) \\
+\midrule
+$(1,0)$ reachable & $k \ge 4$ & $k \ge 4$ & $k \ge 4$ & $k \ge 4$ \\
+$(0,1)$ reachable & $k \le 2$ & $k \le 2$ & all $k$ & all $k$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Read the two rows together: \emph{no value of $k$ closes both states}. At $k \le 2$ the Earth floor exceeds $k$ and every tier carries $(0,1)$ exposure. At $k \ge 4$ Proposition~3's bound is violated and $(1,0)$ opens everywhere. At $k = 3$---the best available configuration, and the relaxation Section~\ref{sec:relaxed} adopts---$(1,0)$ is closed at every tier and $(0,1)$ is closed at Earth and LEO, but Moon and Mars retain it. Those are exactly the tiers with an intervening row between themselves and the anchor, and no choice of $k$ removes it, because the obligation that fails is a witness row rather than an Earth count.
+
+The enumeration credits each proposer with a reachable node in its own tier, modelling a colocated acceptor; without that assumption LEO also retains $(0,1)$ at every $k$, since its single node can be severed while Earth remains whole. We state the assumption rather than absorb it: it determines whether phase symmetry is affordable at one tier or two.
+
+\textbf{Relationship to Flexible Paxos.} The $(1,0)$ state is not new, and the Flexible Paxos paper describes it twice~\cite{howard2016}: once in the $|Q_1|{=}1$, $|Q_2|{=}N$ construction, and once in the row-failure discussion, where completing $Q_1$ ``recover[s] all past decisions'' before falling back to reconfiguration. Both readings are constructive, and our measurements agree with them (Section~\ref{sec:results}). Our relationship to that work is therefore threefold. It identifies the state and a use for it; we supply the design-time existence criterion---for a given construction, whether the state arises at all, which \S4.3 does not ask; and we find that the cost, where it exists, lies in the unexamined dual. What \S4.3 assumes is available and the connectivity setting does not supply is a \emph{recognizer}: its prescribed response presumes the system knows which state it occupies. Under a known crash-failure set that is reasonable. Under connectivity it is exactly the missing predicate, and supplying it is what the readout of Section~\ref{sec:liveness-wall} does.
+
+This is the sense in which legibility is load-bearing rather than decorative. The gradient is not an artifact we can relax away; it is a property of any wall whose non-anchor rows carry witness obligations. When a capability gap cannot be closed by construction, making it legible is not a consolation---it is the only mitigation left. The connectivity data needed is already available to an operator; what was missing was the predicate that reads it. Enumeration artifacts are in \texttt{results/capability/} (see \autoref{app:traceability}).
+
 \subsection{What ``Global'' Means}
 
 When an Earth-based proposer completes both phases using only Earth nodes, the decision is \emph{global} in the Paxos sense: any future proposer at any tier, upon completing Phase~1, will discover this value in the Earth acceptors' state and cannot contradict it. Global consensus does not require that all tiers participated, only that no future quorum can produce a conflicting result.
@@ -614,6 +650,9 @@ Weakest-link migration and coordinated relaxation. & Crash-tolerance sweep rows.
 TLA+ verification of quorum intersection. & Exhaustive enumeration, all four tiers $\times$ \{strict, $k{=}4$, $k{=}3$\} (27{,}921 states, complete). & \texttt{tla/\allowbreak QuorumIntersection.tla}; \texttt{tla/\allowbreak ExhaustiveIntersection.tla}. \\
 Paxos agreement model-checked. & 67M states (reduced topology, all-tier Phase~1 family, complete). & \texttt{tla/\allowbreak PaxosSmall.tla}. \\
 Per-tier capability map: which (Phase~1, Phase~2) capability states each tier holds under each connectivity regime. & Exhaustive per-scenario classification, including the degraded partial-capability states. & \texttt{results/capability/\allowbreak capability\_map.csv}; \texttt{experiments/\allowbreak capability\_map.py}. \\
+Containment characterization (Prop.~2) and the $k \le \lceil |E|/2 \rceil$ boundary (Prop.~3). & Exhaustive enumeration, 5~$k$ $\times$ 4~tiers; containment evaluated as set containment over minimal $Q_2$, not as the reachability restatement; 0 disagreements. Predicate monotonicity verified, not assumed. & \texttt{results/capability/\allowbreak dual\_containment.csv}; \texttt{experiments/\allowbreak capability\_dual\_sweep.py}. \\
+Uniform threshold corollary: $(1,0)$ reachable iff $q_1 < q_2$; $(0,1)$ iff $q_2 < q_1$. & 80 threshold configurations ($n = 3..7$, all valid $q_1/q_2$), 0 violations. & \texttt{results/capability/\allowbreak dual\_uniform.csv}; \texttt{experiments/\allowbreak capability\_dual\_sweep.py}. \\
+Tier-gradient: no $k$ closes both capability states; $T_2$ and $T_3$ retain $(0,1)$ at every $k$. & Exhaustive enumeration over all $2^{10}$ connectivity states, every tier and $k$, reported under both colocated-acceptor readings. Output byte-identical across two runs. & \texttt{results/capability/\allowbreak dual\_gradient\_map.csv}; \texttt{experiments/\allowbreak capability\_dual\_sweep.py}. \\
 \bottomrule
 \end{tabular}
 \end{table*}
