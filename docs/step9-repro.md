@@ -45,6 +45,18 @@ uv run python experiments/step9_sweep.py \
 
 The temporal window is **automatically scaled** to ensure sufficient time for each phase and for recovery. Scaling information is captured in the CSV columns: `phase_timeout_s`, `pre_window_s`, `post_window_s`, `temporally_scaled`.
 
+### Runtime expectation and smoke probe
+
+The 50-seed command above is a long reproduction run, not an interactive
+check. In one July 2026 desktop audit, the same 18-point matrix for a single
+seed took approximately two minutes, implying an order-of-hours budget for
+the full serial sweep. Hardware and Python build affect that estimate.
+
+For a bounded wiring and determinism probe, replace the seed list with
+`--seeds "40"` and write both outputs to temporary paths. The resulting 18
+raw rows can be compared with the `seed=40` rows in the accepted CSV. This
+probe does not replace the full 50-seed reproduction used for paper claims.
+
 ## Plot Generation (SVG)
 
 ```bash
@@ -85,10 +97,10 @@ uv run python experiments/tier_liveness_sweep.py \
   --sim-end-s 4000 \
   --reconcile-interval-s 120 \
   --seeds "40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89" \
-  --output results/tier_liveness/tier_sweep.csv
+  --output results/tier_liveness/tier_sweep_full.csv
 ```
 
-The aggregated results (mean ± 95% CI per tier/topology/scenario/mars_latency/blackout_duration) are automatically written to `results/tier_liveness/tier_sweep_ci.csv`.
+The aggregated results (mean ± 95% CI per tier/topology/scenario/mars_latency/blackout_duration) are automatically written to `results/tier_liveness/tier_sweep_full_ci.csv`.
 
 ## Crash-Tolerance Sweep (Relaxed Quorum Configurations)
 
@@ -114,8 +126,12 @@ Scenarios tested: strict (all 5 Earth) and relaxed Phase 2 quorums (4-of-5 or 3-
 - `results/step9/step9_liveness_ci.csv` — mean ± 95% CI aggregated per (scenario, timeout, blackout_duration)
 
 ### Per-Tier Liveness Sweep
-- `results/tier_liveness/tier_sweep.csv` — raw per-seed results (25 columns, both topologies × 2 scenarios per run)
-- `results/tier_liveness/tier_sweep_ci.csv` — mean ± 95% CI aggregated per (scenario, topology, tier, mars_latency, blackout_duration)
+- `results/tier_liveness/tier_sweep_full.csv` — accepted raw per-seed results (25 columns, both topologies × 2 scenarios per run)
+- `results/tier_liveness/tier_sweep_full_ci.csv` — accepted mean ± 95% CI aggregated per (scenario, topology, tier, mars_latency, blackout_duration)
+
+The shorter `tier_sweep.csv` and `tier_sweep_ci.csv` are retained in repository
+history from an earlier pre-scaling run. They are not cited by the paper and
+are not the outputs of the command above.
 
 ### Crash-Tolerance Sweep
 - `results/step10/step10_sweep.csv` — raw per-seed results (19 columns, 6 scenarios)

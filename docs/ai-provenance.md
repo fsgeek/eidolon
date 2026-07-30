@@ -29,8 +29,16 @@ by checking — this document only tells you where to press.
   experiment design and execution, drafting, and repair campaigns. Each
   session leaves handoff records; successors treat predecessors' claims
   as testimony to verify, not facts to assume.
-- **An outside reviewer (OpenAI ChatGPT)** — cross-model adversarial
-  review of the draft, prompted to refute rather than affirm.
+- **Codex instances (OpenAI)** — implementation, formal and artifact
+  audits, and machine-drafting of the current NINeS revision from a
+  human-approved design. Codex produced the first revised front matter;
+  the human author reviewed the claim-affecting prose before the body
+  was brought into alignment with it.
+- **Claude as a cross-model reviewer** — independent editorial and
+  technical review of the approved design, front matter, formal section,
+  related-work boundary, and evidence language. Findings were checked
+  against proofs, source papers, and repository artifacts before being
+  applied; agreement alone was not treated as evidence.
 - **A multi-judge review harness ("rikuy"), run by the research
   supervisor** — panels of independent reviewer personas whose findings
   are then adjudicated against repository ground truth, not accepted on
@@ -44,10 +52,10 @@ by checking — this document only tells you where to press.
    artifact and script.
 3. Open the named CSV under `results/`, or rerun it: reproduction
    commands are in `docs/step9-repro.md`.
-4. Check the chronology: commits are GPG-signed and OpenTimestamps-
-   stamped (`timestamps/`, stamped automatically by
-   `scripts/hooks/post-commit`), so the order of claim, evidence, and
-   correction cannot be quietly rewritten.
+4. In the public repository, check the chronology: research commits are
+   GPG-signed and OpenTimestamps-stamped, so the order of claim, evidence,
+   and correction cannot be quietly rewritten. Signing identities and
+   timestamp receipts are intentionally absent from the anonymous bundle.
 
 The formal claims follow the same rule: the quorum-intersection proof is
 stated in the paper as primary, and the TLA+ specifications under `tla/`
@@ -56,12 +64,25 @@ itself the product of a correction (see ledger).
 
 ## Process gates
 
+- **Design before revision.** The capability-first narrative, exact
+  four-way theorem, evidence bounds, and artifact interfaces were written
+  into a design and execution plan before the current introduction or
+  implementation was drafted. The introduction and subsequent body
+  revision were machine-drafted from that approved contract, then reviewed
+  by the human author and independently by Claude and Codex.
+- **Expected outputs before implementation.** The generic auditor's
+  semantic cases, witnesses, wall readings, and discrepancy rules were
+  committed before its code or tests existed. The included pre-registration
+  note is
+  `docs/superpowers/notes/2026-07-30-quorum-auditor-preregistration.md`.
+  Its optimized classifier is cross-checked by an independent connectivity-
+  state enumerator and by 129,032 exhaustive small-universe cases.
 - **Pre-registration.** The dueling-proposer experiment was designed by
   an adversarial pre-mortem before any code: four critics produced a
-  design contract with predictions registered in advance
-  (`.superpowers/sdd/progress.md` is the authoritative ledger). Two
-  central predictions were falsified by the data and are retained as
-  findings, not rewritten.
+  design contract with predictions registered in advance. The included
+  pre-registration and results notes preserve that boundary. Two central
+  predictions were falsified by the data and are retained as findings,
+  not rewritten.
 - **Acceptance gates.** Regeneration of paper data under a repaired
   harness halted at a BLOCKED verdict
   (`docs/superpowers/notes/2026-07-21-regeneration-delta.md`: fifteen
@@ -72,6 +93,12 @@ itself the product of a correction (see ledger).
   in both directions: reviewer findings have been rejected when the
   artifacts contradicted them, and review of the reviewers' own
   spot-checks caught a stale-artifact error there too.
+- **Claim-language and package audits.** Regression tests prohibit the
+  superseded exactly-one, unconditional-livelock, and only-mitigation
+  formulations; the final manuscript is rebuilt through the full LaTeX
+  citation cycle. The anonymous artifact is created from a positive
+  allowlist, scanned for identity-bearing content, and checked against
+  every path in the paper's traceability appendix.
 
 ## Corrections that cost something (selected)
 
