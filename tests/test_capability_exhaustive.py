@@ -53,7 +53,7 @@ def test_hazard_flags_follow_matrix_exhaustively():
                 report = classify(wall, tier, subset)
                 expects_disruptive = report.r1 and not report.r2
                 expects_incumbent = report.r2 and not report.r1
-                assert (Hazard.DISRUPTIVE_ELECTION in report.hazards) \
+                assert (Hazard.ACQUIRE_WITHOUT_COMMIT in report.hazards) \
                     == expects_disruptive
                 assert (Hazard.INCUMBENT_ONLY in report.hazards) \
                     == expects_incumbent

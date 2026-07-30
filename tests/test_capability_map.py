@@ -19,7 +19,7 @@ def test_map_contains_relaxation_sequence():
 
 def test_map_labels_hazards_and_authority():
     rows = _index(run())
-    assert rows[("sparse_leo_k5", "leo")]["hazards"] == "disruptive-election"
+    assert rows[("sparse_leo_k5", "leo")]["hazards"] == "acquire-without-commit"
     moon = rows[("moon_row_broken_k5", "moon")]
     assert moon["hazards"] == "incumbent-only"
     assert moon["requires_preexisting_authority"] == 1

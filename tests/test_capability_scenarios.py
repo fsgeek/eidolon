@@ -35,7 +35,7 @@ def test_sparse_leo_relaxation_sequence():
 
 def test_relaxation_clears_the_disruption_hazard():
     assert classify(make_wall(5), LEO_TIER, SPARSE_LEO_REACH).hazards \
-        == (Hazard.DISRUPTIVE_ELECTION,)
+        == (Hazard.ACQUIRE_WITHOUT_COMMIT,)
     assert classify(make_wall(3), LEO_TIER, SPARSE_LEO_REACH).hazards == ()
 
 

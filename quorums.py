@@ -26,36 +26,30 @@ from paxos import QuorumSystem
 
 
 class GridQuorum(QuorumSystem):
-    """Grid quorum (Cheung, Ammar, Ahamad 1990).
+    """Grid-SIZED quorum, after Cheung, Ammar, Ahamad (1990).
 
-    Arrange n nodes in a rows x cols grid.
-    Quorum = one full row + one element from each other row.
-    Size = cols + (rows - 1) ≈ 2*sqrt(n) for square grids.
+    Arranges n nodes into a rows x cols grid and uses the grid only to
+    DERIVE A SIZE: rows + cols - 1, which is the cardinality of a true
+    grid quorum (one full column plus one element from every other
+    column), and approximately 2*sqrt(n) for square grids.
 
-    For non-square n, we find the best rectangular arrangement.
+    WARNING — this class does not implement grid geometry. It overrides
+    neither is_phase1_quorum nor is_phase2_quorum, so both remain the
+    inherited pure-cardinality tests: any set of at least
+    phase1/phase2_quorum_size() nodes passes, whatever its position in
+    the grid. `self._grid` is built and never read.
 
-    Intersection property: any two quorums share at least one
-    element (both contain a full row, and at least one element
-    from every other row - pigeonhole on columns).
+    Consequently intersection is NOT guaranteed by construction, only
+    by cardinality, and only when 2*(rows + cols - 1) > n. It fails at
+    n=16 (a 4x4 grid, both phase sizes 7), where the disjoint sets
+    {0..6} and {7..13} both satisfy both predicates.
 
-    Actually, the standard grid quorum is:
-    Q = full column + one per remaining column's row
-    Let me use the standard: a row + one from each other row.
-    Two such quorums: Q1 has row i, Q2 has row j.
-    Q1 includes one element from row j. Q2 includes one element from row i.
-    Wait - do they intersect?
-
-    Standard grid quorum: pick a full COLUMN (all rows in that column)
-    plus one element from each remaining column.
-    Size = rows + (cols - 1) = rows + cols - 1.
-
-    Two quorums Q1, Q2: Q1 has full column c1, Q2 has full column c2.
-    Q1 also has one element from column c2 (in some row r).
-    Q2 has all of column c2, so it has the element in (r, c2).
-    But Q1's element from c2 is (r, c2). Is (r, c2) in Q2?
-    Q2 has full column c2, so yes! (r, c2) is in both.
-
-    Intersection guaranteed.
+    Inert as shipped: the sole instantiation is demo_step_4.py:155 at
+    n=5, where the grid is 2x3, both phase sizes are 4, and 4 + 4 > 5
+    forces intersection by counting alone. It is a live trap for anyone
+    reusing the class at larger n. Implement the predicates before
+    doing so, or use CrumblingWallQuorum, whose intersection is carried
+    by the Earth floor rather than by cardinality.
     """
 
     def __init__(self, nodes: list[int], rows: int = 0, cols: int = 0):

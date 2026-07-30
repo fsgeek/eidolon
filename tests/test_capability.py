@@ -114,7 +114,7 @@ def test_fully_capable_report_has_empty_missing():
 
 def test_10_state_flags_disruptive_election():
     report = classify(make_wall(), LEO_TIER, {300, 1, 2, 3})
-    assert report.hazards == (Hazard.DISRUPTIVE_ELECTION,)
+    assert report.hazards == (Hazard.ACQUIRE_WITHOUT_COMMIT,)
     assert report.requires_preexisting_authority is False
 
 

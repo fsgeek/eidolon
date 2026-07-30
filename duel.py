@@ -176,7 +176,7 @@ def wire_duel(env: simpy.Environment, *, k: int, polarity: str,
         assert leo_report.r1 and not leo_report.r2, (
             f"k={k} must put sparse LEO in (1,0); got "
             f"({leo_report.r1},{leo_report.r2})")
-        assert Hazard.DISRUPTIVE_ELECTION in leo_report.hazards
+        assert Hazard.ACQUIRE_WITHOUT_COMMIT in leo_report.hazards
     else:  # k == 3: relaxation converts the spoiler into a failover peer
         assert leo_report.r1 and leo_report.r2 and not leo_report.hazards
     earth_reach = {a for a in all_ids

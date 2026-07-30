@@ -144,7 +144,7 @@ def test_wire_duel_gates_and_shared_wall():
                  if sys_.network.get_link(sys_.leo_prop.entity.id, a) is not None}
     rep = classify(sys_.wall, 2, leo_reach)
     assert rep.r1 and not rep.r2
-    assert Hazard.DISRUPTIVE_ELECTION in rep.hazards
+    assert Hazard.ACQUIRE_WITHOUT_COMMIT in rep.hazards
 
 
 def test_wire_duel_k3_is_failover_regime():

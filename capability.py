@@ -49,17 +49,33 @@ class EvidenceChannel(Enum):
 
 
 class Hazard(Enum):
-    """Hazardous-action labels from the R1 x R2 matrix.
+    """Labels for the two mixed states of the R1 x R2 matrix.
 
-    DISRUPTIVE_ELECTION marks where the disruptive action is
-    structurally REACHABLE: actually disrupting an incumbent further
-    requires completing a higher-ballot Phase 1 whose slot/epoch scope
-    covers the incumbent's — runtime facts the classifier cannot see.
-    INCUMBENT_ONLY marks that progress continues only while some
-    incumbent's authority remains valid — likewise runtime state.
+    ACQUIRE_WITHOUT_COMMIT — (1,0) — marks that a proposer can complete
+    Phase 1 but cannot form a Phase 2 quorum. It was previously named
+    DISRUPTIVE_ELECTION, and both halves of that name were wrong. The
+    valence was falsified by the pre-registered mid-round flip
+    experiment (docs/superpowers/notes/2026-07-29-midround-flip-
+    results.md): a (1,0) incumbent is metric-for-metric
+    indistinguishable from a fully healthy competing proposer, and its
+    partial Phase 2 makes it a value injector rather than a spoiler.
+    "Election" was also wrong vocabulary — every experiment here is
+    single-decree, where Phase 1 is per-decree ballot acquisition.
+
+    INCUMBENT_ONLY — (0,1) — marks that progress continues only while
+    some incumbent's authority remains valid; acquiring fresh authority
+    is structurally impossible. On current evidence this is the state
+    that carries a liveness cost: it blocked a healthy proposer in 50
+    of 50 seeds at retry budget 8.
+
+    Residual, recorded rather than silently accepted: the enum name
+    "Hazard" and the report field "hazards" now overstate
+    ACQUIRE_WITHOUT_COMMIT, which is not hazardous on the evidence.
+    Renaming them touches eight files and is naming hygiene rather
+    than a correctness fix, so it is left as known debt.
     """
 
-    DISRUPTIVE_ELECTION = "disruptive-election"
+    ACQUIRE_WITHOUT_COMMIT = "acquire-without-commit"
     INCUMBENT_ONLY = "incumbent-only"
 
 
@@ -199,7 +215,7 @@ def classify(wall: CrumblingWallQuorum, initiator_tier: int,
 
     hazards = []
     if r1 and not r2:
-        hazards.append(Hazard.DISRUPTIVE_ELECTION)
+        hazards.append(Hazard.ACQUIRE_WITHOUT_COMMIT)
     if r2 and not r1:
         hazards.append(Hazard.INCUMBENT_ONLY)
     requires_preexisting_authority = r2 and not r1

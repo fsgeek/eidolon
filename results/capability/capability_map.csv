@@ -3,12 +3,12 @@ full_reachability_k5,mars,5,1;2;3;4;5;100;101;102;200;300,1,1,1;100;200;300,1;2;
 full_reachability_k5,moon,5,1;2;3;4;5;100;101;102;200;300,1,1,1;200;300,1;2;3;4;5,0,,
 full_reachability_k5,leo,5,1;2;3;4;5;100;101;102;200;300,1,1,1;300,1;2;3;4;5,0,,
 full_reachability_k5,earth,5,1;2;3;4;5;100;101;102;200;300,1,1,1,1;2;3;4;5,0,,
-sparse_leo_k5,leo,5,1;2;3;300,1,0,1;300,,0,disruptive-election,"Phase 2 obligation at tier 3: require 5, reachable 3; unreachable candidates [4, 5]"
+sparse_leo_k5,leo,5,1;2;3;300,1,0,1;300,,0,acquire-without-commit,"Phase 2 obligation at tier 3: require 5, reachable 3; unreachable candidates [4, 5]"
 full_reachability_k4,mars,4,1;2;3;4;5;100;101;102;200;300,1,1,1;2;100;200;300,1;2;3;4,0,,
 full_reachability_k4,moon,4,1;2;3;4;5;100;101;102;200;300,1,1,1;2;200;300,1;2;3;4,0,,
 full_reachability_k4,leo,4,1;2;3;4;5;100;101;102;200;300,1,1,1;2;300,1;2;3;4,0,,
 full_reachability_k4,earth,4,1;2;3;4;5;100;101;102;200;300,1,1,1;2,1;2;3;4,0,,
-sparse_leo_k4,leo,4,1;2;3;300,1,0,1;2;300,,0,disruptive-election,"Phase 2 obligation at tier 3: require 4, reachable 3; unreachable candidates [4, 5]"
+sparse_leo_k4,leo,4,1;2;3;300,1,0,1;2;300,,0,acquire-without-commit,"Phase 2 obligation at tier 3: require 4, reachable 3; unreachable candidates [4, 5]"
 full_reachability_k3,mars,3,1;2;3;4;5;100;101;102;200;300,1,1,1;2;3;100;200;300,1;2;3,0,,
 full_reachability_k3,moon,3,1;2;3;4;5;100;101;102;200;300,1,1,1;2;3;200;300,1;2;3,0,,
 full_reachability_k3,leo,3,1;2;3;4;5;100;101;102;200;300,1,1,1;2;3;300,1;2;3,0,,
