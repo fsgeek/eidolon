@@ -6,6 +6,8 @@ public audit boundary; they do not reconstruct its containment algorithm.
 
 from dataclasses import replace
 from itertools import combinations
+import json
+from pathlib import Path
 
 import pytest
 
@@ -14,6 +16,10 @@ from quorum_audit import (
     audit_quorum_families,
     verify_report_exhaustively,
 )
+from experiments.quorum_audit_registered import run_registered_audits
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.parametrize(
@@ -225,3 +231,56 @@ def test_exhaustive_oracle_covers_every_three_node_family_pair_and_pin_set():
                 checked += 1
 
     assert checked == 129_032
+
+
+def test_registered_wall_matrix_matches_preregistration_and_live_csv():
+    """Changing wall construction, pin semantics, or CSV reading must fail."""
+    artifact = run_registered_audits(
+        REPO_ROOT / "results" / "capability" / "dual_gradient_map.csv"
+    )
+
+    assert artifact["summary"] == {
+        "exhaustive_self_checks": 16,
+        "registered_cases": 16,
+        "wall_csv_disagreements": 0,
+    }
+    relations = {
+        (case["k"], case["initiator_tier"], case["reading"]):
+            case["audit"]["relation"]
+        for case in artifact["registrations"]
+    }
+    for k in (4, 5):
+        assert relations[k, "Mars", "unconstrained"] == "incomparable"
+        assert relations[k, "Mars", "self-reachable"] == "incomparable"
+        assert relations[k, "Moon", "unconstrained"] == "incomparable"
+        assert relations[k, "Moon", "self-reachable"] == "incomparable"
+        assert relations[k, "LEO", "unconstrained"] == "incomparable"
+        assert relations[k, "LEO", "self-reachable"] == (
+            "r2-strictly-implies-r1"
+        )
+        assert relations[k, "Earth", "unconstrained"] == (
+            "r2-strictly-implies-r1"
+        )
+        assert relations[k, "Earth", "self-reachable"] == (
+            "r2-strictly-implies-r1"
+        )
+
+    mars_k4 = next(
+        case for case in artifact["registrations"]
+        if (case["k"], case["initiator_tier"], case["reading"])
+        == (4, "Mars", "unconstrained")
+    )
+    assert mars_k4["audit"]["gaps"] == {
+        "(0,1)": ["5", "6", "7", "8"],
+        "(1,0)": ["0", "3", "4", "5", "6"],
+    }
+    leo_pinned_k5 = next(
+        case for case in artifact["registrations"]
+        if (case["k"], case["initiator_tier"], case["reading"])
+        == (5, "LEO", "self-reachable")
+    )
+    assert leo_pinned_k5["audit"]["gaps"] == {
+        "(0,1)": None,
+        "(1,0)": ["4", "5"],
+    }
+    assert "scarcity" not in json.dumps(artifact).lower()
