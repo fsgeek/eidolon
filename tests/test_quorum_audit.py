@@ -4,11 +4,16 @@ The fixtures are hand-derived from the pre-registration. Tests exercise the
 public audit boundary; they do not reconstruct its containment algorithm.
 """
 
+from dataclasses import replace
 from itertools import combinations
 
 import pytest
 
-from quorum_audit import PredicateRelation, audit_quorum_families
+from quorum_audit import (
+    PredicateRelation,
+    audit_quorum_families,
+    verify_report_exhaustively,
+)
 
 
 @pytest.mark.parametrize(
@@ -130,3 +135,93 @@ def test_registered_uniform_threshold_profiles(
     assert report.relation is relation
     assert report.gap_10_witness == witness_10
     assert report.gap_01_witness == witness_01
+
+
+def test_pinning_can_close_only_the_01_gap():
+    """Ignoring P would leave an impossible pinned-domain state reachable."""
+    unpinned = audit_quorum_families(
+        ["a", "b", "c"], [["a"]], [["b"]])
+    pinned = audit_quorum_families(
+        ["a", "b", "c"], [["a"]], [["b"]], pinned=["a"])
+
+    assert unpinned.relation is PredicateRelation.INCOMPARABLE
+    assert pinned.safe is False  # Pinning restricts states, not Paxos safety.
+    assert pinned.relation is PredicateRelation.R2_STRICTLY_IMPLIES_R1
+    assert pinned.gap_10_witness == frozenset({"a"})
+    assert pinned.gap_01_witness is None
+
+
+def test_lifted_family_is_minimized_again():
+    """Failing to re-minimize leaves redundant effective predicates."""
+    report = audit_quorum_families(
+        ["a", "b", "c"], [["a"], ["b"]], [["c"]], pinned=["a"])
+
+    assert report.phase1_minimal == (
+        frozenset({"a"}), frozenset({"b"}))
+    assert report.phase1_effective == (frozenset({"a"}),)
+
+
+def test_exhaustive_mode_marks_a_verified_report():
+    """The public switch must run the oracle and expose that fact."""
+    report = audit_quorum_families(
+        ["a", "b", "c"],
+        [["a", "b"]],
+        [["a", "c"]],
+        pinned=["a"],
+        exhaustive=True,
+    )
+
+    assert report.self_check_passed is True
+
+
+def test_exhaustive_oracle_rejects_a_mutated_classification():
+    """An oracle that merely repeats the report cannot catch this mutation."""
+    universe = ["a", "b", "c"]
+    phase1 = [["a", "b"]]
+    phase2 = [["a", "c"]]
+    report = audit_quorum_families(universe, phase1, phase2)
+    bad_report = replace(
+        report,
+        relation=PredicateRelation.EQUAL,
+        gap_10_witness=None,
+        gap_01_witness=None,
+    )
+
+    with pytest.raises(AssertionError):
+        verify_report_exhaustively(
+            universe, phase1, phase2, [], bad_report)
+
+
+def _all_subsets(nodes):
+    return [
+        list(subset)
+        for size in range(len(nodes) + 1)
+        for subset in combinations(nodes, size)
+    ]
+
+
+def test_exhaustive_oracle_covers_every_three_node_family_pair_and_pin_set():
+    """All 127^2 nonempty family pairs and eight pinned domains agree."""
+    nodes = ["a", "b", "c"]
+    nonempty_quorums = _all_subsets(nodes)[1:]
+    families = [
+        [nonempty_quorums[index] for index in range(len(nonempty_quorums))
+         if mask & (1 << index)]
+        for mask in range(1, 1 << len(nonempty_quorums))
+    ]
+    checked = 0
+
+    for phase1 in families:
+        for phase2 in families:
+            for pinned in _all_subsets(nodes):
+                report = audit_quorum_families(
+                    nodes,
+                    phase1,
+                    phase2,
+                    pinned=pinned,
+                    exhaustive=True,
+                )
+                assert report.self_check_passed is True
+                checked += 1
+
+    assert checked == 129_032

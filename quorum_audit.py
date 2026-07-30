@@ -12,8 +12,9 @@ docs/superpowers/notes/2026-07-30-quorum-auditor-preregistration.md
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
+from itertools import combinations
 from typing import Generic, Hashable, Iterable, Sequence, TypeVar
 
 
@@ -141,6 +142,59 @@ def _first_gap_witness(
     )
 
 
+def verify_report_exhaustively(
+    universe: Sequence[NodeT],
+    phase1: Iterable[Iterable[NodeT]],
+    phase2: Iterable[Iterable[NodeT]],
+    pinned: Iterable[NodeT],
+    report: QuorumAudit[NodeT],
+) -> None:
+    """Check a report by independently enumerating its reachable states.
+
+    This oracle evaluates the supplied predicates directly over every
+    connectivity set C such that P is a subset of C. It intentionally does
+    not use antichain minimization or the containment-based classifier.
+    """
+    nodes, q1, q2, pinned_set = _normalize_inputs(
+        universe, phase1, phase2, pinned
+    )
+    gap_10: frozenset[NodeT] | None = None
+    gap_01: frozenset[NodeT] | None = None
+
+    for size in range(len(nodes) + 1):
+        for members in combinations(nodes, size):
+            connected = frozenset(members)
+            if not pinned_set <= connected:
+                continue
+            phase1_formable = any(quorum <= connected for quorum in q1)
+            phase2_formable = any(quorum <= connected for quorum in q2)
+            if phase1_formable and not phase2_formable and gap_10 is None:
+                gap_10 = connected
+            if phase2_formable and not phase1_formable and gap_01 is None:
+                gap_01 = connected
+
+    if gap_10 is None and gap_01 is None:
+        relation = PredicateRelation.EQUAL
+    elif gap_10 is None:
+        relation = PredicateRelation.R1_STRICTLY_IMPLIES_R2
+    elif gap_01 is None:
+        relation = PredicateRelation.R2_STRICTLY_IMPLIES_R1
+    else:
+        relation = PredicateRelation.INCOMPARABLE
+
+    expected = (relation, gap_10, gap_01)
+    observed = (
+        report.relation,
+        report.gap_10_witness,
+        report.gap_01_witness,
+    )
+    if observed != expected:
+        raise AssertionError(
+            "containment classification disagrees with exhaustive states: "
+            f"observed={observed!r}, expected={expected!r}"
+        )
+
+
 def audit_quorum_families(
     universe: Sequence[NodeT],
     phase1: Iterable[Iterable[NodeT]],
@@ -156,21 +210,21 @@ def audit_quorum_families(
     deterministic sorting, and the separate quadratic-in-family-size
     minimization pass.
 
-    Pinned-domain lifting and exhaustive verification are added by the next
-    test-driven task.
+    Exhaustive verification is added by the next test-driven task.
     """
     nodes, q1, q2, pinned_set = _normalize_inputs(
         universe, phase1, phase2, pinned)
     rank = {node: index for index, node in enumerate(nodes)}
     q1_min = _minimal_antichain(q1, rank)
     q2_min = _minimal_antichain(q2, rank)
-    if pinned_set:
-        raise NotImplementedError("pinned-domain lifting is not implemented")
-    if exhaustive:
-        raise NotImplementedError("exhaustive self-checking is not implemented")
-
-    gap_10 = _first_gap_witness(q1_min, q2_min, rank)
-    gap_01 = _first_gap_witness(q2_min, q1_min, rank)
+    q1_effective = _minimal_antichain(
+        (quorum | pinned_set for quorum in q1_min), rank
+    )
+    q2_effective = _minimal_antichain(
+        (quorum | pinned_set for quorum in q2_min), rank
+    )
+    gap_10 = _first_gap_witness(q1_effective, q2_effective, rank)
+    gap_01 = _first_gap_witness(q2_effective, q1_effective, rank)
     if gap_10 is None and gap_01 is None:
         relation = PredicateRelation.EQUAL
     elif gap_10 is None:
@@ -194,16 +248,20 @@ def audit_quorum_families(
         ),
         default=None,
     )
-    return QuorumAudit(
+    report = QuorumAudit(
         universe=nodes,
         pinned=pinned_set,
         phase1_minimal=q1_min,
         phase2_minimal=q2_min,
-        phase1_effective=q1_min,
-        phase2_effective=q2_min,
+        phase1_effective=q1_effective,
+        phase2_effective=q2_effective,
         safe=unsafe_witness is None,
         unsafe_witness=unsafe_witness,
         relation=relation,
         gap_10_witness=gap_10,
         gap_01_witness=gap_01,
     )
+    if exhaustive:
+        verify_report_exhaustively(nodes, q1, q2, pinned_set, report)
+        report = replace(report, self_check_passed=True)
+    return report
