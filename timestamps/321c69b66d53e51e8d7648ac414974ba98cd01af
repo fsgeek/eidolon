@@ -1,0 +1,14 @@
+commit 321c69b66d53e51e8d7648ac414974ba98cd01af
+tree 67b19bb8cdcf7b8e1350e191db7e67d2abac4f0e
+parent dac5e771b36553d13f7e305fe8378d8221c59a40
+author wamason.com research <research@wamason.com> 1785436516 -0700
+committer wamason.com research <research@wamason.com> 1785436516 -0700
+gpgsig -----BEGIN PGP SIGNATURE-----
+ 
+ iHUEABYIAB0WIQQdfEpoJS9uwazS/I6TR3ig616rsQUCamuZZQAKCRCTR3ig616r
+ sRv8AQDwYJXrN+r4oxYPnizFvFZNOUFKRB3WWV4h4ViSAQueDgD/fItEViJir+TF
+ xJvjzaVJQY5KznkTJzpINPACo8e9bw4=
+ =tMBC
+ -----END PGP SIGNATURE-----
+
+    docs: state exact capability correspondence and evidence bounds
