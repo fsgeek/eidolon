@@ -32,9 +32,10 @@ quality:
 1. Phase symmetry supplies coincidence: acquisition and commit formability
    are the same predicate over connectivity state.
 2. Flexible quorum designs can spend that coincidence.
-3. The induced predicates may be equal, directionally ordered, or
-   incomparable; those relations admit neither gap, one gap, or potentially
-   both gaps, respectively.
+3. The induced predicates may be equal, strictly directionally ordered, or
+   incomparable; those relations admit neither gap, exactly one gap, or both
+   gaps, respectively. The reachable gap profile is a complete invariant of
+   this four-way predicate ordering.
 4. The two mixed states have sharply different measured consequences under
    the registered experiment and modeled retry policy.
 5. The wall is a case study in both the value and price of encoding
@@ -81,11 +82,17 @@ are syntactically identical. The paper must state:
 
 - different predicates imply at least one capability gap;
 - equal predicates admit neither gap;
-- directionally ordered predicates admit only the gap in the unmatched
-  direction;
-- incomparable predicates may admit both;
+- `R1` strictly implying `R2` admits only `(0,1)`;
+- `R2` strictly implying `R1` admits only `(1,0)`;
+- incomparable predicates admit both gaps;
 - uniform threshold families give the exact trichotomy already derived from
   comparing `q1` and `q2`.
+
+These four mutually exclusive cases form an exact correspondence: the
+predicate-ordering class determines the reachable gap profile, and the gap
+profile determines the ordering class. Equality must be tested before either
+non-strict implication in prose and executable classification so equality is
+not mislabeled as a directional case.
 
 The phrases “every departure from phase symmetry opens exactly one gap” and
 “the direction selects which gap” are permitted only when explicitly scoped
@@ -181,12 +188,15 @@ Create a library and runnable command that accept:
 
 - a finite universe `N`;
 - explicit finite Phase 1 and Phase 2 quorum families;
+- an optional pinned set `P`, defaulting to empty, whose nodes must be present
+  in every analyzed connectivity state;
 - an optional request for exhaustive small-universe self-checking.
 
 The library may accept hashable node identifiers. The JSON command accepts
 string identifiers so ordering and serialization remain portable. `N` and
 both families must be nonempty; every quorum must be a nonempty subset of
-`N`. Violations are input errors and produce a nonzero command exit status.
+`N`, and `P` must be a subset of `N`. Violations are input errors and produce
+a nonzero command exit status.
 
 JSON input and deterministic text/JSON output are sufficient. The command must
 report:
@@ -197,6 +207,9 @@ report:
   incomparable;
 - which capability gaps are reachable;
 - a deterministic minimal connectivity witness for every reachable gap.
+
+The four relation labels are mutually exclusive. The two implication labels
+mean strict implication; implementation checks semantic equality first.
 
 When several minimal-family members witness the same gap, choose the one with
 the smallest cardinality and then the lexicographically smallest sorted node
@@ -210,15 +223,31 @@ configuration.
 
 Remove every quorum that strictly contains another quorum in the same family.
 The remaining minimal antichain induces the same upward-closed formability
-predicate.
+predicate. With pinned nodes, lift each minimal quorum to `q union P`, then
+minimize again; the resulting antichain represents formability over the
+restricted domain `{C subseteq N | P subseteq C}`. Cross-phase intersection
+safety is still checked against the original quorum families, because pinning
+restricts observed connectivity states rather than changing the Paxos
+configuration.
 
-`(1,0)` is reachable exactly when some minimal Phase 1 quorum contains no
-minimal Phase 2 quorum. That Phase 1 quorum itself is a connectivity witness.
-The dual test decides `(0,1)`. Classification therefore requires pairwise set
-containment checks, not enumeration of all `2^|N|` connectivity states.
+`(1,0)` is reachable exactly when some lifted minimal Phase 1 quorum contains
+no lifted minimal Phase 2 quorum. That lifted Phase 1 quorum is itself a
+connectivity witness. The dual test decides `(0,1)`. Classification therefore
+requires pairwise set-containment checks, not enumeration of all `2^|N|`
+connectivity states.
 
 For explicit families, expected complexity is
-`O(|min(Q1)| * |min(Q2)| * |N|)`, excluding parsing and deterministic sorting.
+`O(|min(Q1)| * |min(Q2)| * |N|)`, excluding parsing, deterministic sorting,
+and the quadratic-in-family-size antichain minimization pass.
+
+`P` models a specific colocated acceptor or other node known to remain
+reachable. The wall's published self-reachable reading requires at least one
+node from the initiator's tier, not necessarily one named node. Pinning a
+representative node reproduces the wall result because its quorum predicates
+are symmetric within each tier; the registration must state that equivalence.
+For an asymmetric deployment, reproduce an “at least one of this set” reading
+by auditing each possible pinned representative and combining the results,
+not by silently treating the conditions as identical.
 
 ### Registered expected outputs
 
@@ -229,14 +258,18 @@ containing expected results for:
 - `R1 => R2` only;
 - `R2 => R1` only;
 - the intersecting incomparable example
-  `N={a,b,c}`, `Q1={{a,b}}`, `Q2={{a,c}}`;
+  `N={a,b,c}`, `Q1={{a,b}}`, `Q2={{a,c}}`, which must report both gaps;
 - uniform threshold families below, at, and above equality;
-- the wall at `k >= 4` for tiers where both gaps are reachable;
+- the wall at `k >= 4`, with every expected cell explicitly labeled as either
+  unconstrained (`P` empty) or self-reachable (a named, symmetry-equivalent
+  colocated acceptor pinned), including tiers where both gaps are reachable;
 - at least one unsafe cross-intersection negative control.
 
 The registration must fence off the scarcity lemma and unplanned derived
 claims. Any divergence between the auditor, existing CSVs, and registered
-expectations is recorded and investigated as a finding.
+expectations under the same explicitly named reading is recorded and
+investigated as a finding. A difference between the unconstrained and pinned
+readings is expected model sensitivity, not itself a new finding.
 
 ### Verification
 
@@ -304,12 +337,29 @@ the formal characterization.
 5. Verify RQS/LCL primary sources and repair related-work positioning.
 6. Implement Artifact B if schedule permits.
 7. Complete the manuscript claim, traceability, anonymization, build, and
-   artifact audit; upload the revised paper.
+   artifact audit. This audit includes regression checks that the executable
+   `(1,0)` label remains `ACQUIRE_WITHOUT_COMMIT`, the documented
+   `GridQuorum` intersection limitation remains visible, and the current paper
+   retains the corrected 27,921-state attribution. It also verifies that the
+   submission artifact is a clean export without Git history or signing
+   identity. Upload the revised paper.
 8. Design, register, and run the gated terrestrial experiment.
+
+If schedule remains after Artifact B and all upload gates, a dual-dashboard
+rendering of one existing blackout trace is optional communication work: the
+same run shown once as node health and once as capability state. It is below
+Artifact B in priority and supplies no new evidence.
+
+The Cassandra version pin is successor-work hygiene unless the current paper
+uses Cassandra as evidence. If such a claim is reintroduced, pinning the
+source version and checking the Paxos-v2 path becomes an upload gate.
 
 Codex drafts Section 1 and the other manuscript revisions. The author reviews
 the prose rather than producing the first draft, preserving a fresh editorial
-view. External HotCRP changes remain the author's action.
+view. Every drafting prompt carries the ban list up front: no arbitrary-family
+“exactly one” claim, no anchor-scoped claim without its tier quantifier, no
+“recovery” synonym for acquisition, and no unconditional livelock claim.
+External HotCRP changes remain the author's action.
 
 All repository commits are made through WSL against the mounted Windows
 working tree, signed with the `research@wamason.com` key, and OpenTimestamps-
@@ -322,6 +372,8 @@ The revision is ready for audited upload when:
 
 - title and abstract use the approved capability-gap framing;
 - no arbitrary-family claim asserts exactly one gap;
+- the four predicate-ordering classes and gap profiles are stated as an exact,
+  mutually exclusive correspondence;
 - all empirical claims state their modeled conditions and observed bounds;
 - membership/reconfiguration scope is explicit;
 - the wall's participation-policy purpose and analytical fallback are clear;
@@ -331,5 +383,6 @@ The revision is ready for audited upload when:
   artifact, or explicit hypothesis label;
 - the full test suite passes;
 - the paper builds cleanly with resolved references;
-- claim-to-artifact traceability and anonymization audits pass;
+- claim-to-artifact traceability and anonymization audits pass, including a
+  history-free submission export with no signing identity;
 - the audited PDF is uploaded before the terrestrial experiment begins.
