@@ -16,4 +16,11 @@ __pycache__
 .vscode
 
 # ignore tmp directory
-./tmp/*
+tmp/
+
+# don't save ai local dirs
+.claude/
+.vscode/
+.codex/
+.gemini/
+.grok/
