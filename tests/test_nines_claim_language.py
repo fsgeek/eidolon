@@ -129,6 +129,45 @@ def test_formal_investigation_sections_appear_in_order():
     assert positions == sorted(positions)
 
 
+def test_behavioral_reversal_immediately_follows_wall_boundary():
+    text = PAPER.read_text(encoding="utf-8")
+    headings = (
+        r"\section{Where the Wall Works, and Where It Stops}",
+        r"\section{What Happens Inside the Gaps}",
+        r"\section{Related Work}",
+    )
+    positions = [text.index(heading) for heading in headings]
+    assert positions == sorted(positions)
+    assert r"\subsection{The Valence of the Two Capability States}" not in text
+
+
+def test_behavioral_result_keeps_method_and_bounds_adjacent():
+    text = PAPER.read_text(encoding="utf-8")
+    behavior = section(
+        text,
+        r"\section{What Happens Inside the Gaps}",
+        r"\section{",
+    )
+    for required in (
+        "five arms",
+        r"$\{1,2,4,8\}$",
+        "50 seeds per cell",
+        "single-decree Paxos",
+        "healthy proposer's fixed eight-round budget",
+        "all 50 seeds",
+        "accepted value",
+        "not evidence of livelock",
+        "Under Multi-Paxos",
+    ):
+        assert required in behavior
+    for overclaim in (
+        "the cost is contention, not the capability state",
+        "measured-harmful direction",
+        "blocks the healthy proposer completely",
+    ):
+        assert overclaim not in text
+
+
 def test_wall_positive_results_precede_the_boundary():
     text = PAPER.read_text(encoding="utf-8")
     wall = section(
