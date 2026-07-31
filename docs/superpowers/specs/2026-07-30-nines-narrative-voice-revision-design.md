@@ -24,6 +24,11 @@ paper may make a structural applicability argument about edge systems and may
 demonstrate the readout on an edge-shaped input. It will not present
 terrestrial empirical validation.
 
+The production-system census remains post-submission work because the
+Cassandra evidence still needs a version pin. A dual-dashboard figure may be
+reconsidered after the story, page count, and existing figures settle, but it
+is not required to pass this revision gate.
+
 ## Narrative Contract
 
 The paper begins with two operational questions:
@@ -76,6 +81,26 @@ The portable diagnostic left with the reader is:
 
 > Can this system acquire authority, and can it commit?
 
+## Legibility Definition
+
+In this paper, a quorum construction is legible with respect to a supplied
+connectivity summary when its phase capabilities and failed obligations can be
+read from a compact structural representation without enumerating candidate
+quorum subsets or attempting protocol execution. The wall supplies such a
+representation: acquisition and commit formability and the unsatisfied tier
+obligations can be determined in `O(tiers)` time.
+
+The interface assumes that configuration and connectivity are already known.
+It does not detect connectivity, establish current authority, select recovery
+policy, or guarantee that an operator consults the result. Those are separate
+operational problems.
+
+This definition does not restore the superseded claim that the wall
+"compensates every other tier with legibility." The registered gradient
+falsified that framing: Moon and Mars retain `(0,1)` exposure at every `k`.
+Legibility is load-bearing because it supplies interpretation where
+construction reaches its limit.
+
 ## Constructive Role of the Wall
 
 The wall is a useful design tool with a known boundary. The revision must
@@ -109,7 +134,10 @@ The target section sequence is:
 1. **Introduction: the green-dashboard puzzle.** Present the symptom, the two
    operational questions, the answer, and the paper's contributions.
 2. **Why one count once worked.** Introduce phase symmetry, majority as its
-   familiar threshold instance, and the consequence of Flexible Paxos.
+   familiar threshold instance, and the consequence of Flexible Paxos. Place
+   the odd-cluster observation here: a cost-minimal threshold split can be
+   phase-symmetric at odd `n`, while symmetry costs one additional participant
+   across the phases at even `n`.
 3. **Capability gaps.** Define `R1` and `R2`, prove the exact containment
    correspondence, and introduce the generic auditor.
 4. **Putting the gaps on a wall.** Define the topology and construction,
@@ -117,7 +145,10 @@ The target section sequence is:
    witnesses.
 5. **Where the wall works, and where it stops.** Present the positive `k=3`
    result, reusable threshold rules, the self-reachable sensitivity, and the
-   residual Moon and Mars exposure.
+   residual Moon and Mars exposure. Before leaving the section, identify the
+   residual `(0,1)` gap as the state associated with retry-budget exhaustion
+   in the registered experiment that follows. Do not assign the state an
+   intrinsic cost or valence.
 6. **What happens inside the gaps.** Present the registered valence experiment
    and its bounded behavioral reversal.
 7. **Reading the wall.** Present the readout and the supporting topology,
@@ -152,6 +183,9 @@ The revision should:
 - begin from observations, examples, and questions;
 - show how one observation led to the next;
 - use "we" for choices, measurements, and interpretations;
+- gloss "acquire proposal authority" at first use as the leader-election step
+  under Multi-Paxos while preserving the single-decree meaning used by the
+  experiments;
 - state uncertainty and evidentiary limits directly;
 - place qualifications beside the claims they bound;
 - prefer concrete mechanisms to compressed rhetorical labels;
@@ -177,6 +211,8 @@ work.
   necessary.
 - Attribute Flexible Paxos, crumbling walls, and other foundational ideas at
   first use even if the full related-work section appears later.
+- Introduce coincidence as a named relationship before using language about
+  spending it.
 - Require new transitions to replace or remove existing exposition so that
   narrative connective tissue does not expand the manuscript.
 - Check the rendered page count after each major section. The main paper must
@@ -188,6 +224,13 @@ automatic replacement. The review also looks for slogan density, repeated
 interpretive announcements, unnecessary personification, symmetrical lists
 that add no information, and stock transitions such as repeated claims of a
 "deeper" point.
+
+The rewrite must preserve several insights at full prominence without
+freezing their present wording: the significance of the proof's simplicity;
+LEO's lower measured latency than Earth and the separation between obligation
+and physical cost; the need to check both wall structure and network
+reachability; the opposite-remediation result; and the odd-cluster
+observation. Every current aphorism remains subject to the voice review.
 
 ## Epistemic Controls
 
@@ -231,11 +274,15 @@ asks:
    choices to the remaining manuscript.
 5. Revise the manuscript section by section. After each section, perform claim,
    implication, citation, and page-budget checks.
-6. Perform the contextual AI-tell review after the narrative and voice pass.
-7. Rebuild the traceability appendix against the final claim set.
-8. Run the manuscript claim-language tests, full test suite, anonymization
+6. Audit the central per-tier liveness table. Test whether one common
+   1800-second blackout condition produces a clearer table with a directly
+   observed Mars result. Do not mix a Mars cell from 1800 seconds into a table
+   whose other cells report the 900-second condition.
+7. Perform the contextual AI-tell review after the narrative and voice pass.
+8. Rebuild the traceability appendix against the final claim set.
+9. Run the manuscript claim-language tests, full test suite, anonymization
    checks, and complete LaTeX build.
-9. Conduct a final human cold read focused on voice, accessibility, narrative
+10. Conduct a final human cold read focused on voice, accessibility, narrative
    coherence, and places where the prose feels more certain than the evidence.
 
 ## Success Criteria
@@ -248,6 +295,9 @@ The revision is complete when:
   without withholding required scholarly information;
 - the wall is presented as a concrete tool that closes named gaps in named
   configurations, followed by its exact boundary;
+- legibility is defined in the introduction, instantiated by the wall's
+  `O(tiers)` readout, and distinguished from detection, current authority, and
+  policy;
 - the readout's contribution and limits are both explicit;
 - the open terrestrial experiment and performance-preserving prevention work
   remain clearly outside the paper's evidence;
