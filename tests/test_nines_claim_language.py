@@ -127,3 +127,43 @@ def test_formal_investigation_sections_appear_in_order():
     )
     positions = [text.index(heading) for heading in headings]
     assert positions == sorted(positions)
+
+
+def test_wall_positive_results_precede_the_boundary():
+    text = PAPER.read_text(encoding="utf-8")
+    wall = section(
+        text,
+        r"\section{Where the Wall Works, and Where It Stops}",
+        r"\section{",
+    )
+    required = (
+        r"At $k=3$, the $(1,0)$ gap is absent at every tier",
+        r"both gaps are absent for Earth under both connectivity readings",
+        r"both gaps are absent for LEO under the self-reachable reading",
+        r"$(0,1)$ remains reachable for Moon and Mars",
+        r"For $k \le 3$, $(1,0)$ is absent at every tier",
+        r"For $k \ge 3$, $(0,1)$ is absent for Earth",
+    )
+    assert all(claim in wall for claim in required)
+    assert wall.index(required[0]) < wall.index(required[3])
+
+
+def test_central_per_tier_table_uses_one_observed_condition():
+    text = PAPER.read_text(encoding="utf-8")
+    table = section(text, r"\caption{Per-tier global consensus", r"\end{table}")
+    assert "1800~s blackout" in table
+    assert "900~s blackout" not in table
+    assert r"Mars & top (3) & 0.0\%" in table
+    assert r"---$^{\dagger}$" not in table
+
+
+def test_superseded_wall_and_valence_claims_do_not_return():
+    text = PAPER.read_text(encoding="utf-8")
+    for banned in (
+        "compensates every other tier with legibility",
+        "the harmful gap",
+        "the harmless gap",
+        "intrinsically harmful",
+        "universally benign",
+    ):
+        assert banned not in text
