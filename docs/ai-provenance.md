@@ -70,6 +70,14 @@ itself the product of a correction (see ledger).
   implementation was drafted. The introduction and subsequent body
   revision were machine-drafted from that approved contract, then reviewed
   by the human author and independently by Claude and Codex.
+- **Editorial triangulation.** The narrative and voice revision used an
+  approved editorial contract, a paragraph-level claim and implication map,
+  and a human-reviewed introduction pilot. One model family reviewed a draft
+  substantially written by that family; a different model family evaluated
+  the review and led the rewrite. Agreement raised confidence but did not
+  establish truth. Disagreements were adjudicated against proofs and
+  artifacts, while the human author retained authority over voice and
+  claim-affecting prose.
 - **Expected outputs before implementation.** The generic auditor's
   semantic cases, witnesses, wall readings, and discrepancy rules were
   committed before its code or tests existed. The included pre-registration

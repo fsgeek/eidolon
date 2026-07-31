@@ -29,6 +29,7 @@ The counts below are discovery aids, not targets.
 | Wall/table audit | 10,535 | 29 | 13 | 12 | 14 | -489 words from baseline | Exact wall readings verified from the registered gradient; central per-tier table rendered on page 8 under one 1800-second condition |
 | Behavioral reversal | 10,542 | 21 | 11 | 12 | 14 | -482 words from baseline | Registered method, result, mechanism, and limits now occupy one page immediately after the wall boundary; rendered table fits without overfull text |
 | Reading the Wall | 9,657 | 11 | 8 | 11 | 13 | -1,367 words from baseline | Readout, method, baselines, liveness, sparse reachability, relaxation, and structural gradient now form one four-page investigation; duplicate discussion and policy prose removed |
+| Integrated ending | 9,516 | 1 | 6 | 11 | 14 | -1,508 words from baseline | Open problem, compact limits, and conclusion finish before references on page 11; traceability is split across two readable appendix tables rather than oversized on one page |
 
 ## Paragraph map
 
@@ -131,27 +132,27 @@ The counts below are discovery aids, not targets.
 | P093 | Weakest-link migration | interpretation | C13 | rewritten | Reading the Wall | One punch sentence follows the two-crash comparison and its mechanism |
 | P094 | Coordinated relaxation | measurement | C13 | merged | Reading the Wall | Exact 3-of-5 plus local-majority recovery remains beside the table |
 | P095 | Tradeoff summary table | definition | C13 | fixed | Reading the Wall | Compact reusable result |
-| P096 | “All results are design-level” | qualification | C16 | merge | Limitations | Avoid repeating abstract/intro wording |
-| P097 | Anchor concentration | qualification | C06, C13 | fixed | Limitations | Cross-cutting construction limit |
-| P098 | Tier bundles properties | qualification | C16 | fixed | Limitations | Prevents overgeneralized edge mapping |
-| P099 | Abstract network model | qualification | C11, C12 | fixed | Limitations | Preserve omitted physical effects |
-| P100 | Stylized workload | qualification | C11 | merge | Reading the Wall / Limitations | Keep cadence qualification beside recovery result; brief reminder later |
-| P101 | Single topology | qualification | C06–C08 | fixed | Limitations | Bounds structural evaluation |
-| P102 | Crash-stop only | qualification | C06 | fixed | Limitations | Preserve fault-model boundary |
-| P103 | Per-tier crash tolerance untested | qualification | C13 | fixed | Limitations | Preserve future experiment boundary |
+| P096 | “All results are design-level” | qualification | C16 | merged | Limitations | Opens one compact model-scope paragraph instead of repeating the abstract |
+| P097 | Anchor concentration | qualification | C06, C13 | rewritten | Limitations | The one-anchor dependency now sits beside the multi-anchor research candidate |
+| P098 | Tier bundles properties | qualification | C16 | retained | Limitations | Prevents overgeneralized edge mapping |
+| P099 | Abstract network model | qualification | C11, C12 | consolidated | Limitations | Orbital, link, scheduling, and fault omissions are named once |
+| P100 | Stylized workload | qualification | C11 | merged | Reading the Wall / Limitations | Cadence stays beside recovery measurements and receives one brief reminder later |
+| P101 | Single topology | qualification | C06–C08 | consolidated | Limitations | Structural and measured scopes remain distinct |
+| P102 | Crash-stop only | qualification | C06 | consolidated | Limitations | Crash-stop scope and omitted Byzantine behavior share the model-scope paragraph |
+| P103 | Per-tier crash tolerance untested | qualification | C13 | retained | Limitations | The Earth-initiator boundary remains explicit |
 | P104 | Inter-tier obligation vs replication | interpretation | C06, C13 | rewritten/moved | Reading the Wall | Shortened consequence now closes coordinated relaxation; deployment-overclaim language removed |
 | P105 | Capability/authority/contract table | qualification | C15 | merged | Reading the Wall | Replaced prescriptive state table with explicit interface outputs and exclusions |
 | P106 | Opposite remediations | interpretation | C09, C10, C15 | move | What Happens Inside the Gaps | Operational surprise belongs immediately after measured reversal |
 | P107 | Leadership hierarchy | interpretation | C06, C14 | rewritten/moved | Reading the Wall | Closed-form count is now a compact design-time readout, separate from availability |
 | P108 | Quorum-count gradient figure | measurement | C06, C14 | moved/recaptioned | Reading the Wall | Preserves 992/496/248/217 and labels the figure structural rather than stochastic |
 | P109 | WPaxos contrast | related work | C06 | merged | Related Work | Removed duplicate post-figure comparison; existing Related Work paragraph carries it |
-| P110 | Terrestrial mapping | qualification | C16 | move | What Remains Unsolved | Structural recurrence only; no evaluation |
-| P111 | Future-work candidates | transition | C17 | rewrite | What Remains Unsolved | Frame candidates as unevaluated paths toward performance-preserving closure |
-| P112 | Conclusion: coincidence and correspondence | interpretation | C02–C10 | rewrite | Conclusion | Return through the investigation rather than compressing every result |
-| P113 | Conclusion: Mars and mitigation | interpretation | C14–C17 | rewrite | Conclusion | End with two-question diagnostic and open problem |
+| P110 | Terrestrial mapping | qualification | C16 | moved/revised | What Remains Unsolved | The edge mapping is a next experiment, explicitly not evidence |
+| P111 | Future-work candidates | transition | C17 | rewritten | What Remains Unsolved | Scoped authority, gap-aware behavior, and multi-anchor families are unevaluated candidates |
+| P112 | Conclusion: coincidence and correspondence | interpretation | C02–C10 | rewritten | Conclusion | Returns through symmetry, count-readability, and containment without inventory cadence |
+| P113 | Conclusion: Mars and mitigation | interpretation | C14–C17 | rewritten | Conclusion | Ends with the two-question diagnostic and performance-preserving open problem |
 | P114 | Simulator-parameters table | definition | C09–C13 | fixed | Appendix | Preserve values; update only cross-reference or verified condition drift |
-| P115 | Traceability introduction | qualification | C04–C16 | rewrite | Appendix | Rebuild against final claim ledger |
-| P116 | Traceability table | measurement | C04–C16 | rewrite | Appendix | Update common-condition row and final wording without changing artifact identity |
+| P115 | Traceability introduction | qualification | C04–C17 | retained | Appendix | Defines executable-artifact scope and environment once |
+| P116 | Traceability table | measurement | C01–C17 | rebuilt/artifact-checked | Appendix | Names common conditions, exact wall positives and residuals, experiment bounds, post-hoc status, demonstration limits, and artifact-free future work |
 
 ## Claim ledger
 
@@ -186,8 +187,8 @@ The counts below are discovery aids, not targets.
 | Where the Wall Works, and Where It Stops | The wall closes all operationally important gaps, or residual `(0,1)` is intrinsically bad | structural reachability | exact only for named `k`, tier, and reading | reusable design technique plus exact boundary | exhaustive connectivity enumeration | resolved and artifact-checked | Opens with `k=3` closures, names both readings and LEO sensitivity, then Moon/Mars residual exposure; bounded experiment bridge denies intrinsic valence |
 | What Happens Inside the Gaps | The registered experiment establishes universal valence or validates the wall | no; theorem and wall are established independently | bounded to topology, one flip site, policy, both proposer budgets, and single-decree protocol | behavioral comparison of constructed states | preregistered 5×4×50 simulation | resolved | The section defines the harness outcome, places limits beside each result, and closes by stating that it measures behavior inside constructed states rather than validating the proof or wall enumeration |
 | Reading the Wall | The readout detects failures, identifies a live leader, or chooses safe remediation | readout interprets supplied state | structural interface; measurements remain topology-specific | compact typed readout and joined interpretation | existing topology/baseline/liveness/crash experiments | resolved | Configuration and connectivity are named inputs; authority is unknown, policy is uninferred, the edge JSON is a demonstration, and every measurement retains its local conditions |
-| What Remains Unsolved | No performance-preserving closure exists | no | open across structured topologies | question, not result | none | no | Ask whether and where coincidence can be extended; label candidate directions unevaluated |
-| Related Work, Limitations, Conclusion | Mars experiments empirically establish terrestrial behavior or research chronology followed narrative order | no | structural recurrence only | contributions bounded above | planetary simulator only | no without scope | Distinguish explanatory order from discovery chronology; end with diagnostic and open question, not deployment prevalence |
+| What Remains Unsolved | No performance-preserving closure exists | no | open across structured topologies | question, not result | none | resolved | The section asks whether and where coincidence can be extended and labels all three candidate directions unevaluated |
+| Related Work, Limitations, Conclusion | Mars experiments empirically establish terrestrial behavior or research chronology followed narrative order | no | structural recurrence only | contributions bounded above | planetary simulator only | resolved | Related Work states no discovery chronology; Limitations denies terrestrial evaluation and prevalence; Conclusion ends with the diagnostic and open question |
 
 ## Contextual style review
 
@@ -275,3 +276,30 @@ The counts below are discovery aids, not targets.
 
 - The section reports each interpretive result once: majority matches blackout survival while leaving Earth for Phase 1; LEO is faster than Earth because obligation and physical cost differ; sparse reachability can defeat a satisfiable wall obligation; recovery point values follow cadence while the bound matters to the protocol; and coordinated relaxation moves the weakest link to the Earth-local family before restoring it.
 - Rendered evaluation pages were inspected after consolidation. Section headings, the two structural figures, all measurement tables, equations, and the transition into limitations fit without collision or overfull boxes. The two-column floats may precede their source paragraphs on a page, but each caption carries its complete local condition set.
+
+## Final contextual style audit
+
+Discovery after the integrated ending found one TeX `---` sequence and six case-insensitive uses of “rather than.” One of the latter is a source comment and the `---` is a table's missing-value marker, so neither is rendered punctuation. Every rendered match was read in context:
+
+| Location | Match | Decision | Reason |
+|---|---|---|---|
+| Preamble source comment | “rather than `\\newtheorem`” | keep | Implementation note; absent from the paper readers see |
+| Capability auditor | “rather than reusing the containment classifier” | keep | Establishes the independent check's methodological independence |
+| Construction policy boundary | “analytical construction rather than a recommended deployment geometry” | keep | Prevents a structural example from becoming deployment advice |
+| TLA+ completeness explanation | “it is not a statistical sample” | keep | Necessary epistemic distinction for readers unfamiliar with model checking |
+| Protocol verification scope | “single all-tier Phase 1 family rather than the per-tier families” | keep | Names exactly what the specification does and does not cover |
+| Behavioral table | `---` | keep | Data marker for an undefined time-to-commit after zero completions, not an em dash |
+| Related work hierarchy | “physical latency tiers rather than organizational or logical grouping” | keep | Defines the construction's relationship to prior hierarchy work |
+| Related work WAN scope | “scheduled total disconnection rather than heterogeneous latency” | keep | Distinguishes the evaluated phenomenon from the comparison systems |
+
+The repeated analytical-versus-recommended wall qualification in Related Work was removed because the construction section already states it at the point of consequence. Four explanatory em-dash pivots in the formal core were recast as sentences, a colon, or an ordinary clause. Manual review kept two short sentences because they follow evidence and perform real reversals: “The prediction failed. It failed in reverse.” and “The weakest link migrates.” The three uses of the wall as a grammatical actor (“tells,” “gives,” and “turns”) remain local shorthand for the classification or construction, not claims of agency. No empty contribution litany or repeated interpretive announcement remains.
+
+## Ending and traceability audit
+
+- Added `What Remains Unsolved` before the consolidated limitations and conclusion. It begins with the exact `k=3` positive result and residual Moon/Mars exposure, then asks whether coincidence can extend farther without returning inter-tier latency to Phase 2.
+- Scoped authority, gap-aware proposer behavior, and multi-anchor families are identified as candidates only. The paper makes no efficacy claim for them and assigns separate safety, performance, and operational work.
+- Consolidated simulator, hard-blackout, crash-stop, orbital/link, single-decree, known-connectivity, authority/policy, prevalence, and terrestrial-evaluation limits into four paragraphs. Limits already adjacent to measurements are only recalled briefly.
+- Rebuilt the conclusion in investigative order: symmetry and count-readability, containment after predicate separation, the exact wall result and boundary, then the two-question diagnostic. The last sentence preserves the performance constraint and proposes no solution.
+- Rechecked traceability against C01--C17. The common 1800-second per-tier condition, sparse and crash conditions, exact `k=3` closures, Moon/Mars residual, eight-round behavioral bound, post-hoc odd/even observation, edge non-evaluation, and artifact-free open problem are explicit. Artifact paths were not changed.
+- Recorded the editorial triangulation in `docs/ai-provenance.md`: approved contract and map, pilot gate, same-family review risk, cross-family adjudication, proof/artifact authority, and human authority over voice and claim-affecting prose.
+- The initial one-page traceability rebuild exceeded the page by 111 points. It was split into two continued full-width tables; the float warning disappeared, paths and claims remain unchanged, and both pages were inspected. Moving the crash table's source slightly earlier keeps it at the top of page 10, before the open problem, so the conclusion runs without a delayed empirical float and ends above the References heading on page 11.

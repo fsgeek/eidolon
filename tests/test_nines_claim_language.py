@@ -112,6 +112,62 @@ def test_reading_the_wall_preserves_the_five_interpretive_results():
         assert required in reading
 
 
+def test_ending_opens_the_unsolved_problem_before_bounding_claims():
+    text = PAPER.read_text(encoding="utf-8")
+    headings = (
+        r"\section{Reading the Wall}",
+        r"\section{What Remains Unsolved}",
+        r"\section{Threats to Validity and Limitations}",
+        r"\section{Conclusion}",
+    )
+    positions = [text.index(heading) for heading in headings]
+    assert positions == sorted(positions)
+    assert r"\section{Discussion}" not in text
+
+
+def test_open_problem_and_conclusion_keep_their_boundaries():
+    text = PAPER.read_text(encoding="utf-8")
+    open_problem = section(
+        text,
+        r"\section{What Remains Unsolved}",
+        r"\section{",
+    )
+    for required in (
+        "without returning inter-tier latency to the Phase~2 hot path",
+        "scoped authority",
+        "gap-aware proposer behavior",
+        "multi-anchor families",
+        "safety, performance, and operational behavior",
+    ):
+        assert required in open_problem
+
+    conclusion = section(text, r"\section{Conclusion}", r"\bibliographystyle")
+    assert "phase symmetry" in conclusion
+    assert "threshold family" in conclusion
+    assert "Can this system acquire authority?" in conclusion
+    assert "Can it commit?" in conclusion
+    assert "without returning inter-tier latency to Phase~2" in conclusion
+
+
+def test_cross_cutting_limits_are_explicit():
+    text = PAPER.read_text(encoding="utf-8")
+    limits = section(
+        text,
+        r"\section{Threats to Validity and Limitations}",
+        r"\section{",
+    )
+    for required in (
+        "single-decree",
+        "Multi-Paxos",
+        "supplied connectivity",
+        "no deployment prevalence",
+        "no terrestrial evaluation",
+        "runtime authority",
+        "service policy",
+    ):
+        assert required in limits
+
+
 def test_introduction_states_the_two_questions_and_defines_legibility():
     text = PAPER.read_text(encoding="utf-8")
     introduction = section(text, r"\section{Introduction}", r"\section{")
