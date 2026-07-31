@@ -28,6 +28,7 @@ The counts below are discovery aids, not targets.
 | Formal-core checkpoint | 10,646 | 34 | 16 | 12 | 14 | -378 words from baseline | Four investigative sections now occupy pages 2--6; proof labels and artifact references remain stable |
 | Wall/table audit | 10,535 | 29 | 13 | 12 | 14 | -489 words from baseline | Exact wall readings verified from the registered gradient; central per-tier table rendered on page 8 under one 1800-second condition |
 | Behavioral reversal | 10,542 | 21 | 11 | 12 | 14 | -482 words from baseline | Registered method, result, mechanism, and limits now occupy one page immediately after the wall boundary; rendered table fits without overfull text |
+| Reading the Wall | 9,657 | 11 | 8 | 11 | 13 | -1,367 words from baseline | Readout, method, baselines, liveness, sparse reachability, relaxation, and structural gradient now form one four-page investigation; duplicate discussion and policy prose removed |
 
 ## Paragraph map
 
@@ -74,8 +75,8 @@ The counts below are discovery aids, not targets.
 | P037 | Verification-scope limitation | qualification | C06 | fixed | Putting the Gaps on a Wall | Must stay beside model-check claim |
 | P038 | Wall liveness rule | definition | C07, C08, C14 | moved | Where the Wall Works, and Where It Stops | Structural readout now follows the section's exact positive result |
 | P039 | Mars-blackout reachability | observation | C07, C08 | moved | Where the Wall Works, and Where It Stops | Concrete input remains beside the structural rule |
-| P040 | Blackout liveness figure | definition | C07, C14 | moved | Where the Wall Works, and Where It Stops | Visualizes successful and failed tier obligations |
-| P041 | “This instantiates the legibility definition…” | interpretation | C14, C15 | rewrite | Where the Wall Works, and Where It Stops | Repair dangling Section 1 reference and avoid repeating the full definition |
+| P040 | Blackout liveness figure | definition | C07, C14 | moved/recaptioned | Reading the Wall | Now follows the readout algorithm and is labeled as a structural supplied-connectivity example |
+| P041 | “This instantiates the legibility definition…” | interpretation | C14, C15 | rewritten/moved | Reading the Wall | Replaced dangling reference with the exact one-pass check and sole-timely-proposer boundary |
 | P042 | Per-tier wall predicates | definition | C07, C08 | move | Where the Wall Works, and Where It Stops | Sets up threshold result |
 | P043 | Boundary proposition | proof | C07, C08 | moved/fixed | Where the Wall Works, and Where It Stops | Exact containment threshold remains unchanged |
 | P044 | Hitting-set arithmetic | proof | C07 | moved/fixed | Where the Wall Works, and Where It Stops | Mechanism and safety connection remain unchanged |
@@ -85,19 +86,19 @@ The counts below are discovery aids, not targets.
 | P048 | Self-reachable sensitivity | qualification | C07, C08 | fixed | Where the Wall Works, and Where It Stops | Required scope for LEO result |
 | P049 | Relationship to Flexible Paxos | related work | C04, C07 | moved/revised | Related Work | Prior `(1,0)` examples and the present design-time question now sit together |
 | P050 | “Legibility is load-bearing” | interpretation | C08, C14 | rewrite | Where the Wall Works, and Where It Stops | Remove compensation implication; legibility explains residual obligation |
-| P051 | Wall-specific readout interface | definition | C14–C16 | move | Reading the Wall | Put inputs, outputs, and exclusions together |
+| P051 | Wall-specific readout interface | definition | C14–C16 | rewritten/moved | Reading the Wall | Inputs, outputs, unknown authority, uninferred policy, and edge-demonstration boundary now open the section |
 | P052 | Meaning of global | qualification | C06, C15 | moved | Putting the Gaps on a Wall | Learned-value scope now closes the construction before capability enumeration |
 | P053 | Related work: Paxos/Flexible Paxos | related work | C02, C04 | merge | Related Work | First-use citations already carry definitions; retain relationship here |
 | P054 | Related work: containment/RQS | related work | C04 | fixed | Related Work | Essential novelty boundary |
 | P055 | Related work: grid/wall/Satrapy | related work | C06 | fixed | Related Work | Preserve geometry and heterogeneous quorum lineage |
 | P056 | Related work: geo-consensus | related work | C06, C16 | fixed | Related Work | Practical comparison |
 | P057 | Related work: DTN/CRDT | related work | C16 | fixed | Related Work | Preserve scope distinction |
-| P058 | Simulator description | definition | C09–C13 | move | Reading the Wall | General evaluation method before supporting results |
-| P059 | Physical topology | definition | C11, C12 | move | Reading the Wall | Conditions for latency and reachability results |
-| P060 | Sparse/full variants | definition | C12 | move | Reading the Wall | Keep immediately before relevant measurements |
+| P058 | Simulator description | definition | C09–C13 | moved | Reading the Wall | General evaluation method now precedes all supporting measurements |
+| P059 | Physical topology | definition | C11, C12 | moved | Reading the Wall | Physical conditions remain adjacent to the experiment inventory |
+| P060 | Sparse/full variants | definition | C12 | moved | Reading the Wall | Both network inputs are defined before the full/sparse comparison |
 | P061 | Four experiment families | transition | C09–C13 | rewritten | What Happens / Reading the Wall | The design section now names three wall experiment families and points separately to the adjacent behavioral experiment |
-| P062 | Experimental-design table | definition | C09–C13 | rewrite | What Happens / Reading the Wall | Preserve conditions; consider splitting if adjacency requires it |
-| P063 | Fixed parameters and CI method | qualification | C09–C13 | move | Reading the Wall | Keep shared conditions near evaluation and full details in appendix |
+| P062 | Experimental-design table | definition | C09–C13 | rewritten/moved | Reading the Wall | Per-tier row now distinguishes its 900- and 1800-second conditions |
+| P063 | Fixed parameters and CI method | qualification | C09–C13 | moved | Reading the Wall | Shared conditions remain beside the method with full values in the appendix |
 | P064 | Valence question and registration | question | C09, C10 | moved/rewritten | What Happens Inside the Gaps | Now follows the residual wall state and states the registered comparison and falsification boundary |
 | P065 | Valence experimental setting | definition | C09, C10 | rewritten/artifact-checked | What Happens Inside the Gaps | Distinguishes swept incumbent budgets from the healthy proposer's fixed eight rounds and defines prevented decision from the harness |
 | P066 | Valence result table | measurement | C09, C10 | rewritten/artifact-checked | What Happens Inside the Gaps | Conditions are part of each row; primary registered evidence remains compact |
@@ -106,10 +107,10 @@ The counts below are discovery aids, not targets.
 | P069 | “Two things this is not” | qualification | C09, C10 | merged | What Happens Inside the Gaps | Universal-valence and livelock limits now sit in the paragraphs containing their measurements |
 | P070 | Multi-Paxos/single-decree scope | qualification | C09, C10, C15 | rewritten/moved | What Happens Inside the Gaps | Delayed versus immediate exposure now leads directly to the opposite-remediation question |
 | P071 | Registered deviations | qualification | C09, C10 | rewritten/moved | What Happens Inside the Gaps | All five deviations remain named; theorem and wall independence are explicit |
-| P072 | Geometry comparison setup | definition | C11 | move | Reading the Wall | Opens baseline subsection |
-| P073 | Flat/majority/wall table | measurement | C11 | fixed | Reading the Wall | Preserve full conditions and measured latency |
-| P074 | Flat versus wall result | measurement | C11 | merge | Reading the Wall | One concise result before competitive baseline |
-| P075 | Majority baseline interpretation | interpretation | C11 | rewrite | Reading the Wall | Preserve matched liveness, doubled Phase 1 latency, and tier-awareness difference |
+| P072 | Geometry comparison setup | definition | C11 | moved | Reading the Wall | Opens the geometry/baseline subsection after method |
+| P073 | Flat/majority/wall table | measurement | C11 | recaptioned/artifact-checked | Reading the Wall | Caption now identifies sparse 5/1/1/3 topology, initiator, blackout, timeouts, sweep, and seeds |
+| P074 | Flat versus wall result | measurement | C11 | retained | Reading the Wall | Calibration remains one concise observation before majority |
+| P075 | Majority baseline interpretation | interpretation | C11 | rewritten | Reading the Wall | States matched blackout survival, cross-tier Phase 1 latency, and initiator sensitivity once |
 | P076 | Per-tier central-result setup | definition | C11 | rewritten | Reading the Wall | All four rows now use the verified common 1800-second condition |
 | P077 | Per-tier table | measurement | C11 | rewritten/artifact-checked | Reading the Wall | Mixed 900/1800 presentation replaced with four registered common-condition rows |
 | P078 | Three-of-four summary | measurement | C11 | rewritten | Reading the Wall | Reports Earth/LEO/Moon 100% and observed Mars 0%; no undefined cell remains |
@@ -117,18 +118,18 @@ The counts below are discovery aids, not targets.
 | P080 | Mars cadence and physics explanation | qualification | C11 | rewritten | Reading the Wall | Obsolete undefined-cell explanation removed; 1800-second observation and outside-blackout physics retained |
 | P081 | Recovery-lag cadence explanation | qualification | C11 | rewritten | Reading the Wall | Common-condition values now accompany the cadence-bound qualification |
 | P082 | Sparse reachability setup | transition | C12 | move | Reading the Wall | Follows full-coverage readout |
-| P083 | Sparse table | measurement | C12 | fixed | Reading the Wall | Preserve 186/900/50-seed condition explicitly |
+| P083 | Sparse table | measurement | C12 | recaptioned/artifact-checked | Reading the Wall | Caption now includes topology, blackout, Mars delay, timeout, and seeds |
 | P084 | LEO full-to-sparse drop | measurement | C12 | fixed | Reading the Wall | Core network-versus-wall observation |
-| P085 | Two-step operator procedure | interpretation | C12, C14, C15 | rewrite | Reading the Wall | Explain supplied inputs without implying failure detection |
+| P085 | Two-step operator procedure | interpretation | C12, C14, C15 | rewritten | Reading the Wall | Recast as two supplied inputs; the readout performs no detection |
 | P086 | Moon and sparse Mars detail | measurement | C12 | fixed | Reading the Wall | Preserve topology-specific explanation |
-| P087 | Strict Phase 2 fragility | observation | C13 | move | Reading the Wall | Motivates coordinated relaxation subsection |
+| P087 | Strict Phase 2 fragility | observation | C13 | moved | Reading the Wall | Opens coordinated relaxation subsection |
 | P088 | Relaxed construction | definition | C13 | fixed | Reading the Wall | Preserve `k=4`/`k=3` crash tolerance |
 | P089 | Relaxed Phase 1 family | definition | C13 | fixed | Reading the Wall | Preserve cross-intersection formula |
-| P090 | Crash-sweep setup | definition | C13 | fixed | Reading the Wall | Keep conditions beside table |
-| P091 | Crash-relaxation table | measurement | C13 | fixed | Reading the Wall | Primary evidence |
-| P092 | Strict crash-intolerance result | measurement | C13 | merge | Reading the Wall | Fold into table interpretation |
-| P093 | Weakest-link migration | interpretation | C13 | rewrite | Reading the Wall | Preserve mechanism; reduce repeated contrast framing |
-| P094 | Coordinated relaxation | measurement | C13 | fixed | Reading the Wall | Preserve exact successful configuration |
+| P090 | Crash-sweep setup | definition | C13 | recaptioned/artifact-checked | Reading the Wall | Full condition set appears before and in the table caption |
+| P091 | Crash-relaxation table | measurement | C13 | moved | Reading the Wall | Primary evidence remains intact |
+| P092 | Strict crash-intolerance result | measurement | C13 | merged | Reading the Wall | Folded into one evidence-ordered paragraph |
+| P093 | Weakest-link migration | interpretation | C13 | rewritten | Reading the Wall | One punch sentence follows the two-crash comparison and its mechanism |
+| P094 | Coordinated relaxation | measurement | C13 | merged | Reading the Wall | Exact 3-of-5 plus local-majority recovery remains beside the table |
 | P095 | Tradeoff summary table | definition | C13 | fixed | Reading the Wall | Compact reusable result |
 | P096 | “All results are design-level” | qualification | C16 | merge | Limitations | Avoid repeating abstract/intro wording |
 | P097 | Anchor concentration | qualification | C06, C13 | fixed | Limitations | Cross-cutting construction limit |
@@ -138,12 +139,12 @@ The counts below are discovery aids, not targets.
 | P101 | Single topology | qualification | C06–C08 | fixed | Limitations | Bounds structural evaluation |
 | P102 | Crash-stop only | qualification | C06 | fixed | Limitations | Preserve fault-model boundary |
 | P103 | Per-tier crash tolerance untested | qualification | C13 | fixed | Limitations | Preserve future experiment boundary |
-| P104 | Inter-tier obligation vs replication | interpretation | C06, C13 | merge | Reading the Wall | Place cost consequence with evaluation, not in a second discussion pass |
-| P105 | Capability/authority/contract table | qualification | C15 | move | Reading the Wall | Keep structural state separate from permission and policy |
+| P104 | Inter-tier obligation vs replication | interpretation | C06, C13 | rewritten/moved | Reading the Wall | Shortened consequence now closes coordinated relaxation; deployment-overclaim language removed |
+| P105 | Capability/authority/contract table | qualification | C15 | merged | Reading the Wall | Replaced prescriptive state table with explicit interface outputs and exclusions |
 | P106 | Opposite remediations | interpretation | C09, C10, C15 | move | What Happens Inside the Gaps | Operational surprise belongs immediately after measured reversal |
-| P107 | Leadership hierarchy | interpretation | C06, C14 | move | Reading the Wall | Introduce gradient figure as a readout of structural cost |
-| P108 | Quorum-count gradient figure | measurement | C06, C14 | fixed | Reading the Wall | Preserve 992/496/248/217 gradient |
-| P109 | WPaxos contrast | related work | C06 | move | Related Work | Keep prior-work comparison out of result narration |
+| P107 | Leadership hierarchy | interpretation | C06, C14 | rewritten/moved | Reading the Wall | Closed-form count is now a compact design-time readout, separate from availability |
+| P108 | Quorum-count gradient figure | measurement | C06, C14 | moved/recaptioned | Reading the Wall | Preserves 992/496/248/217 and labels the figure structural rather than stochastic |
+| P109 | WPaxos contrast | related work | C06 | merged | Related Work | Removed duplicate post-figure comparison; existing Related Work paragraph carries it |
 | P110 | Terrestrial mapping | qualification | C16 | move | What Remains Unsolved | Structural recurrence only; no evaluation |
 | P111 | Future-work candidates | transition | C17 | rewrite | What Remains Unsolved | Frame candidates as unevaluated paths toward performance-preserving closure |
 | P112 | Conclusion: coincidence and correspondence | interpretation | C02–C10 | rewrite | Conclusion | Return through the investigation rather than compressing every result |
@@ -184,7 +185,7 @@ The counts below are discovery aids, not targets.
 | Putting the Gaps on a Wall | Every witness is required by Paxos safety, or the geometry is a deployment recommendation | policy choice affects formability | construction generalizes, evaluation topology does not | phase-decomposed wall application | TLA+ corroborates safety only within stated scopes | resolved in formal core | Earth anchor, policy witnesses, and effect of removing a witness are stated separately; analytical-only boundary remains beside the family |
 | Where the Wall Works, and Where It Stops | The wall closes all operationally important gaps, or residual `(0,1)` is intrinsically bad | structural reachability | exact only for named `k`, tier, and reading | reusable design technique plus exact boundary | exhaustive connectivity enumeration | resolved and artifact-checked | Opens with `k=3` closures, names both readings and LEO sensitivity, then Moon/Mars residual exposure; bounded experiment bridge denies intrinsic valence |
 | What Happens Inside the Gaps | The registered experiment establishes universal valence or validates the wall | no; theorem and wall are established independently | bounded to topology, one flip site, policy, both proposer budgets, and single-decree protocol | behavioral comparison of constructed states | preregistered 5×4×50 simulation | resolved | The section defines the harness outcome, places limits beside each result, and closes by stating that it measures behavior inside constructed states rather than validating the proof or wall enumeration |
-| Reading the Wall | The readout detects failures, identifies a live leader, or chooses safe remediation | readout interprets supplied state | structural interface; measurements remain topology-specific | compact typed readout and joined interpretation | existing topology/baseline/liveness/crash experiments | no without interface boundary | State inputs and exclusions before results; treat edge JSON as demonstration |
+| Reading the Wall | The readout detects failures, identifies a live leader, or chooses safe remediation | readout interprets supplied state | structural interface; measurements remain topology-specific | compact typed readout and joined interpretation | existing topology/baseline/liveness/crash experiments | resolved | Configuration and connectivity are named inputs; authority is unknown, policy is uninferred, the edge JSON is a demonstration, and every measurement retains its local conditions |
 | What Remains Unsolved | No performance-preserving closure exists | no | open across structured topologies | question, not result | none | no | Ask whether and where coincidence can be extended; label candidate directions unevaluated |
 | Related Work, Limitations, Conclusion | Mars experiments empirically establish terrestrial behavior or research chronology followed narrative order | no | structural recurrence only | contributions bounded above | planetary simulator only | no without scope | Distinguish explanatory order from discovery chronology; end with diagnostic and open question, not deployment prevalence |
 
@@ -252,3 +253,25 @@ The counts below are discovery aids, not targets.
 - Moved the experiment immediately after the wall boundary. The section now states the registered prediction and falsification boundary, defines the harness outcome, reports the reversal in evidence order, and places the retry-policy, flip-site, single-decree, and livelock limits beside the corresponding measurements.
 - Moved the opposite-remediation paragraph out of the later discussion. The operational question now follows the mechanism: the same node-health display can conceal states for which restarting authority and reacquiring authority have opposite consequences.
 - The adjacency does not make the experiment evidence for the containment theorem or the wall construction. The theorem is proved independently and the wall gaps are exhaustively enumerated. The experiment measures proposer behavior inside mixed states deliberately constructed from those definitions.
+
+## Reading-the-Wall audit
+
+- Consolidated the readout interface, simulator/topology method, geometry baselines, full-coverage liveness, sparse reachability, crash relaxation, inter-tier witness interpretation, and quorum-count gradient into one section. The exact boundary remains before the behavioral experiment because it is a structural result, not part of the later empirical reading.
+- The interface now names configuration and connectivity as supplied inputs. It returns phase capability, witnesses, and typed failed obligations; runtime authority remains unknown and service policy is not inferred. The planetary and edge JSON files exercise the same deterministic interface, and the edge mapping is explicitly not an evaluated result.
+- Removed the prescriptive four-state client-contract table. It mixed structural facts with possible policy decisions after the paper had already promised not to choose policy. The interface boundary now carries that distinction directly.
+- Moved the 992/496/248/217 quorum-count gradient beside the interface as a design-time reading. Its caption says that the values are exhaustive structural counts without a connectivity distribution, timeout, or stochastic trial. The duplicate WPaxos comparison was removed; Related Work retains the comparison once.
+- Inspected the source conditions against the CSV rows and experiment drivers. The condition ledger for every table or figure in the section is:
+
+| Item | Topology / input | Initiator | Mars delay | Blackout | Timeout | Seeds | Quantity |
+|---|---|---|---:|---:|---:|---:|---|
+| Blackout readout figure | supplied 5/1/1/3 hard-blackout connectivity | all four tiers | n/a | structural state, no duration | n/a | n/a | deterministic formability |
+| Quorum-count gradient | fixed strict 5/1/1/3 family | all four tiers | n/a | n/a | n/a | exhaustive, not sampled | structural family count |
+| Experimental-design table | method inventory | varies | 186/750/1342 where swept | 300/900/1800 where swept | Appendix A | 50 per point | design, not a result |
+| Geometry baseline table | sparse 5/1/1/3, hard blackout | Earth | 186/750/1342 s | 300/900/1800 s | 500 s base, scaled above the registered latency threshold | 50 per point | stochastic sweep with structural 0/1 rates |
+| Full-coverage per-tier table | full-coverage 5/1/1/3, hard blackout | Earth/LEO/Moon/Mars | 186 s | 1800 s | 500 s | 50 | stochastic latency/recovery; rates identical across seeds |
+| Sparse per-tier table | sparse 5/1/1/3, hard blackout | Earth/LEO/Moon/Mars | 186 s | 900 s | 500 s | 50 | structural 0/1 outcomes in the registered sweep |
+| Crash-relaxation table | sparse 5/1/1/3, repeater-assisted | Earth | 186 s | 900 s | 500 s | 50 | stochastic liveness and recovery |
+| Relaxation tradeoff table | fixed 5-Earth-node quorum families | Earth/Mars minima | n/a | n/a | n/a | n/a | structural quorum requirements |
+
+- The section reports each interpretive result once: majority matches blackout survival while leaving Earth for Phase 1; LEO is faster than Earth because obligation and physical cost differ; sparse reachability can defeat a satisfiable wall obligation; recovery point values follow cadence while the bound matters to the protocol; and coordinated relaxation moves the weakest link to the Earth-local family before restoring it.
+- Rendered evaluation pages were inspected after consolidation. Section headings, the two structural figures, all measurement tables, equations, and the transition into limitations fit without collision or overfull boxes. The two-column floats may precede their source paragraphs on a page, but each caption carries its complete local condition set.

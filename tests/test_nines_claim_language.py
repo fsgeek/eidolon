@@ -73,10 +73,43 @@ def test_relocated_corollary_and_operational_boundaries_are_present():
     assert "chosen client contract" in text
 
 
-def test_wall_readout_is_labeled_as_demonstration_not_evidence():
+def test_readout_is_a_bounded_demonstration():
     text = PAPER.read_text(encoding="utf-8")
-    assert "demonstration artifact, not empirical evidence" in text
+    reading = section(text, r"\section{Reading the Wall}", r"\section{")
+    assert "demonstration artifact, not empirical evidence" in reading
+    assert "configuration and connectivity" in reading
+    assert "runtime authority" in reading
+    assert "service policy" in reading
     assert "experiments/\\allowbreak capability\\_readout.py" in text
+    assert "not an evaluated result" in text
+
+
+def test_reading_the_wall_uses_interpretive_subsection_order():
+    text = PAPER.read_text(encoding="utf-8")
+    reading = section(text, r"\section{Reading the Wall}", r"\section{")
+    headings = (
+        r"\subsection{Readout Interface}",
+        r"\subsection{Evaluation Method}",
+        r"\subsection{Geometry and Competitive Majority Baseline}",
+        r"\subsection{Per-Tier Liveness under Full Coverage}",
+        r"\subsection{Wall Obligations versus Sparse Reachability}",
+        r"\subsection{Crash Tolerance and Coordinated Relaxation}",
+    )
+    positions = [reading.index(heading) for heading in headings]
+    assert positions == sorted(positions)
+
+
+def test_reading_the_wall_preserves_the_five_interpretive_results():
+    text = PAPER.read_text(encoding="utf-8")
+    reading = section(text, r"\section{Reading the Wall}", r"\section{")
+    for required in (
+        "majority Phase~1 leaves the fast tier",
+        "LEO's 131~ms is \\emph{faster} than Earth",
+        "Liveness requires both",
+        "These point values are cadence-alignment artifacts",
+        "The weakest link migrates",
+    ):
+        assert required in reading
 
 
 def test_introduction_states_the_two_questions_and_defines_legibility():
