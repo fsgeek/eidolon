@@ -303,3 +303,10 @@ The repeated analytical-versus-recommended wall qualification in Related Work wa
 - Rechecked traceability against C01--C17. The common 1800-second per-tier condition, sparse and crash conditions, exact `k=3` closures, Moon/Mars residual, eight-round behavioral bound, post-hoc odd/even observation, edge non-evaluation, and artifact-free open problem are explicit. Artifact paths were not changed.
 - Recorded the editorial triangulation in `docs/ai-provenance.md`: approved contract and map, pilot gate, same-family review risk, cross-family adjudication, proof/artifact authority, and human authority over voice and claim-affecting prose.
 - The initial one-page traceability rebuild exceeded the page by 111 points. It was split into two continued full-width tables; the float warning disappeared, paths and claims remain unchanged, and both pages were inspected. Moving the crash table's source slightly earlier keeps it at the top of page 10, before the open problem, so the conclusion runs without a delayed empirical float and ends above the References heading on page 11.
+
+## Final verification gate
+
+- Fresh Python verification after the integrated commit: 20 claim-language tests passed in 0.04 seconds; 7 anonymous-artifact tests passed in 0.21 seconds; the full suite passed 130 tests in 25.32 seconds.
+- A clean `latexmk -C`, `pdflatex`, `bibtex`, `pdflatex`, `pdflatex` cycle completed. The final log contains no undefined citation/reference, multiply-defined label, overfull box, or oversized-float diagnostic.
+- PDF metadata has an empty title and author, page 1 displays `Paper #98`, and extracted text contains none of the repository's identity probes. The conclusion ends on page 11 before References; page 12 contains no conclusion prose.
+- Rendered pages 1--14 were inspected at 144 dpi. The clean build exposed one defect invisible to the log: the long crash-table caption clipped its opening at the left page edge. Constraining that caption to 92 percent of the text width and compacting its condition syntax fixed the clipping without dropping a parameter. The corrected page 10 and both traceability pages were re-rendered and inspected.
