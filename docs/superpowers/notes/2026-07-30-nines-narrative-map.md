@@ -24,6 +24,7 @@ The counts below are discovery aids, not targets.
 | Checkpoint | Source words | TeX `---` | “rather than” | Last body page | Total PDF pages | Change | Decision |
 |---|---:|---:|---:|---:|---:|---:|---|
 | Baseline (`72955ef`) | 11,024 | 49 | 22 | 13 | 15 | — | Recover at least one body page by removing repetition and duplicated method |
+| Introduction pilot | — | 0 in pilot | 0 in pilot | 12 | 14 | -1 body / -1 total | Page budget recovered without compressing the formal or empirical core; punctuation counts are observations, not quotas |
 
 ## Paragraph map
 
@@ -174,7 +175,7 @@ The counts below are discovery aids, not targets.
 
 | Revised section | Likely reader inference | Causal? | General? | Novel? | Empirical? | Evidence permits it? | Correction |
 |---|---|---|---|---|---|---|---|
-| Introduction | Green dashboards have caused observed production incidents of this exact form | no | diagnostic is general; prevalence is unknown | two-question framing/characterization are contributions | registered behavior only | no, if written as deployment history | Present the dashboard as an operator-facing puzzle; make no frequency or incident claim |
+| Introduction | Green dashboards have caused observed production incidents of this exact form | no | diagnostic is general; prevalence is unknown | two-question framing/characterization are contributions | registered behavior only | resolved in pilot | Dashboard is a hypothetical operator-facing puzzle; no frequency, incident-history, or prevalence claim is made |
 | Why One Count Once Worked | Majority voting itself made acquisition and commit identical | structural explanation | threshold families from a stated vantage | odd/even observation is post-hoc | enumeration corroborates corollary | only with correction | Attribute equality to phase symmetry; majority supplies the count-readable threshold instance |
 | Capability Gaps | Containment itself is newly discovered, or the experiment proves the theorem | formal implication only | any finite nonempty phase families | predicate-level four-way correspondence and auditor, bounded against RQS prior art | exhaustive audit corroborates; proof is primary | yes with prior-work boundary | Cite member-indexed containment and state that behavior experiments do not validate the proof |
 | Putting the Gaps on a Wall | Every witness is required by Paxos safety, or the geometry is a deployment recommendation | policy choice affects formability | construction generalizes, evaluation topology does not | phase-decomposed wall application | TLA+ corroborates safety only within stated scopes | no without qualification | Name Earth as the safety anchor and all other witnesses as participation policy; call analytical when policy is absent |
@@ -202,3 +203,19 @@ The counts below are discovery aids, not targets.
 | Discussion P105/P106 | Capability table and opposite remediations | Operational interpretation | move | They become stronger beside readout and valence evidence |
 | Discussion P110/P111 | Edge prediction followed by three speculative solutions | Opens future work | rewrite | Keep structural mapping and an open door without efficacy claims |
 | Conclusion | Compressed restatement of every contribution | Closure | rewrite | Return to two questions, usable wall result, boundary, and open problem |
+
+## Introduction pilot decisions
+
+- Kept the green-dashboard opening as a hypothetical operational puzzle, without implying a documented incident or measured prevalence.
+- Established the two-question vocabulary before the formal predicates: can the system acquire proposal authority, and can it complete a commit?
+- Explained coincidence through phase symmetry first; majority is the familiar threshold-readable instance. No resource-spending metaphor is used in the pilot.
+- Reported the wall's exact positive results before its Moon/Mars boundary, with the tier, threshold, and connectivity reading stated where needed.
+- Defined legibility in the Introduction and placed its interface limits beside it: the readout assumes supplied connectivity and does not detect failures, identify current authority, choose recovery policy, infer client contracts, or prescribe operator action.
+- Converted the contribution list into connected prose so the investigation, rather than a repeated inventory, carries the section.
+- The pilot happens to contain no TeX em dashes, no “rather than,” and no “not X but Y” construction. This is not a constraint on later prose; each construction remains available when it earns its rhetorical work.
+- After external review against the voice corpus, restored the short sentence “A node-health dashboard answers neither” and moved the $R_1/R_2$ notation from the two-question paragraph to the Flexible Paxos paragraph. The questions now live in English before they receive symbols.
+- Named the two connectivity readings at first use. The unconstrained reading permits any reachable set; the self-reachable reading requires the initiator's colocated acceptor to be reachable. Added one visual clause explaining the wall as tier rows whose Phase~1 paths read downward toward the Earth Phase~2 anchor.
+- Recast “the count worked” and “for so long” to avoid an unsupported claim about historical operator practice. The Introduction now asks what makes one count answer both questions in the familiar case.
+- Kept the deployment-prevalence qualification beside the opening observation. Kept every required readout exclusion in the Introduction, but divided the list into shorter statements: the readout interprets supplied connectivity; it does not detect connectivity, establish authority, select policy, or ensure that an operator uses it.
+- Removed the repeated claim that Mars exposes the distinction “at human scale”; the opening already establishes why the topology makes the separation visible.
+- The author reserved concentrated voice review for the integrated manuscript and delegated disposition of the external pilot review. The pilot is therefore the provisional register for continued revision; the final cold-read gate remains authoritative.
