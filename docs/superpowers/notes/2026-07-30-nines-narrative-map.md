@@ -25,6 +25,7 @@ The counts below are discovery aids, not targets.
 |---|---:|---:|---:|---:|---:|---:|---|
 | Baseline (`72955ef`) | 11,024 | 49 | 22 | 13 | 15 | — | Recover at least one body page by removing repetition and duplicated method |
 | Introduction pilot | — | 0 in pilot | 0 in pilot | 12 | 14 | -1 body / -1 total | Page budget recovered without compressing the formal or empirical core; punctuation counts are observations, not quotas |
+| Formal-core checkpoint | 10,646 | 34 | 16 | 12 | 14 | -378 words from baseline | Four investigative sections now occupy pages 2--6; proof labels and artifact references remain stable |
 
 ## Paragraph map
 
@@ -40,19 +41,19 @@ The counts below are discovery aids, not targets.
 | P006 | Intro: “The directions are…” | measurement | C09, C10, C15 | merge | Introduction | Retain bounded reversal and authority caveat without exhausting the later experiment |
 | P007 | Intro: “We apply…” | interpretation | C06–C08, C14–C16 | rewrite | Introduction | Positive wall result must precede boundary; define legibility here |
 | P008 | Intro contributions list | interpretation | C04, C07–C10, C14 | rewrite | Introduction | Shorten to three contributions and remove repeated exposition |
-| P009 | Background: Classic Paxos | definition | C02, C03 | move | Why One Count Once Worked | Establish same-family symmetry before majority's threshold instance |
-| P010 | Background: Flexible Paxos | definition | C02–C04 | move | Why One Count Once Worked | Cross-phase safety creates room for predicate separation |
-| P011 | Background: crumbling walls | definition | C06 | move | Putting the Gaps on a Wall | Attribute the source construction at first wall use |
-| P012 | Background: wall intersection | proof | C06 | merge | Putting the Gaps on a Wall | Keep original-wall intuition distinct from this paper's construction |
-| P013 | Background: composing ideas | interpretation | C06, C08 | move | Putting the Gaps on a Wall | Explain anchor safety and participation-policy witnesses beside construction |
+| P009 | Background: Classic Paxos | definition | C02, C03 | moved/revised | Why One Count Once Worked | Same-family symmetry now precedes majority's threshold instance |
+| P010 | Background: Flexible Paxos | definition | C02–C04 | moved/revised | Why One Count Once Worked | Cross-phase safety now creates room for predicate separation |
+| P011 | Background: crumbling walls | definition | C06 | moved/revised | Putting the Gaps on a Wall | Source construction is attributed before the paper's phase split |
+| P012 | Background: wall intersection | proof | C06 | merged | Putting the Gaps on a Wall | Original-wall intersection intuition is compressed and kept distinct |
+| P013 | Background: composing ideas | interpretation | C06, C08 | moved/revised | Putting the Gaps on a Wall | Anchor safety and participation policy are stated in separate sentences |
 | P014 | Capability: construction-independent scope | transition | C04 | rewrite | Capability Gaps | Let loss of coincidence make the generic question necessary |
 | P015 | Formability definition and acquisition gloss | definition | C01, C04 | fixed | Capability Gaps | Core notation and single-decree/Multi-Paxos scope are load-bearing |
 | P016 | Four joint states | definition | C04 | fixed | Capability Gaps | Names the gaps without intrinsic valence |
 | P017 | Proposition: gap emptiness | proof | C04 | fixed | Capability Gaps | Primary formal result |
 | P018 | Proposition proof | proof | C04 | fixed | Capability Gaps | Preserve the short monotonicity proof |
 | P019 | Corollary: exact correspondence | proof | C04 | fixed | Capability Gaps | Preserve four-way classification |
-| P020 | “On the ease of the proof” | interpretation | C04 | rewrite | Capability Gaps | Preserve why simplicity matters; remove defensive aphoristic cadence |
-| P021 | Uniform threshold case | proof | C03, C05 | move | Why One Count Once Worked | Odd/even result belongs with the historical coincidence |
+| P020 | “On the ease of the proof” | interpretation | C04 | rewritten | Capability Gaps | Short proof is explained through monotonicity and the newly non-vacuous question |
+| P021 | Uniform threshold case | proof | C03, C05 | moved/revised | Why One Count Once Worked | Odd/even result is beside coincidence and explicitly post-hoc |
 | P022 | Generic auditor | measurement | C04 | fixed | Capability Gaps | Keep complexity, independent check, and proof-primary boundary |
 | P023 | System model: epochs and connectivity | definition | C01, C16 | fixed | Putting the Gaps on a Wall | Preserve `N_e`/`C_t` membership boundary |
 | P024 | Acceptor universe and 5/1/1/3 topology | definition | C06 | fixed | Putting the Gaps on a Wall | Physical vocabulary for the construction |
@@ -69,21 +70,21 @@ The counts below are discovery aids, not targets.
 | P035 | TLA+ explanation | qualification | C06 | merge | Putting the Gaps on a Wall | Retain accessibility; compress generic TLC tutorial if page pressure remains |
 | P036 | Paxos model-check scope and counts | measurement | C06 | fixed | Putting the Gaps on a Wall | Preserve exact topology/count and proof/corroboration distinction |
 | P037 | Verification-scope limitation | qualification | C06 | fixed | Putting the Gaps on a Wall | Must stay beside model-check claim |
-| P038 | Wall liveness rule | definition | C07, C08, C14 | move | Where the Wall Works, and Where It Stops | Structural readout precedes measurement |
-| P039 | Mars-blackout reachability | observation | C07, C08 | move | Where the Wall Works, and Where It Stops | Concrete input to the structural rule |
-| P040 | Blackout liveness figure | definition | C07, C14 | move | Where the Wall Works, and Where It Stops | Visualizes successful and failed tier obligations |
+| P038 | Wall liveness rule | definition | C07, C08, C14 | moved | Where the Wall Works, and Where It Stops | Structural readout now follows the section's exact positive result |
+| P039 | Mars-blackout reachability | observation | C07, C08 | moved | Where the Wall Works, and Where It Stops | Concrete input remains beside the structural rule |
+| P040 | Blackout liveness figure | definition | C07, C14 | moved | Where the Wall Works, and Where It Stops | Visualizes successful and failed tier obligations |
 | P041 | “This instantiates the legibility definition…” | interpretation | C14, C15 | rewrite | Where the Wall Works, and Where It Stops | Repair dangling Section 1 reference and avoid repeating the full definition |
 | P042 | Per-tier wall predicates | definition | C07, C08 | move | Where the Wall Works, and Where It Stops | Sets up threshold result |
-| P043 | Boundary proposition | proof | C07, C08 | fixed | Where the Wall Works, and Where It Stops | Preserve exact containment threshold |
-| P044 | Hitting-set arithmetic | proof | C07 | fixed | Where the Wall Works, and Where It Stops | Preserve mechanism and safety connection |
-| P045 | Gradient explanation | interpretation | C07, C08 | rewrite | Where the Wall Works, and Where It Stops | Lead with what `k=3` closes before residual exposure |
-| P046 | Gradient table | measurement | C07, C08 | fixed | Where the Wall Works, and Where It Stops | Registered exhaustive result under both readings |
-| P047 | “Read the two rows together” | interpretation | C07, C08 | rewrite | Where the Wall Works, and Where It Stops | Current order leads with impossibility; reverse it |
+| P043 | Boundary proposition | proof | C07, C08 | moved/fixed | Where the Wall Works, and Where It Stops | Exact containment threshold remains unchanged |
+| P044 | Hitting-set arithmetic | proof | C07 | moved/fixed | Where the Wall Works, and Where It Stops | Mechanism and safety connection remain unchanged |
+| P045 | Gradient explanation | interpretation | C07, C08 | rewritten | Where the Wall Works, and Where It Stops | Section opens with named `k=3` closures before residual exposure |
+| P046 | Gradient table | measurement | C07, C08 | moved/fixed | Where the Wall Works, and Where It Stops | Registered exhaustive result remains intact; both-reading audit continues in Task 4 |
+| P047 | “Read the two rows together” | interpretation | C07, C08 | rewritten | Where the Wall Works, and Where It Stops | `k=3` design value now precedes endpoint and all-tier boundary |
 | P048 | Self-reachable sensitivity | qualification | C07, C08 | fixed | Where the Wall Works, and Where It Stops | Required scope for LEO result |
-| P049 | Relationship to Flexible Paxos | related work | C04, C07 | move | Related Work | Keep prior `(1,0)` examples and distinguish present characterization |
+| P049 | Relationship to Flexible Paxos | related work | C04, C07 | moved/revised | Related Work | Prior `(1,0)` examples and the present design-time question now sit together |
 | P050 | “Legibility is load-bearing” | interpretation | C08, C14 | rewrite | Where the Wall Works, and Where It Stops | Remove compensation implication; legibility explains residual obligation |
 | P051 | Wall-specific readout interface | definition | C14–C16 | move | Reading the Wall | Put inputs, outputs, and exclusions together |
-| P052 | Meaning of global | qualification | C06, C15 | move | Putting the Gaps on a Wall | Preserve learned-value versus current-authority distinction |
+| P052 | Meaning of global | qualification | C06, C15 | moved | Putting the Gaps on a Wall | Learned-value scope now closes the construction before capability enumeration |
 | P053 | Related work: Paxos/Flexible Paxos | related work | C02, C04 | merge | Related Work | First-use citations already carry definitions; retain relationship here |
 | P054 | Related work: containment/RQS | related work | C04 | fixed | Related Work | Essential novelty boundary |
 | P055 | Related work: grid/wall/Satrapy | related work | C06 | fixed | Related Work | Preserve geometry and heterogeneous quorum lineage |
@@ -176,10 +177,10 @@ The counts below are discovery aids, not targets.
 | Revised section | Likely reader inference | Causal? | General? | Novel? | Empirical? | Evidence permits it? | Correction |
 |---|---|---|---|---|---|---|---|
 | Introduction | Green dashboards have caused observed production incidents of this exact form | no | diagnostic is general; prevalence is unknown | two-question framing/characterization are contributions | registered behavior only | resolved in pilot | Dashboard is a hypothetical operator-facing puzzle; no frequency, incident-history, or prevalence claim is made |
-| Why One Count Once Worked | Majority voting itself made acquisition and commit identical | structural explanation | threshold families from a stated vantage | odd/even observation is post-hoc | enumeration corroborates corollary | only with correction | Attribute equality to phase symmetry; majority supplies the count-readable threshold instance |
+| Why One Count Once Worked | Majority voting itself made acquisition and commit identical | structural explanation | threshold families from a stated vantage | odd/even observation is post-hoc | enumeration corroborates corollary | resolved in formal core | Phase symmetry supplies equality; majority supplies the count-readable threshold; odd/even result is explicitly post-hoc |
 | Capability Gaps | Containment itself is newly discovered, or the experiment proves the theorem | formal implication only | any finite nonempty phase families | predicate-level four-way correspondence and auditor, bounded against RQS prior art | exhaustive audit corroborates; proof is primary | yes with prior-work boundary | Cite member-indexed containment and state that behavior experiments do not validate the proof |
-| Putting the Gaps on a Wall | Every witness is required by Paxos safety, or the geometry is a deployment recommendation | policy choice affects formability | construction generalizes, evaluation topology does not | phase-decomposed wall application | TLA+ corroborates safety only within stated scopes | no without qualification | Name Earth as the safety anchor and all other witnesses as participation policy; call analytical when policy is absent |
-| Where the Wall Works, and Where It Stops | The wall closes all operationally important gaps, or residual `(0,1)` is intrinsically bad | structural reachability | exact only for named `k`, tier, and reading | reusable design technique plus exact boundary | exhaustive connectivity enumeration | yes with exact qualifiers | Lead with `k=3` closures, then Moon/Mars residual exposure; defer behavioral cost to next section |
+| Putting the Gaps on a Wall | Every witness is required by Paxos safety, or the geometry is a deployment recommendation | policy choice affects formability | construction generalizes, evaluation topology does not | phase-decomposed wall application | TLA+ corroborates safety only within stated scopes | resolved in formal core | Earth anchor, policy witnesses, and effect of removing a witness are stated separately; analytical-only boundary remains beside the family |
+| Where the Wall Works, and Where It Stops | The wall closes all operationally important gaps, or residual `(0,1)` is intrinsically bad | structural reachability | exact only for named `k`, tier, and reading | reusable design technique plus exact boundary | exhaustive connectivity enumeration | ordered correctly; table audit pending | Opens with `k=3` closures, then Moon/Mars residual exposure; bounded experiment bridge denies intrinsic valence |
 | What Happens Inside the Gaps | The registered experiment establishes universal valence or validates the wall | no causal validation of theorem/wall | bounded to topology, policy, budget, and single-decree protocol | behavioral comparison of constructed states | preregistered 5×4×50 simulation | no if generalized | Keep each number beside its conditions; distinguish accepted-value consequence from universal harmlessness and retry exhaustion from livelock |
 | Reading the Wall | The readout detects failures, identifies a live leader, or chooses safe remediation | readout interprets supplied state | structural interface; measurements remain topology-specific | compact typed readout and joined interpretation | existing topology/baseline/liveness/crash experiments | no without interface boundary | State inputs and exclusions before results; treat edge JSON as demonstration |
 | What Remains Unsolved | No performance-preserving closure exists | no | open across structured topologies | question, not result | none | no | Ask whether and where coincidence can be extended; label candidate directions unevaluated |
@@ -219,3 +220,14 @@ The counts below are discovery aids, not targets.
 - Kept the deployment-prevalence qualification beside the opening observation. Kept every required readout exclusion in the Introduction, but divided the list into shorter statements: the readout interprets supplied connectivity; it does not detect connectivity, establish authority, select policy, or ensure that an operator uses it.
 - Removed the repeated claim that Mars exposes the distinction “at human scale”; the opening already establishes why the topology makes the separation visible.
 - The author reserved concentrated voice review for the integrated manuscript and delegated disposition of the external pilot review. The pilot is therefore the provisional register for continued revision; the final cold-read gate remains authoritative.
+
+## Formal-core checkpoint decisions
+
+- Replaced the generic Background section with the causal sequence “Why One Count Once Worked”: phase symmetry creates equality, majority makes the equal predicate count-readable, and Flexible Paxos permits the questions to separate while preserving cross-phase safety.
+- Moved the uniform-threshold odd/even result beside that explanation and removed the claim that it explains the odd-cluster convention. It is labeled as a post-hoc structural observation.
+- Preserved Proposition~1, its three-line proof, Corollary~1, the auditor, their labels, and their evidence boundaries. Rewrote the commentary on proof simplicity to explain when the question became non-vacuous.
+- Introduced the wall only after the generic characterization. The source geometry, this paper's phase split, the Earth safety anchor, and the non-anchor participation policy now appear in that order.
+- Moved the meaning of “global” into the construction section, before liveness and capability claims, so readers know what an Earth-only commit guarantees.
+- Opened “Where the Wall Works, and Where It Stops” with the exact `k=3` successes and then the residual Moon/Mars exposure. The section ends by sending the residual state to the registered experiment without assigning it intrinsic valence.
+- Moved the Flexible Paxos comparison out of the wall result and into Related Work. The formal investigation now runs without a literature detour.
+- Rendered pages 2--6 were inspected after the move. Headings, propositions, equations, figures, and transitions fit without collision or overfull boxes; the long wall-section heading wraps across two lines on page 4 but remains visually balanced.

@@ -64,21 +64,16 @@ We call a quorum construction \emph{legible with respect to a supplied connectiv
 The paper contributes the containment characterization and a construction-independent auditor, a pre-registered experiment that measures both mixed states under a stated single-decree retry policy, and the wall case study with its exact positive results and boundary. Every empirical claim maps to an executable artifact (\autoref{app:traceability}). The mapping to edge and control-plane systems is a structural applicability argument, not an evaluated result. We begin by asking what, precisely, makes one count answer both phase questions in the familiar case.
 
 
-\section{Background}
+\section{Why One Count Once Worked}
 \label{sec:background}
 
-\subsection{Flexible Paxos}
-Classic Paxos~\cite{lamport1998} uses majority quorums for both phases, which are Phase~1 (prepare/promise) and Phase~2 (accept/accepted), guaranteeing intersection via the pigeonhole principle.
+For one replica count to answer both operational questions, two facts must line up. Classic Paxos~\cite{lamport1998} commonly uses one majority-quorum family for Phase~1 (prepare/promise) and Phase~2 (accept/accepted). Because the families are the same, a reachable set that can form one phase can form the other. Phase symmetry makes the two formability predicates equal.
 
-Flexible Paxos~\cite{howard2016} observed that the intersection requirement is \emph{cross-phase}, not within-phase: any Phase~1 quorum must intersect any Phase~2 quorum, but Phase~1 quorums need not intersect each other, nor Phase~2 quorums each other. Formally, safety holds if $q_1 + q_2 > |N|$, where $q_1$ and $q_2$ are the quorum sizes for Phase~1 and Phase~2 respectively. This is the uniform special case where all quorums have the same size; the crumbling-wall construction generalizes this with per-tier quorum families of different sizes, where the cross-intersection property holds by construction rather than by arithmetic majority. The key consequence is that Phase~2 (the hot path, executed on every commit) can be small if Phase~1 (the cold path, executed only when proposal authority is acquired---leader election, under Multi-Paxos) is correspondingly large.
+Majority supplies the second fact. A majority is a threshold family, so its formability can be decided by counting reachable replicas from the network vantage under consideration. The count is useful because the threshold makes the predicate readable. It answers both questions because phase symmetry has already made the predicates equal.
 
-\subsection{Crumbling-Wall Quorum Systems}
-Peleg and Wool~\cite{peleg1995} introduced crumbling walls as quorum constructions that achieve high availability through asymmetric structure. Nodes are arranged in rows of potentially different widths. A quorum takes one complete row together with one representative from every row below it. The ``crumbling'' refers to rows losing members to failure.
+Flexible Paxos~\cite{howard2016} separates the safety requirement from this convenient symmetry. Safety requires \emph{cross-phase} intersection: every Phase~1 quorum must intersect every Phase~2 quorum. Quorums within one phase need not intersect one another. For uniform thresholds, $q_1+q_2 > |N|$ is sufficient. A designer may therefore enlarge the less frequent Phase~1 family so that Phase~2, the commit hot path, remains small or local. Once the two families differ, the two operational questions can receive different answers.
 
-The key property: any two quorums intersect. If their complete rows differ, the quorum whose complete row sits higher carries a representative in the other quorum's complete row; if they share a complete row, they share it outright---the intersection that consensus requires.
-
-\subsection{Composing the Two Ideas}
-We decompose wall-like structure \emph{across} the two phases rather than reproducing Peleg and Wool's quorums: each tier's Phase~1 family reads downward through the wall from that tier's position, while Phase~2 is the bottom row alone. Only the anchor intersection is safety-critical. The upper-tier witnesses exist to make authority and degradation topology-legible, not to secure agreement---and, as Section~\ref{sec:capability-wall} shows, they are also what manufactures this construction's residual capability exposure.
+The uniform case shows the smallest cost of retaining the coincidence. Subject to $q_1+q_2 \ge n+1$, a cost-minimal split can be symmetric when $n$ is odd. When $n$ is even, symmetry adds one additional participant across the two phase thresholds. This is a post-hoc structural observation, not an explanation for deployment practice or for the odd-cluster convention.
 
 
 \section{Capability Gaps}
@@ -92,7 +87,7 @@ For a finite fixed universe $N_e$ and a nonempty quorum family $\mathcal{Q}$, de
 \]
 Given phase families $\mathcal{Q}_1$ and $\mathcal{Q}_2$, write $R_1(C)$ when $C \in \operatorname{Form}(\mathcal{Q}_1)$ and $R_2(C)$ when $C \in \operatorname{Form}(\mathcal{Q}_2)$. We say a proposer can \emph{acquire} when $R_1$ holds and is structurally commit-capable when $R_2$ holds. Actual commitment also requires valid runtime authority and ordinary protocol execution. Under Multi-Paxos, acquisition is leader election and amortizes over many commands; under single-decree Paxos it is per-decree ballot acquisition and every decree pays for it. Our measurements are single-decree throughout (Section~\ref{sec:valence}), so ``acquisition'' carries the general sense everywhere except Section~\ref{sec:discussion}, which discusses Multi-Paxos leadership explicitly.
 
-The pair $(R_1,R_2)$ has four joint states. Two are familiar: $(1,1)$ makes both phases formable, and $(0,0)$ makes neither formable. We call the mixed states \emph{capability gaps}: $(1,0)$ permits acquisition but not commit formation, while $(0,1)$ permits commit formation but not acquisition. A single family used for both phases makes both gaps empty. This phase symmetry---majority is only its familiar instance---is why counting reachable nodes was ever a sufficient diagnostic. It supplies a second guarantee alongside safety intersection: intersection is a witness to accepted history, while semantic equality of the phase predicates makes acquisition and commit prospects coincide. Syntactically different families can still induce equal predicates; it is semantic equality of $\operatorname{Form}(\mathcal{Q}_1)$ and $\operatorname{Form}(\mathcal{Q}_2)$ that matters. When they are unequal, which gaps are reachable is determined by how the predicates order.
+The pair $(R_1,R_2)$ has four joint states. Two are familiar: $(1,1)$ makes both phases formable, and $(0,0)$ makes neither formable. We call the mixed states \emph{capability gaps}: $(1,0)$ permits acquisition but not commit formation, while $(0,1)$ permits commit formation but not acquisition. A single family used for both phases makes both gaps empty. Syntactically different families can also induce equal predicates; semantic equality of $\operatorname{Form}(\mathcal{Q}_1)$ and $\operatorname{Form}(\mathcal{Q}_2)$ is what matters. Once the predicates differ, we need to know whether one or both mixed states can occur.
 
 \refstepcounter{prop}\label{prop:gap}\textbf{Proposition \theprop\ (gap emptiness).} The $(1,0)$ gap is empty if and only if every $Q_1 \in \mathcal{Q}_1$ contains some $Q_2 \in \mathcal{Q}_2$. Dually, the $(0,1)$ gap is empty if and only if every $Q_2 \in \mathcal{Q}_2$ contains some $Q_1 \in \mathcal{Q}_1$.
 
@@ -100,15 +95,17 @@ The pair $(R_1,R_2)$ has four joint states. Two are familiar: $(1,1)$ makes both
 
 \refstepcounter{cor}\label{cor:correspondence}\textbf{Corollary \thecor\ (exact correspondence).} The reachable gap profile is a complete invariant of the ordering between the two formability predicates: equal predicates admit neither gap; $R_1$ strictly implying $R_2$ admits only $(0,1)$; $R_2$ strictly implying $R_1$ admits only $(1,0)$; and incomparable predicates admit both. This follows by applying Proposition~\ref{prop:gap} in both directions and distinguishing equality from the two strict implications.
 
-\textbf{On the ease of the proof.} Proposition~\ref{prop:gap} is three lines of monotonicity, and we take that to be the finding rather than a weakness in it. The coterie literature refined intersection---the condition that governs safety---for decades without needing this criterion, because while both phases drew on one family the criterion had nothing to decide: identical families make both gaps empty by inspection. A characterization only becomes necessary once the families are permitted to differ, which is precisely what flexible quorums do. The mathematics stayed easy; what changed is that there is now something to ask it.
-
-\textbf{The uniform case.} For a threshold family used uniformly, with sizes $q_1$ and $q_2$, the criterion collapses to a statement about two integers: $(1,0)$ is reachable exactly when $q_1 < q_2$, $(0,1)$ exactly when $q_2 < q_1$, and both are empty exactly when $q_1 = q_2$. Subject to safety, $q_1+q_2 \ge n+1$; a cost-minimal split can therefore be symmetric at odd $n$, while at even $n$ symmetry costs one additional participant across the two phases. This is a fault-tolerance-independent reason for the odd-cluster convention.
+The proof is short because formability is monotone. While both phases used the same family, the question had nothing to distinguish: both gaps were empty by inspection. Flexible quorums made the question useful by allowing the phase predicates to differ. Proposition~\ref{prop:gap} then says exactly how they differ.
 
 Our construction-independent auditor implements this test over explicit finite families. It validates the universe and families, removes duplicate and nonminimal quorums, checks every cross-phase pair for safety, classifies the four predicate relations, and emits deterministic minimum-cardinality gap witnesses. An optional pinned set restricts the analyzed domain to connectivity states containing those nodes without changing the configured families or their safety result. Writing $\min(\mathcal{Q})$ for the canonical minimal antichain, classification takes $O(|\min(\mathcal{Q}_1)|\,|\min(\mathcal{Q}_2)|\,|N_e|)$ time, excluding input parsing, deterministic sorting, and the separate quadratic-in-family-size minimization passes. An independent mode enumerates every connectivity set rather than reusing the containment classifier. It rejects a deliberately mutated report and agrees with the optimized classifier over all 129{,}032 combinations of nonempty family pair and pinned domain on a three-node universe. The proof above remains primary; the auditor makes the criterion executable and checks the registered wall instances against the existing connectivity enumeration with zero disagreements.
 
 
-\section{Construction}
+\section{Putting the Gaps on a Wall}
 \label{sec:construction}
+
+Peleg and Wool~\cite{peleg1995} arrange nodes in rows of potentially different widths. A crumbling-wall quorum takes one complete row and one representative from every row below it. Two such quorums intersect: if their complete rows differ, the higher quorum carries a representative in the lower quorum's complete row; if the complete rows match, they share that row.
+
+We split this geometry across the two Paxos phases. Each tier's Phase~1 family reads downward from that tier, while Phase~2 stays on the bottom row. The Earth anchor supplies the Paxos intersection. The non-anchor witnesses encode participation policy. Removing one of those witnesses changes that policy; it does not weaken the anchor-based safety argument.
 
 \subsection{System Model}
 For each configuration epoch~$e$, let $N_e$ be the fixed logical acceptor universe and let $C_t \subseteq N_e$ be the acceptors effectively reachable at time~$t$. A \emph{decision window} is the interval over which we evaluate phase formability against one such connectivity state; $N_e$ remains fixed within that window even when $C_t$ changes between windows. Our results apply epoch by epoch. Changing $N_e$ is a reconfiguration and state-transfer decision that requires its own protocol; it is outside this paper's scope and is not modeled as ordinary reachability churn. For the evaluated epoch below, we write $N$ for $N_e$.
@@ -233,7 +230,16 @@ For the full Paxos protocol (not just quorum intersection), we verify safety ove
 
 \textbf{Verification scope.} The protocol-level specification models a single all-tier Phase~1 family rather than the per-tier families of Section~\ref{sec:construction}: it exercises the protocol machinery under wall-shaped quorums, but safety of the per-tier construction itself rests on Proposition~\ref{prop:intersection} and the standard Flexible Paxos argument, with the intersection premise checked exhaustively above. The proof is primary; the model checking is corroboration. Specifications are in \texttt{tla/} (see \autoref{app:traceability}).
 
-\subsection{Liveness: Reading the Wall}
+\subsection{What ``Global'' Means}
+
+When an Earth-based proposer completes both phases using only Earth nodes, the decision is \emph{global} in the Paxos sense: any future proposer at any tier, upon completing Phase~1, will discover this value in the Earth acceptors' state and cannot contradict it. Global consensus does not require that all tiers participated, only that no future quorum can produce a conflicting result.
+
+
+\section{Where the Wall Works, and Where It Stops}
+
+The $k=3$ wall restores the old coincidence in several precise places without moving Phase~2 off Earth. The $(1,0)$ gap is absent at every tier. Both gaps are absent for Earth under the unconstrained and self-reachable connectivity readings, and for LEO under the self-reachable reading. Moon and Mars retain $(0,1)$ exposure. The wall is therefore a useful but bounded construction: its geometry lets a designer choose some places where the two phase questions coincide, while its witness obligations make the remaining boundary visible.
+
+\subsection{Reading the Wall}
 \label{sec:liveness-wall}
 
 The wall determines liveness as follows. A proposer at tier~$i$ can complete Phase~1 if and only if it can reach at least one node in every tier~$j$ where $j \le i$ (from its own tier down to Earth). Phase~2 succeeds if the proposer can reach enough Earth nodes (all five under strict $\mathcal{Q}_2$).
@@ -293,7 +299,7 @@ During Mars conjunction blackout, cross-tier links between Mars and the inner sy
 
 This instantiates the legibility definition of Section~1: for any tier~$i$, global Phase~1 succeeds if and only if every tier~$j \le i$ is reachable from~$i$ in~$C$---the promised $O(\text{tiers})$ check. This is what distinguishes legibility from mere computability. The claim concerns quorum formability: it bounds what a sole, timely proposer can achieve under connectivity state $C$, and does not speak to contention between concurrent proposers, whose durable promises can delay an otherwise-capable peer. Global \emph{operation}, as opposed to Phase~1 recovery, additionally requires the Phase~2 quorum to be reachable; Section~\ref{sec:reachability} shows the two conditions coming apart.
 
-\subsection{Capability Gaps in the Wall}
+\subsection{The Exact Boundary}
 \label{sec:capability-wall}
 
 Section~\ref{sec:capability} defines the two formability predicates for an arbitrary pair of quorum families. The wall instantiates them per tier: write $R_1(i,C)$ when $C \in \operatorname{Form}(\mathcal{Q}_1^{(i)})$ and $R_2(i,C)$ when $C \in \operatorname{Form}(\mathcal{Q}_2)$, so every tier carries its own acquisition predicate against one shared commit predicate. Which gaps are reachable is therefore a per-tier question, and the answer is not uniform across tiers.
@@ -315,24 +321,22 @@ $(0,1)$ reachable & $k \le 2$ & $k \le 2$ & all $k$ & all $k$ \\
 \end{tabular}
 \end{center}
 
-Read the two rows together: \emph{no value of $k$ closes both states}. At $k \le 2$ the Earth floor exceeds $k$ and every tier carries $(0,1)$ exposure. At $k \ge 4$ Proposition~\ref{prop:boundary}'s bound is violated and $(1,0)$ opens everywhere. At $k = 3$---the best available configuration, and the relaxation Section~\ref{sec:relaxed} adopts---$(1,0)$ is closed at every tier and $(0,1)$ is closed at Earth and LEO, but Moon and Mars retain it. Those are exactly the tiers with an intervening row between themselves and the anchor, and no choice of $k$ removes it, because the obligation that fails is a witness row rather than an Earth count.
+At $k=3$, the Earth floor contains a Phase~2 quorum, so $(1,0)$ is absent at every tier. Under the self-reachable reading, $(0,1)$ is also absent for Earth and LEO. Moon and Mars retain it because each has an intervening witness row between itself and the anchor; no value of $k$ removes that obligation. The endpoints explain why $k=3$ is the useful middle: at $k \le 2$ every tier carries $(0,1)$ exposure, while at $k \ge 4$ Proposition~\ref{prop:boundary}'s bound is violated and $(1,0)$ opens everywhere. No tested value of $k$ closes both states at every tier.
 
 The enumeration credits each proposer with a reachable node in its own tier, modelling a colocated acceptor; without that assumption LEO also retains $(0,1)$ at every $k$, since its single node can be severed while Earth remains whole. We state the assumption rather than absorb it: it determines whether phase symmetry is affordable at one tier or two.
-
-\textbf{Relationship to Flexible Paxos.} The $(1,0)$ state is not new, and the Flexible Paxos paper describes it twice~\cite{howard2016}: once in the $|Q_1|{=}1$, $|Q_2|{=}N$ construction, and once in the row-failure discussion, where completing $Q_1$ ``recover[s] all past decisions'' before falling back to reconfiguration. Both readings are constructive, and our measurements agree with them (Section~\ref{sec:valence}). Our relationship to that work is therefore threefold. It identifies the state and a use for it; we supply the design-time existence criterion---for a given construction, whether the state arises at all, which FPaxos \S4.3 does not ask; and we find that the cost, where it exists, lies in the unexamined dual. What FPaxos \S4.3 assumes is available and the connectivity setting does not supply is a \emph{recognizer}: its prescribed response presumes the system knows which state it occupies. Under a known crash-failure set that is reasonable. Under connectivity it is exactly the missing predicate, and supplying it is what the readout of Section~\ref{sec:liveness-wall} does.
 
 This is the sense in which legibility is load-bearing rather than decorative. The gradient is not an artifact we can relax away; it is a property of any wall whose non-anchor rows carry witness obligations. When a capability gap cannot be closed by construction, state-aware mitigation requires distinguishing the state. The connectivity data needed is already available to an operator; what was missing was the predicate that reads it. Enumeration and auditor artifacts are in \texttt{results/capability/} (see \autoref{app:traceability}).
 
 The wall-specific capability readout turns that predicate into a small operational interface. Given named tiers, a Phase~2 threshold, an initiating tier, a reachable-node summary, and the provenance of both configuration and connectivity, it reports $(R_1,R_2)$, quorum witnesses, and typed failed obligations. It deliberately reports runtime authority as unknown and service policy as not inferred. The planetary and terrestrial-edge inputs are a demonstration artifact, not empirical evidence.
 
-\subsection{What ``Global'' Means}
-
-When an Earth-based proposer completes both phases using only Earth nodes, the decision is \emph{global} in the Paxos sense: any future proposer at any tier, upon completing Phase~1, will discover this value in the Earth acceptors' state and cannot contradict it. Global consensus does not require that all tiers participated, only that no future quorum can produce a conflicting result.
+The structural state itself has no intrinsic valence. Section~\ref{sec:valence} reports what happened in the registered single-decree experiment under its stated topology, retry policy, and retry budget. That experiment measures one consequence of the residual state; it does not turn the state into a universal label.
 
 
 \section{Related Work}
 
 Paxos established the standard safety argument for replicated state machines under asynchronous messaging and crash failures~\cite{lamport1998}. Flexible Paxos showed that safety requires only Phase~1/Phase~2 cross-intersection, not universal majority~\cite{howard2016}. Our characterization builds on that result but does not claim containment itself as a new mathematical tool. The contribution is the exact correspondence between phase-formability ordering and its complete gap profile, the operational interpretation of those gaps, and their application to phase-asymmetric Paxos.
+
+The $(1,0)$ state is also present in Flexible Paxos: its $|Q_1|{=}1$, $|Q_2|{=}N$ construction permits acquisition before commit is formable, and its row-failure discussion uses Phase~1 to recover past decisions before reconfiguration. That work identifies the state and a constructive use for it. We ask the design-time question of whether a given construction admits the state at all, examine the dual state, and supply a readout for known connectivity. The readout matters because a recovery prescription must first know which predicate holds.
 
 Containment has important prior uses. Refined Quorum Systems~\cite{guerraoui2010rqs} nests quorum classes $QC_1 \subseteq QC_2 \subseteq RQS$ to connect resilience with optimistic complexity, subject to adversary-aware intersection properties. That class inclusion is a design and correctness condition, not an ordering of two phase-formability predicates over connectivity states. Li, Chan, and Lesani's quorum subsumption~\cite{li2023} is a member-indexed containment condition: for every process $p$ in a quorum $q$, some quorum in $p$'s personal family is contained in $q$. It supports progress in a heterogeneous Byzantine trust model. We instead compare two phase predicates over one fixed crash-stop acceptor universe. The quantifiers and the questions differ even though both results use containment.
 

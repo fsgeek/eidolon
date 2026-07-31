@@ -115,3 +115,15 @@ def test_introduction_distinguishes_symmetry_majority_and_vantage():
         assert introduction.lower().index("coincid") < introduction.lower().index(
             "spend"
         )
+
+
+def test_formal_investigation_sections_appear_in_order():
+    text = PAPER.read_text(encoding="utf-8")
+    headings = (
+        r"\section{Why One Count Once Worked}",
+        r"\section{Capability Gaps}",
+        r"\section{Putting the Gaps on a Wall}",
+        r"\section{Where the Wall Works, and Where It Stops}",
+    )
+    positions = [text.index(heading) for heading in headings]
+    assert positions == sorted(positions)
