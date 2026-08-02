@@ -160,12 +160,40 @@ Under Multi-Paxos, a still-authorized $(0,1)$ leader can continue committing and
 Five deviations remain recorded with their reasons in the artifact: the flip occurs before Phase~2 fan-out; the intended $(0,0)$ control is realized as $(0,1)$; the incumbent is Moon-tier; the late-$(0,1)$ arm was added to test the timing prediction; and the registered treatment exists only at $k=5$. At $k=3$, the boundary theorem makes $(1,0)$ unreachable at every tier, so there is no corresponding treatment state to rerun. The theorem and wall enumeration stand independently of this experiment. These runs measure behavior inside constructed mixed states; they do not validate either structural result. How can a designer or operator read which state the topology permits?
 
 
+\section{Look Through the Instrument}
+\label{sec:reading}
+\label{sec:liveness-wall}
+
+The repository's deterministic readout answers that question for a supplied configuration and connectivity summary. For the supplied Moon-initiated example, it prints:
+
+{\scriptsize
+\begin{verbatim}
+state: (0,1)
+initiating tier: Moon
+R1 acquisition formable: False
+R2 commit quorum formable: True
+requires preexisting authority: True
+runtime authority: unknown
+service policy: not-inferred
+missing Phase 1 LEO obligation: require 1, reachable 0
+\end{verbatim}
+}
+
+The two phase capabilities are visibly different. The Moon initiator cannot form Phase~1, but the reachable Earth nodes can form Phase~2. A scalar health summary would obscure that distinction; the two-bit state reports it directly.
+
+The readout also names the failed obligation. It reports the missing LEO witness rather than requiring an operator to infer the problem from timeouts or repeated protocol attempts. This is structural interpretation of known connectivity, not failure detection or empirical evaluation.
+
+Finally, the output refuses to invent what its inputs cannot establish. Commit formability in this state requires preexisting authority, but current authority is unknown and service policy is not inferred. The instrument says what the topology permits; it does not identify a current leader, establish fresh authority, choose a client contract or recovery policy, or ensure that anyone acts on the result.
+
+The wall-specific pass takes named tiers, a Phase~2 threshold, an initiating tier, a reachable-node summary, and the provenance of configuration and connectivity. It returns $(R_1,R_2)$, quorum witnesses, and typed failed obligations in $O(\text{tiers})$ time. The planetary and edge JSON inputs exercise the same interface. They are demonstrations, not evidence about terrestrial latency, availability, or prevalence. What structure makes this compact readout possible?
+
+
 \section{Putting the Gaps on a Wall}
 \label{sec:construction}
 
 Peleg and Wool~\cite{peleg1995} arrange nodes in rows of potentially different widths. A crumbling-wall quorum takes one complete row and one representative from every row below it. Two such quorums intersect: if their complete rows differ, the higher quorum carries a representative in the lower quorum's complete row; if the complete rows match, they share that row.
 
-We split this geometry across the two Paxos phases. Each tier's Phase~1 family reads downward from that tier, while Phase~2 stays on the bottom row. The Earth anchor supplies the Paxos intersection. The non-anchor witnesses encode participation policy. Removing one of those witnesses changes that policy; it does not weaken the anchor-based safety argument.
+We split this geometry across the two Paxos phases. Each tier's Phase~1 family reads downward from that tier, while Phase~2 stays on the bottom row. Extra downward witnesses express participation policy; the Earth anchor supplies the Paxos intersection. Removing one of those witnesses changes that policy, not the anchor-based safety argument.
 
 \subsection{System Model}
 For each configuration epoch~$e$, let $N_e$ be the fixed logical acceptor universe and let $C_t \subseteq N_e$ be the acceptors effectively reachable at time~$t$. A \emph{decision window} is the interval over which we evaluate phase formability against one such connectivity state; $N_e$ remains fixed within that window even when $C_t$ changes between windows. Our results apply epoch by epoch. Changing $N_e$ is a reconfiguration and state-transfer decision that requires its own protocol; it is outside this paper's scope and is not modeled as ordinary reachability churn. For the evaluated epoch below, we write $N$ for $N_e$.
@@ -325,59 +353,11 @@ For $k \le 3$, $(1,0)$ is absent at every tier. For $k \ge 3$, $(0,1)$ is absent
 
 Moon and Mars retain $(0,1)$ under both readings for every $k$. Each has an intervening witness row between itself and the Earth anchor, and changing the Earth threshold cannot remove that obligation. At the other endpoint, $k \ge 4$ violates Proposition~\ref{prop:boundary}'s bound and opens $(1,0)$ everywhere. The useful design point is $k=3$: it closes $(1,0)$ everywhere, closes both gaps at Earth under both readings and at self-reachable LEO, and keeps Phase~2 on Earth. No tested threshold closes both gaps at every tier.
 
-The witnesses implement participation policy; legibility makes the resulting obligation readable. When a capability gap remains possible, state-aware mitigation first requires distinguishing the state. The readout supplies that predicate for connectivity data supplied to it. Enumeration and auditor artifacts are in \texttt{results/capability/} (see \autoref{app:traceability}).
+The witnesses implement participation policy; legibility makes the resulting obligation readable. In the three-layer response, containment \emph{prevents} selected gaps, the readout \emph{detects} which residual structural state supplied connectivity permits, and authority plus service policy determine how to \emph{act}. That last decision remains outside the interface. Enumeration and auditor artifacts are in \texttt{results/capability/} (see \autoref{app:traceability}).
 
-\section{Reading the Wall}
-\label{sec:reading}
+\section{Wall Evaluation}
 \label{sec:expdesign}
 \label{sec:results}
-
-\subsection{Readout Interface}
-\label{sec:liveness-wall}
-
-The wall-specific readout takes named tiers, a Phase~2 threshold, an initiating tier, a reachable-node summary, and the provenance of configuration and connectivity. It returns $(R_1,R_2)$, quorum witnesses, and typed failed obligations in one pass over the tiers. It reports runtime authority as unknown and service policy as not inferred. Connectivity is an input to the interface; the readout does not detect failures, identify a current leader, establish fresh runtime authority, choose a client contract or recovery policy, or ensure that anyone acts on its output.
-
-For tier~$i$, the pass checks whether at least one node is reachable in every required row $T_j$ with $j \le i$, then checks the Earth threshold for Phase~2. During the modeled Mars conjunction blackout, Earth, LEO, and Moon retain the rows they require. Mars cannot reach the inner rows, so its Phase~1 obligation fails (Figure~\ref{fig:blackout}). This is the promised $O(\text{tiers})$ check. It establishes structural formability for a sole, timely proposer; concurrent promises, current authority, and protocol execution remain separate.
-
-\begin{figure}[t]
-\centering
-\begin{tikzpicture}[
-    node/.style={draw, minimum width=0.65cm, minimum height=0.65cm, font=\footnotesize},
-    dead/.style={draw, minimum width=0.65cm, minimum height=0.65cm, font=\footnotesize, fill=black!20, text=black!40},
-    ok/.style={draw, minimum width=0.65cm, minimum height=0.65cm, font=\footnotesize, fill=green!12},
-    tierlab/.style={font=\footnotesize\bfseries, anchor=east},
-    arrow/.style={-{Stealth[length=3pt]}, thick},
-]
-\node[ok] (e1) at (0, 0) {$e_1$};
-\node[ok] (e2) at (0.85, 0) {$e_2$};
-\node[ok] (e3) at (1.7, 0) {$e_3$};
-\node[ok] (e4) at (2.55, 0) {$e_4$};
-\node[ok] (e5) at (3.4, 0) {$e_5$};
-\node[tierlab] at (-0.5, 0) {$T_0$};
-\node[ok] (l1) at (1.7, 1.0) {$\ell_1$};
-\node[tierlab] at (-0.5, 1.0) {$T_1$};
-\node[ok] (u1) at (1.7, 2.0) {$u_1$};
-\node[tierlab] at (-0.5, 2.0) {$T_2$};
-\node[dead] (m1) at (0.85, 3.0) {$m_1$};
-\node[dead] (m2) at (1.7, 3.0) {$m_2$};
-\node[dead] (m3) at (2.55, 3.0) {$m_3$};
-\node[tierlab, text=black!40] at (-0.5, 3.0) {$T_3$};
-\draw[thick, red, densely dashed] (-2.0, 2.5) -- (3.5, 2.5);
-\node[font=\tiny\bfseries, color=red, anchor=west] at (3.6, 2.5) {blackout};
-\draw[arrow, color=green!50!black] (4.1, 0.5) --  (4.1, -0.3);
-\node[font=\tiny, color=green!50!black] at (3.9, 0.1) {$\checkmark$};
-\draw[arrow, color=green!50!black] (4.4, 1.3) -- (4.4, -0.3);
-\node[font=\tiny, color=green!50!black] at (4.2, 1) {$\checkmark$};
-\draw[arrow, color=green!50!black] (4.7, 2.1) -- (4.7, -0.3);
-\node[font=\tiny, color=green!50!black] at (4.5, 1.7) {$\checkmark$};
-\draw[arrow, color=red!70!black] (3.4, 3.4) -- (3.4, 2.7);
-\node[font=\large, color=red] at (3.7, 3) {$\times$};
-\end{tikzpicture}
-\caption{Structural readout under the supplied hard-blackout connectivity state in the 5/1/1/3 wall; no latency, timeout, or stochastic trial is involved. Earth, LEO, and Moon retain their required rows. Mars does not.}
-\label{fig:blackout}
-\end{figure}
-
-The repository supplies planetary and edge JSON inputs to the same deterministic interface. They are a demonstration artifact, not empirical evidence. The edge input is a structural mapping and not an evaluated result: it supports no claim about terrestrial latency, availability, or prevalence. The executable interface is \texttt{experiments/\allowbreak capability\_readout.py}; input and output examples are listed in \autoref{app:traceability}.
 
 \textbf{Design-time gradient.}\label{sec:leadership} The wall also makes the number of valid Phase~1 quorums readable by tier. If $f_i$ nodes lie above tier~$i$, then
 \[
