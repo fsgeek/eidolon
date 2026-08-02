@@ -93,7 +93,7 @@ Three Earth nodes, LEO, and Moon & 5 & yes & no \\
 
 Moon's Phase~1 family needs one Earth node, LEO, and Moon. Strict Phase~2 needs all five Earth nodes. The same count therefore describes either mixed state. Five is no longer informative by itself because it omits the phase structure that distinguished the cases. Once phase-capability coincidence is lost, the smaller question no longer settles the two larger ones.
 
-The uniform case shows the smallest cost of retaining the coincidence. Subject to $q_1+q_2 \ge n+1$, a cost-minimal split can be symmetric when $n$ is odd. When $n$ is even, symmetry adds one additional participant across the two phase thresholds. This is a post-hoc structural observation, not an explanation for deployment practice or for the odd-cluster convention.
+The uniform case shows the smallest cost of retaining the coincidence. Subject to $q_1+q_2 \ge n+1$, a cost-minimal split can be symmetric when $n$ is odd. When $n$ is even, symmetry adds one additional participant across the two phase thresholds. This is a post-hoc structural observation, not an explanation for deployment practice or for the odd-cluster convention. Once the families differ, which mixed states must appear, and which can quorum design exclude?
 
 
 \section{Capability Gaps}
@@ -185,7 +185,7 @@ The readout also names the failed obligation. It reports the missing LEO witness
 
 Finally, the output refuses to invent what its inputs cannot establish. Commit formability in this state requires preexisting authority, but current authority is unknown and service policy is not inferred. The instrument says what the topology permits; it does not identify a current leader, establish fresh authority, choose a client contract or recovery policy, or ensure that anyone acts on the result.
 
-The wall-specific pass takes named tiers, a Phase~2 threshold, an initiating tier, a reachable-node summary, and the provenance of configuration and connectivity. It returns $(R_1,R_2)$, quorum witnesses, and typed failed obligations in $O(\text{tiers})$ time. The planetary and edge JSON inputs exercise the same interface. They are demonstrations, not evidence about terrestrial latency, availability, or prevalence. What structure makes this compact readout possible?
+The wall-specific pass takes named tiers, a Phase~2 threshold, an initiating tier, a reachable-node summary, and the provenance of configuration and connectivity. It returns $(R_1,R_2)$, quorum witnesses, and typed failed obligations in $O(\text{tiers})$ time. The planetary input is a demonstration artifact, not empirical evidence. The edge input exercises the same interface as a structural mapping and is not an evaluated result; it supports no claim about terrestrial latency, availability, or prevalence. What structure makes this compact readout possible?
 
 
 \section{Putting the Gaps on a Wall}
@@ -322,6 +322,8 @@ For the full Paxos protocol (not just quorum intersection), we verify safety ove
 
 When an Earth-based proposer completes both phases using only Earth nodes, the decision is \emph{global} in the Paxos sense: any future proposer at any tier, upon completing Phase~1, will discover this value in the Earth acceptors' state and cannot contradict it. Global consensus does not require that all tiers participated, only that no future quorum can produce a conflicting result.
 
+The structure is safe; which capability gaps does it prevent?
+
 
 \section{Where the Wall Works, and Where It Stops}
 
@@ -353,7 +355,7 @@ For $k \le 3$, $(1,0)$ is absent at every tier. For $k \ge 3$, $(0,1)$ is absent
 
 Moon and Mars retain $(0,1)$ under both readings for every $k$. Each has an intervening witness row between itself and the Earth anchor, and changing the Earth threshold cannot remove that obligation. At the other endpoint, $k \ge 4$ violates Proposition~\ref{prop:boundary}'s bound and opens $(1,0)$ everywhere. The useful design point is $k=3$: it closes $(1,0)$ everywhere, closes both gaps at Earth under both readings and at self-reachable LEO, and keeps Phase~2 on Earth. No tested threshold closes both gaps at every tier.
 
-The witnesses implement participation policy; legibility makes the resulting obligation readable. In the three-layer response, containment \emph{prevents} selected gaps, the readout \emph{detects} which residual structural state supplied connectivity permits, and authority plus service policy determine how to \emph{act}. That last decision remains outside the interface. Enumeration and auditor artifacts are in \texttt{results/capability/} (see \autoref{app:traceability}).
+The witnesses implement participation policy; legibility makes the resulting obligation readable. In the three-layer response, containment \emph{prevents} selected gaps, the readout \emph{detects} which residual structural state supplied connectivity permits, and authority plus service policy determine how to \emph{act}. That last decision remains outside the interface. Enumeration and auditor artifacts are in \texttt{results/capability/} (see \autoref{app:traceability}). What does prevention cost when failures reach the Earth anchor?
 
 \section{Prevention Has a Cost}
 \label{sec:results}
@@ -504,55 +506,6 @@ Loss model & none & deterministic link removal for blackout \\
 \bottomrule
 \end{tabular}
 \end{table}
-
-\section{Claim-to-Artifact Traceability}
-\label{app:traceability}
-Table~\ref{tab:traceability} maps the paper's main claims to executable artifacts. Paths are relative to the repository root of the (anonymized) artifact accompanying this submission. Results were generated with Python~$\ge$3.14 and SimPy~$\ge$4.1.1.
-
-\begin{table*}[t]
-\centering
-\small
-\caption{Claim-to-artifact traceability.}
-\label{tab:traceability}
-\begin{tabular}{p{0.28\linewidth}p{0.30\linewidth}p{0.34\linewidth}}
-\toprule
-Claim & Evidence & Artifact(s) \\
-\midrule
-Flat construction: 0\% during blackout at every hard-blackout sweep point. & Flat-mode sweep under the validated harness (\texttt{--global-quorum flat}). & \texttt{results/step9\_flat/\allowbreak step9\_sweep.csv}; \texttt{experiments/\allowbreak step9\_sweep.py}. \\
-Majority baseline: 100\% during blackout, 361~ms two-phase decision latency at every hard-blackout sweep point. & Majority-mode sweep under the validated harness (\texttt{--global-quorum majority}). & \texttt{results/step9\_maj/\allowbreak step9\_sweep.csv}; \texttt{experiments/\allowbreak step9\_sweep.py}. \\
-Crumbling wall: 100\% during blackout at every hard-blackout sweep point, 183~ms two-phase decision latency. & All rows show 100\% during-blackout. & \texttt{results/step9/\allowbreak step9\_sweep.csv}; \texttt{experiments/\allowbreak step9\_sweep.py}. \\
-Per-tier liveness: Earth, LEO, and Moon succeed; Mars fails under the common 1800~s condition. & Full coverage, hard blackout, 186~s Mars delay, 1800~s blackout, 50 seeds. & \texttt{results/tier\_liveness/\allowbreak tier\_sweep\_full\_ci.csv}; \texttt{experiments/\allowbreak tier\_liveness\_sweep.py}. \\
-Sparse topology: LEO drops from 100\% to 0\%. & Sparse 5/1/1/3; all tier initiators; hard blackout; 186/900/500~s Mars-delay/blackout/timeout; 50 seeds. & Same as above. \\
-Weakest-link migration and coordinated relaxation. & Sparse 5/1/1/3; Earth initiator; repeater; hard blackout; 186/900/500~s Mars-delay/blackout/timeout; 50 seeds. & \texttt{results/step10/\allowbreak step10\_sweep\_ci.csv}; \texttt{experiments/\allowbreak step10\_sweep.py}. \\
-TLA+ verification of quorum intersection. & Exhaustive enumeration, all four tiers $\times$ \{strict, $k{=}4$, $k{=}3$\} (27{,}921 states, complete). & \texttt{tla/\allowbreak QuorumIntersection.tla}; \texttt{tla/\allowbreak ExhaustiveIntersection.tla}. \\
-Paxos agreement model-checked. & 67M states (reduced topology, all-tier Phase~1 family, complete). & \texttt{tla/\allowbreak PaxosSmall.tla}. \\
-\bottomrule
-\end{tabular}
-\end{table*}
-
-\begin{table*}[t]
-\centering
-\footnotesize
-\renewcommand{\arraystretch}{0.94}
-\setlength{\tabcolsep}{4pt}
-\caption{Claim-to-artifact traceability (continued).}
-\begin{tabular}{p{0.28\linewidth}p{0.30\linewidth}p{0.34\linewidth}}
-\toprule
-Claim & Evidence & Artifact(s) \\
-\midrule
-Per-tier capability map: which (Phase~1, Phase~2) capability states each tier holds under each connectivity regime. & Exhaustive per-scenario classification, including the degraded partial-capability states. & \texttt{results/capability/\allowbreak capability\_map.csv}; \texttt{experiments/\allowbreak capability\_map.py}. \\
-Containment characterization (Proposition~\ref{prop:gap}) and the $k \le \lceil |E|/2 \rceil$ boundary (Proposition~\ref{prop:boundary}). & Exhaustive enumeration, 5~$k$ $\times$ 4~tiers; containment evaluated as set containment over minimal $Q_2$, not as the reachability restatement; 0 disagreements. Predicate monotonicity verified, not assumed. & \texttt{results/capability/\allowbreak dual\_containment.csv}; \texttt{experiments/\allowbreak capability\_dual\_sweep.py}. \\
-Exact four-way gap correspondence and construction-independent audit. & Proposition~\ref{prop:gap} and Corollary~\ref{cor:correspondence} are primary. Independent state enumeration rejects a mutated report; all 129{,}032 three-node family-pair/pinned-domain cases pass; 16 registered wall cases reconcile with 0 CSV disagreements. & \texttt{quorum\_audit.py}; \texttt{experiments/\allowbreak quorum\_audit.py}; \texttt{results/capability/\allowbreak quorum\_audit\_registered.json}. \\
-Wall-specific capability readout. & Deterministic operational demonstration over one planetary and one structurally analogous edge input; not evaluation. Runtime authority remains unknown and service policy is not inferred. & \texttt{experiments/\allowbreak capability\_readout.py}; \texttt{examples/capability/\allowbreak planetary\_moon\_01.json}; \texttt{examples/capability/\allowbreak edge\_remote\_01.json}. \\
-Uniform threshold corollary: $(1,0)$ reachable iff $q_1 < q_2$; $(0,1)$ iff $q_2 < q_1$. & 80 threshold configurations ($n = 3..7$, all valid $q_1/q_2$), 0 violations. & \texttt{results/capability/\allowbreak dual\_uniform.csv}; \texttt{experiments/\allowbreak capability\_dual\_sweep.py}. \\
-Behavior inside the two capability gaps: $(1,0)$ matched a healthy contender on recorded metrics and supplied the decided value; $(0,1)$ prevented decision in 50 of 50 seeds when both proposers had an eight-round budget. & Pre-registered single-decree experiment, 5 arms $\times$ 4 incumbent budgets $\times$ 50 seeds; the healthy proposer always had 8 rounds. Predictions, falsification criteria, and the declared consequence of a null were committed before the experiment code existed; two registered predictions were falsified and kept. Output was byte-identical across two runs. & \texttt{results/flip/\allowbreak flip\_map.csv}; \texttt{results/flip/\allowbreak flip\_sweep.csv}; \texttt{flip.py}; \texttt{experiments/\allowbreak flip\_sweep.py}; \texttt{experiments/\allowbreak flip\_verdict.py}. \\
-Price of coincidence: 0 at odd $n$, 1 at even $n$; cost-minimal configurations cannot be phase-symmetric at even $n$. & Re-analysis of the threshold enumeration; post-hoc, not pre-registered, and labelled as such. & \texttt{results/capability/\allowbreak dual\_uniform.csv}; \texttt{experiments/\allowbreak capability\_dual\_sweep.py}. \\
-Tier-gradient: at $k=3$, $(1,0)$ is absent at every tier; both gaps are absent for Earth under both readings and for self-reachable LEO. Moon and Mars retain $(0,1)$ at every $k$; no $k$ closes both gaps everywhere. & Exhaustive enumeration over all $2^{10}$ connectivity states, every tier and $k$, under both colocated-acceptor readings. Output byte-identical across two runs. & \texttt{results/capability/\allowbreak dual\_gradient\_map.csv}; \texttt{experiments/\allowbreak capability\_dual\_sweep.py}. \\
-Performance-preserving closure beyond the named wall cases remains open. & Scoped authority, gap-aware behavior, and multi-anchor families are unevaluated candidates, not results. & No artifact; future work. \\
-\bottomrule
-\end{tabular}
-\end{table*}
-
 
 \section{Supplemental Wall Calibration}
 \label{app:wall-calibration}
@@ -722,5 +675,54 @@ The readout therefore needs both supplied inputs. Configuration determines the o
 
 Moon succeeds in both topologies because it has links to all five Earth ground stations. The sparse topology models a single LEO satellite with limited ground coverage; the three missing ground-station links are the difference between 0\% and 100\% for LEO-initiated consensus.
 
+
+
+\section{Claim-to-Artifact Traceability}
+\label{app:traceability}
+Table~\ref{tab:traceability} maps the paper's main claims to executable artifacts. Paths are relative to the repository root of the (anonymized) artifact accompanying this submission. Results were generated with Python~$\ge$3.14 and SimPy~$\ge$4.1.1.
+
+\begin{table*}[t]
+\centering
+\small
+\caption{Claim-to-artifact traceability.}
+\label{tab:traceability}
+\begin{tabular}{p{0.28\linewidth}p{0.30\linewidth}p{0.34\linewidth}}
+\toprule
+Claim & Evidence & Artifact(s) \\
+\midrule
+Flat construction: 0\% during blackout at every hard-blackout sweep point. & Flat-mode sweep under the validated harness (\texttt{--global-quorum flat}). & \texttt{results/step9\_flat/\allowbreak step9\_sweep.csv}; \texttt{experiments/\allowbreak step9\_sweep.py}. \\
+Majority baseline: 100\% during blackout, 361~ms two-phase decision latency at every hard-blackout sweep point. & Majority-mode sweep under the validated harness (\texttt{--global-quorum majority}). & \texttt{results/step9\_maj/\allowbreak step9\_sweep.csv}; \texttt{experiments/\allowbreak step9\_sweep.py}. \\
+Crumbling wall: 100\% during blackout at every hard-blackout sweep point, 183~ms two-phase decision latency. & All rows show 100\% during-blackout. & \texttt{results/step9/\allowbreak step9\_sweep.csv}; \texttt{experiments/\allowbreak step9\_sweep.py}. \\
+Per-tier liveness: Earth, LEO, and Moon succeed; Mars fails under the common 1800~s condition. & Full coverage, hard blackout, 186~s Mars delay, 1800~s blackout, 50 seeds. & \texttt{results/tier\_liveness/\allowbreak tier\_sweep\_full\_ci.csv}; \texttt{experiments/\allowbreak tier\_liveness\_sweep.py}. \\
+Sparse topology: LEO drops from 100\% to 0\%. & Sparse 5/1/1/3; all tier initiators; hard blackout; 186/900/500~s Mars-delay/blackout/timeout; 50 seeds. & Same as above. \\
+Weakest-link migration and coordinated relaxation. & Sparse 5/1/1/3; Earth initiator; repeater; hard blackout; 186/900/500~s Mars-delay/blackout/timeout; 50 seeds. & \texttt{results/step10/\allowbreak step10\_sweep\_ci.csv}; \texttt{experiments/\allowbreak step10\_sweep.py}. \\
+TLA+ verification of quorum intersection. & Exhaustive enumeration, all four tiers $\times$ \{strict, $k{=}4$, $k{=}3$\} (27{,}921 states, complete). & \texttt{tla/\allowbreak QuorumIntersection.tla}; \texttt{tla/\allowbreak ExhaustiveIntersection.tla}. \\
+Paxos agreement model-checked. & 67M states (reduced topology, all-tier Phase~1 family, complete). & \texttt{tla/\allowbreak PaxosSmall.tla}. \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{table*}[t]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{0.94}
+\setlength{\tabcolsep}{4pt}
+\caption{Claim-to-artifact traceability (continued).}
+\begin{tabular}{p{0.28\linewidth}p{0.30\linewidth}p{0.34\linewidth}}
+\toprule
+Claim & Evidence & Artifact(s) \\
+\midrule
+Per-tier capability map: which (Phase~1, Phase~2) capability states each tier holds under each connectivity regime. & Exhaustive per-scenario classification, including the degraded partial-capability states. & \texttt{results/capability/\allowbreak capability\_map.csv}; \texttt{experiments/\allowbreak capability\_map.py}. \\
+Containment characterization (Proposition~\ref{prop:gap}) and the $k \le \lceil |E|/2 \rceil$ boundary (Proposition~\ref{prop:boundary}). & Exhaustive enumeration, 5~$k$ $\times$ 4~tiers; containment evaluated as set containment over minimal $Q_2$, not as the reachability restatement; 0 disagreements. Predicate monotonicity verified, not assumed. & \texttt{results/capability/\allowbreak dual\_containment.csv}; \texttt{experiments/\allowbreak capability\_dual\_sweep.py}. \\
+Exact four-way gap correspondence and construction-independent audit. & Proposition~\ref{prop:gap} and Corollary~\ref{cor:correspondence} are primary. Independent state enumeration rejects a mutated report; all 129{,}032 three-node family-pair/pinned-domain cases pass; 16 registered wall cases reconcile with 0 CSV disagreements. & \texttt{quorum\_audit.py}; \texttt{experiments/\allowbreak quorum\_audit.py}; \texttt{results/capability/\allowbreak quorum\_audit\_registered.json}. \\
+Wall-specific capability readout. & Deterministic operational demonstration over one planetary and one structurally analogous edge input; not evaluation. Runtime authority remains unknown and service policy is not inferred. & \texttt{experiments/\allowbreak capability\_readout.py}; \texttt{examples/capability/\allowbreak planetary\_moon\_01.json}; \texttt{examples/capability/\allowbreak edge\_remote\_01.json}. \\
+Uniform threshold corollary: $(1,0)$ reachable iff $q_1 < q_2$; $(0,1)$ iff $q_2 < q_1$. & 80 threshold configurations ($n = 3..7$, all valid $q_1/q_2$), 0 violations. & \texttt{results/capability/\allowbreak dual\_uniform.csv}; \texttt{experiments/\allowbreak capability\_dual\_sweep.py}. \\
+Behavior inside the two capability gaps: $(1,0)$ matched a healthy contender on recorded metrics and supplied the decided value; $(0,1)$ prevented decision in 50 of 50 seeds when both proposers had an eight-round budget. & Pre-registered single-decree experiment, 5 arms $\times$ 4 incumbent budgets $\times$ 50 seeds; the healthy proposer always had 8 rounds. Predictions, falsification criteria, and the declared consequence of a null were committed before the experiment code existed; two registered predictions were falsified and kept. Output was byte-identical across two runs. & \texttt{results/flip/\allowbreak flip\_map.csv}; \texttt{results/flip/\allowbreak flip\_sweep.csv}; \texttt{flip.py}; \texttt{experiments/\allowbreak flip\_sweep.py}; \texttt{experiments/\allowbreak flip\_verdict.py}. \\
+Price of coincidence: 0 at odd $n$, 1 at even $n$; cost-minimal configurations cannot be phase-symmetric at even $n$. & Re-analysis of the threshold enumeration; post-hoc, not pre-registered, and labelled as such. & \texttt{results/capability/\allowbreak dual\_uniform.csv}; \texttt{experiments/\allowbreak capability\_dual\_sweep.py}. \\
+Tier-gradient: at $k=3$, $(1,0)$ is absent at every tier; both gaps are absent for Earth under both readings and for self-reachable LEO. Moon and Mars retain $(0,1)$ at every $k$; no $k$ closes both gaps everywhere. & Exhaustive enumeration over all $2^{10}$ connectivity states, every tier and $k$, under both colocated-acceptor readings. Output byte-identical across two runs. & \texttt{results/capability/\allowbreak dual\_gradient\_map.csv}; \texttt{experiments/\allowbreak capability\_dual\_sweep.py}. \\
+Performance-preserving closure beyond the named wall cases remains open. & Scoped authority, gap-aware behavior, and multi-anchor families are unevaluated candidates, not results. & No artifact; future work. \\
+\bottomrule
+\end{tabular}
+\end{table*}
 
 \end{document}

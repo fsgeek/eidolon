@@ -75,47 +75,51 @@ def test_relocated_corollary_and_operational_boundaries_are_present():
 
 def test_readout_is_a_bounded_demonstration():
     text = PAPER.read_text(encoding="utf-8")
-    reading = section(text, r"\section{Reading the Wall}", r"\section{")
+    reading = section(text, r"\section{Look Through the Instrument}", r"\section{")
     assert "demonstration artifact, not empirical evidence" in reading
     assert "configuration and connectivity" in reading
     assert "runtime authority" in reading
     assert "service policy" in reading
+    assert "missing Phase 1 LEO obligation" in reading
     assert "experiments/\\allowbreak capability\\_readout.py" in text
     assert "not an evaluated result" in text
 
 
-def test_reading_the_wall_uses_interpretive_subsection_order():
+def test_readout_precedes_construction_and_calibration():
     text = PAPER.read_text(encoding="utf-8")
-    reading = section(text, r"\section{Reading the Wall}", r"\section{")
     headings = (
-        r"\subsection{Readout Interface}",
-        r"\subsection{Evaluation Method}",
-        r"\subsection{Geometry and Competitive Majority Baseline}",
-        r"\subsection{Per-Tier Liveness under Full Coverage}",
-        r"\subsection{Wall Obligations versus Sparse Reachability}",
-        r"\subsection{Crash Tolerance and Coordinated Relaxation}",
+        r"\section{Look Through the Instrument}",
+        r"\section{Putting the Gaps on a Wall}",
+        r"\section{Where the Wall Works, and Where It Stops}",
+        r"\section{Prevention Has a Cost}",
+        r"\section{Supplemental Wall Calibration}",
     )
-    positions = [reading.index(heading) for heading in headings]
+    positions = [text.index(heading) for heading in headings]
     assert positions == sorted(positions)
 
 
-def test_reading_the_wall_preserves_the_five_interpretive_results():
+def test_supplement_preserves_the_calibration_results():
     text = PAPER.read_text(encoding="utf-8")
-    reading = section(text, r"\section{Reading the Wall}", r"\section{")
+    reading = section(
+        text,
+        r"\section{Supplemental Wall Calibration}",
+        r"\end{document}",
+    )
     for required in (
         "majority Phase~1 leaves the fast tier",
         "LEO's 131~ms is \\emph{faster} than Earth",
         "Liveness requires both",
         "These point values are cadence-alignment artifacts",
-        "The weakest link migrates",
     ):
         assert required in reading
+    prevention = section(text, r"\section{Prevention Has a Cost}", r"\section{")
+    assert "The weakest link migrates" in prevention
 
 
 def test_ending_opens_the_unsolved_problem_before_bounding_claims():
     text = PAPER.read_text(encoding="utf-8")
     headings = (
-        r"\section{Reading the Wall}",
+        r"\section{Look Through the Instrument}",
         r"\section{What Remains Unsolved}",
         r"\section{Threats to Validity and Limitations}",
         r"\section{Conclusion}",
@@ -133,20 +137,21 @@ def test_open_problem_and_conclusion_keep_their_boundaries():
         r"\section{",
     )
     for required in (
-        "without returning inter-tier latency to the Phase~2 hot path",
-        "scoped authority",
-        "gap-aware proposer behavior",
-        "multi-anchor families",
-        "safety, performance, and operational behavior",
+        "Mars makes one temporal regime",
+        "fixed while visibility changes",
+        "authority-bearing membership",
+        "fixed-epoch formability",
+        "transferable evidence of authority and accepted state",
     ):
         assert required in open_problem
 
     conclusion = section(text, r"\section{Conclusion}", r"\bibliographystyle")
-    assert "phase symmetry" in conclusion
-    assert "threshold family" in conclusion
-    assert "Can this system acquire authority?" in conclusion
-    assert "Can it commit?" in conclusion
-    assert "without returning inter-tier latency to Phase~2" in conclusion
+    assert "phase-capability coincidence" in conclusion
+    assert "prevention boundary" in conclusion
+    assert "support detection" in conclusion
+    assert "fresh runtime authority" in conclusion
+    assert "which actions the system can presently complete" in conclusion
+    assert "changing visibility and changing membership" in conclusion
 
 
 def test_cross_cutting_limits_are_explicit():
@@ -195,9 +200,9 @@ def test_introduction_distinguishes_symmetry_majority_and_vantage():
     assert "threshold" in introduction.lower()
     assert "vantage" in introduction.lower()
     assert "coincid" in introduction.lower()
-    assert "unconstrained reading" in introduction.lower()
-    assert "self-reachable reading" in introduction.lower()
-    assert "colocated acceptor" in introduction.lower()
+    assert "unconstrained reading" not in introduction.lower()
+    assert "self-reachable reading" not in introduction.lower()
+    assert "evaluated fixture rather than a proposed deployment" in introduction.lower()
     assert "The count worked because" not in introduction
     assert "for so long" not in introduction
     if "spend" in introduction.lower():
@@ -218,12 +223,12 @@ def test_formal_investigation_sections_appear_in_order():
     assert positions == sorted(positions)
 
 
-def test_behavioral_reversal_immediately_follows_wall_boundary():
+def test_behavioral_reversal_immediately_follows_capability_boundary():
     text = PAPER.read_text(encoding="utf-8")
     headings = (
-        r"\section{Where the Wall Works, and Where It Stops}",
+        r"\section{Capability Gaps}",
         r"\section{What Happens Inside the Gaps}",
-        r"\section{Related Work}",
+        r"\section{Look Through the Instrument}",
     )
     positions = [text.index(heading) for heading in headings]
     assert positions == sorted(positions)
