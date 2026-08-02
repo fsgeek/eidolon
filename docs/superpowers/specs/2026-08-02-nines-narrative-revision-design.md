@@ -78,6 +78,10 @@ The count never directly measured both capabilities. A smaller answer happened
 to settle the larger questions, and the convenience became easy to mistake for
 a general property of consensus.
 
+"The smaller question" should remain the paper's refrain: first as the proxy
+that worked, then as the inference flexibility dissolves, and finally as the
+question operators must replace with direct capability evidence.
+
 ### 4. Flexibility exposes the hidden inference
 
 Flexible Paxos separates the quorum families while preserving the intersection
@@ -97,7 +101,13 @@ The proof is short because the formability predicates are monotone. Its value is
 not mathematical difficulty but naming exactly when the old operational
 inference remains valid.
 
-### 5. Direction matters
+### 5. Let the reader place a bet; then show that direction matters
+
+Before reporting the behavioral result, ask which mixed state the reader would
+expect to disrupt progress. Acquisition without commit looks like the alarming
+state. The paper can make this invitation directly, in a register appropriate
+to the venue, because the authors made the same prediction prospectively rather
+than inventing suspense after seeing the outcome.
 
 The preregistered experiment expected acquisition without commit to be the more
 harmful state. Under the modeled single-decree retry policy and fixed budgets,
@@ -111,7 +121,25 @@ These are bounded behavioral observations, not intrinsic labels for the two
 states. They establish that detecting "a gap" is insufficient: its direction,
 runtime authority, retry policy, and intended response matter.
 
-### 6. The response has three layers
+### 6. Now look through the instrument
+
+After teaching the reader to distinguish the two capabilities, make them
+visible. The wall readout is the concrete payoff: tier by tier, it shows which
+phase is formable and which obligation failed. Lead with the artifact and let
+the reader inspect the distinction before explaining the design taxonomy.
+
+The wall construction is a controlled instrument for prevention and detection.
+It makes quorum obligations structurally visible and permits selected capability
+gaps to be closed without returning all inter-tier latency to Phase 2. Its
+5/1/1/3 topology is an evaluated fixture, not a recommended deployment and not
+the conceptual foundation of the work.
+
+The stance is not that the wall is a demoted former solution. It is the apparatus
+through which the reader can finally observe the distinction the first half of
+the paper taught them to see. Do not claim that it is the first such instrument
+without evidence.
+
+### 7. What the instrument teaches: the response has three layers
 
 1. **Prevent:** Choose quorum families satisfying the desired containment when
    its latency, availability, and participation costs are acceptable.
@@ -122,13 +150,10 @@ runtime authority, retry policy, and intended response matter.
    policy to decide whether to continue, fail over, reconfigure, or stop. This
    layer is necessary but is not solved by the current paper.
 
-### 7. The wall is an instrument, not the hero
+Prevention, detection, and action should be presented as what the demonstration
+reveals, not as a taxonomy inserted between the plot twist and its payoff.
 
-The wall construction is a controlled case study in prevention and detection.
-It makes quorum obligations structurally visible and permits selected capability
-gaps to be closed without returning all inter-tier latency to Phase 2. Its
-5/1/1/3 topology is an evaluated fixture, not a recommended deployment and not
-the conceptual foundation of the work.
+### 8. The horizon opens
 
 Mars stretches connectivity loss until timeout intuition cannot hide it. LEO
 suggests a fixed membership with rapidly changing visibility. Mobile edge marks
@@ -136,7 +161,7 @@ the harder boundary where authorized membership itself changes during
 operation. The present results apply within fixed configuration epochs and do
 not solve continuous reconfiguration.
 
-### 8. The changed practice
+### 9. The changed practice
 
 The paper should leave the reader with a different diagnostic question:
 
@@ -171,6 +196,8 @@ The paper should leave the reader with a different diagnostic question:
   statement.
 - Frame the theorem as the boundary of the historical inference, not as a newly
   discovered production failure class.
+- End by inviting the reader to predict which mixed state will disrupt progress;
+  disclose that the preregistration made the same prediction before the data.
 
 ### 4. What Happens Inside the Gaps
 
@@ -178,21 +205,29 @@ The paper should leave the reader with a different diagnostic question:
 - Preserve preregistration, deviations, policy bounds, and single-decree scope.
 - Emphasize the reversal and why direction matters.
 - Do not generalize contention behavior to Multi-Paxos or production systems.
+- Pay off the reader's prediction immediately; the authors' lost bet is evidence
+  of honest surprise, not a rhetorical reconstruction.
 
-### 5. A Controlled Wall Case Study
+### 5. Look Through the Instrument: The Wall Readout
 
 - Introduce the wall only after the general result and behavioral consequence.
+- Lead with the concrete readout so the reader can inspect the two capabilities
+  tier by tier before encountering the full construction machinery.
 - State immediately that extra tier witnesses are participation policy rather
   than Paxos safety requirements.
 - Present 5/1/1/3 as the existing evaluated fixture.
 - Remove any implication that singleton LEO or Moon tiers form a recommended
   distributed-system design.
 - Preserve the construction and safety argument where technically necessary.
+- Present the wall positively as the apparatus that makes the distinction
+  visible, while retaining every deployment and causality boundary.
 
 ### 6. Preventing and Reading Capability Gaps
 
 - Organize the exact threshold boundary as prevention.
 - Organize the auditor and wall readout as detection.
+- Present prevention--detection--action as the lesson drawn from the visible
+  result, not as an interposed taxonomy.
 - Retain the distinction among structural formability, current authority, and
   service policy.
 - Keep only evaluation that demonstrates the prevention/detection claims or a
@@ -228,6 +263,24 @@ The paper should leave the reader with a different diagnostic question:
 
 The abstract should be written last.
 
+## Narrative Momentum Contract
+
+Each major section should hand the reader a question that the next section pays
+off:
+
+1. GitHub: how can a correct control action produce a day of degradation?
+2. LogDevice: how can a service write but be unable to replace authority?
+3. Phase symmetry: why did one count ever answer both questions?
+4. Containment: which mixed states can a design admit?
+5. Prediction: which direction actually disrupts progress in the model?
+6. Reversal: how can an operator or designer see the distinction before acting?
+7. Readout: what can be prevented, what must be detected, and what evidence is
+   still missing?
+8. Boundary: what changes when reachability and then membership vary over time?
+
+Use "the smaller question" as the recurring phrase that lets a reviewer retell
+the paper accurately without reproducing its notation.
+
 ## Migration Map
 
 | Current material | Disposition | New role |
@@ -236,10 +289,10 @@ The abstract should be written last.
 | Introduction | Rewrite | Incident, technical anchor, thesis, boundaries |
 | Why One Count Once Worked | Keep and tighten | Explain the historical proxy |
 | Capability Gaps | Keep; add intuition | Exact characterization |
-| Putting the Gaps on a Wall | Move later; reframe | Controlled case study |
+| Putting the Gaps on a Wall | Move later; reframe | Instrument made concrete through its readout |
 | Where the Wall Works, and Where It Stops | Keep selectively | Prevention boundary |
 | What Happens Inside the Gaps | Move earlier | Consequence and reversal |
-| Reading the Wall | Keep selectively | Detection and cost evidence |
+| Reading the Wall | Move to front of wall material; keep selectively | Concrete payoff, then detection and cost evidence |
 | Related Work | Rewrite positioning | Credit precedents; bound novelty |
 | What Remains Unsolved | Expand and refocus | Temporal reachability and membership |
 | Threats and Limitations | Preserve and extend | Causal and abstraction boundaries |
@@ -306,4 +359,3 @@ Proceed toward NINeS submission only if all gates pass after migration:
 
 If any gate requires substantial new theory or evidence, do not submit to
 NINeS '27. Preserve the outline as the starting point for the larger work.
-
