@@ -67,7 +67,11 @@ We begin with the historical convenience that made the smaller question work.
 \section{Why One Count Once Worked}
 \label{sec:background}
 
-For one replica count to answer both operational questions, two facts must line up. Classic Paxos~\cite{lamport1998} commonly uses one majority-quorum family for Phase~1 (prepare/promise) and Phase~2 (accept/accepted). Because the families are the same, a reachable set that can form one phase can form the other. Phase symmetry makes the two formability predicates equal.
+For one replica count to answer both operational questions, two facts must line up. Classic Paxos~\cite{lamport1998} commonly uses one majority-quorum family for Phase~1 (prepare/promise) and Phase~2 (accept/accepted). Because the families are the same, a reachable set that can form one phase can form the other. Writing $\operatorname{Form}(\mathcal Q)$ for the connectivity sets that contain some quorum in family $\mathcal Q$, we call
+\[
+\operatorname{Form}(\mathcal Q_1)=\operatorname{Form}(\mathcal Q_2)
+\]
+\emph{phase-capability coincidence}. Phase symmetry is sufficient for this equality, but not necessary: syntactically different families can induce the same formability predicate.
 
 Majority supplies the second fact. A majority is a threshold family, so its formability can be decided by counting reachable replicas from the network vantage under consideration. The count is useful because the threshold makes the predicate readable. It answers both questions because phase symmetry has already made the predicates equal.
 
@@ -87,7 +91,7 @@ Three Earth nodes, LEO, and Moon & 5 & yes & no \\
 \end{tabular}
 \end{center}
 
-Moon's Phase~1 family needs one Earth node, LEO, and Moon. Strict Phase~2 needs all five Earth nodes. The same count therefore describes either mixed state. Five is no longer informative by itself because it omits the phase structure that distinguished the cases.
+Moon's Phase~1 family needs one Earth node, LEO, and Moon. Strict Phase~2 needs all five Earth nodes. The same count therefore describes either mixed state. Five is no longer informative by itself because it omits the phase structure that distinguished the cases. Once phase-capability coincidence is lost, the smaller question no longer settles the two larger ones.
 
 The uniform case shows the smallest cost of retaining the coincidence. Subject to $q_1+q_2 \ge n+1$, a cost-minimal split can be symmetric when $n$ is odd. When $n$ is even, symmetry adds one additional participant across the two phase thresholds. This is a post-hoc structural observation, not an explanation for deployment practice or for the odd-cluster convention.
 
@@ -103,7 +107,9 @@ For a finite fixed universe $N_e$ and a nonempty quorum family $\mathcal{Q}$, de
 \]
 Given phase families $\mathcal{Q}_1$ and $\mathcal{Q}_2$, write $R_1(C)$ when $C \in \operatorname{Form}(\mathcal{Q}_1)$ and $R_2(C)$ when $C \in \operatorname{Form}(\mathcal{Q}_2)$. We say a proposer can \emph{acquire} when $R_1$ holds and is structurally commit-capable when $R_2$ holds. Actual commitment also requires valid runtime authority and ordinary protocol execution. Under Multi-Paxos, acquisition is leader election and amortizes over many commands; under single-decree Paxos it is per-decree ballot acquisition and every decree pays for it. Our measurements are single-decree throughout (Section~\ref{sec:valence}), so ``acquisition'' carries the general sense everywhere except the design-time leadership reading in Section~\ref{sec:leadership}.
 
-The pair $(R_1,R_2)$ has four joint states. Two are familiar: $(1,1)$ makes both phases formable, and $(0,0)$ makes neither formable. We call the mixed states \emph{capability gaps}: $(1,0)$ permits acquisition but not commit formation, while $(0,1)$ permits commit formation but not acquisition. A single family used for both phases makes both gaps empty. Syntactically different families can also induce equal predicates; semantic equality of $\operatorname{Form}(\mathcal{Q}_1)$ and $\operatorname{Form}(\mathcal{Q}_2)$ is what matters. Once the predicates differ, we need to know whether one or both mixed states can occur.
+The pair $(R_1,R_2)$ has four joint states. Two are familiar: $(1,1)$ makes both phases formable, and $(0,0)$ makes neither formable. We call the mixed states \emph{capability gaps}: $(1,0)$ permits acquisition but not commit formation, while $(0,1)$ permits commit formation but not acquisition. A single family used for both phases makes both gaps empty. Phase-capability coincidence is the semantic equality $\operatorname{Form}(\mathcal{Q}_1)=\operatorname{Form}(\mathcal{Q}_2)$; it can also hold for syntactically different families.
+
+Set order gives the classification before any notation does. If every connectivity set capable of acquisition is also capable of commit, acquisition without commit has no witness, although commit without acquisition may remain. If neither formability set contains the other, each has a connectivity witness absent from the other, and both mixed directions occur. The containment condition below makes this predicate order checkable directly from the quorum families.
 
 \refstepcounter{prop}\label{prop:gap}\textbf{Proposition \theprop\ (gap emptiness).} The $(1,0)$ gap is empty if and only if every $Q_1 \in \mathcal{Q}_1$ contains some $Q_2 \in \mathcal{Q}_2$. Dually, the $(0,1)$ gap is empty if and only if every $Q_2 \in \mathcal{Q}_2$ contains some $Q_1 \in \mathcal{Q}_1$.
 
@@ -114,6 +120,8 @@ The pair $(R_1,R_2)$ has four joint states. Two are familiar: $(1,1)$ makes both
 The proof is short because formability is monotone. While both phases used the same family, the question had nothing to distinguish: both gaps were empty by inspection. Flexible quorums made the question useful by allowing the phase predicates to differ. Proposition~\ref{prop:gap} then says exactly how they differ.
 
 Our construction-independent auditor implements this test over explicit finite families. It validates the universe and families, removes duplicate and nonminimal quorums, checks every cross-phase pair for safety, classifies the four predicate relations, and emits deterministic minimum-cardinality gap witnesses. An optional pinned set restricts the analyzed domain to connectivity states containing those nodes without changing the configured families or their safety result. Writing $\min(\mathcal{Q})$ for the canonical minimal antichain, classification takes $O(|\min(\mathcal{Q}_1)|\,|\min(\mathcal{Q}_2)|\,|N_e|)$ time, excluding input parsing, deterministic sorting, and the separate quadratic-in-family-size minimization passes. An independent mode enumerates every connectivity set rather than reusing the containment classifier. It rejects a deliberately mutated report and agrees with the optimized classifier over all 129{,}032 combinations of nonempty family pair and pinned domain on a three-node universe. The proof above remains primary; the auditor makes the criterion executable and checks the registered wall instances against the existing connectivity enumeration with zero disagreements.
+
+The two mixed states are structurally symmetric in the characterization, but need not behave symmetrically. Before reading the next section, which would you expect to disrupt a competing healthy proposer: acquisition without commit, or commit capability without fresh acquisition? We registered the first prediction before implementing the experiment.
 
 
 \section{Putting the Gaps on a Wall}
