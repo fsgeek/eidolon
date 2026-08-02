@@ -1,0 +1,14 @@
+commit 69be078fad821b3ad8019acfe861abf940fba1e5
+tree c7a1fc8c24316241df10294eb0d6457b16547ae3
+parent 7a68eef083bc9b19114955c841dca059056891fe
+author wamason.com research <research@wamason.com> 1785436837 -0700
+committer wamason.com research <research@wamason.com> 1785436837 -0700
+gpgsig -----BEGIN PGP SIGNATURE-----
+ 
+ iHUEABYIAB0WIQQdfEpoJS9uwazS/I6TR3ig616rsQUCamuapgAKCRCTR3ig616r
+ sSGvAP4t2O3VG48qOJIDa+hvwFK8V9vYl41CWudoDgBUP1DS1wD9FunSC+URgOCz
+ f7gSvhvkldcyQW+/3GEFAt6+DpiINA0=
+ =orhe
+ -----END PGP SIGNATURE-----
+
+    feat: expose wall capability readout

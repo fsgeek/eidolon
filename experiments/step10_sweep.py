@@ -7,19 +7,38 @@ from __future__ import annotations
 import argparse
 import csv
 import math
+import sys
 from pathlib import Path
 
 import simpy
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from datacenter import five_dc_topology
 from entity import EntityRegistry
 from paxos import Acceptor, FlexibleQuorum, MajorityQuorum, Proposer
 from quorums import CrumblingWallQuorum
 from demo_step_10 import build_topology, ReconciliationStats
+from demo_step_9 import mars_blackout_pairs
+from time_budget import classify_attempt, scaled_window
 
 
 def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
                mars_latency=186.0, blackout_dur=900.0, with_repeater=True):
+    # Temporal budget: validate (and, if necessary, scale) the window
+    # before anything else is built, so the proposer's timeout and the
+    # blackout schedule below use the effective, guaranteed-valid values.
+    window, temporally_scaled = scaled_window(
+        d_max=mars_latency, p_max=0.0,
+        blackout_duration=blackout_dur,
+        phase_timeout=500.0,
+        pre_window=600.0,
+        post_window=max(4000.0 - 600.0 - blackout_dur, 0.0),
+        reconciliation_cadence=120.0,
+    )
+
     env = simpy.Environment()
     network = build_topology(env, mars_base_latency_s=mars_latency, seed=seed)
     registry = EntityRegistry()
@@ -67,20 +86,21 @@ def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
         [mars_ids, [moon.id], [leo.id], earth_ids],
         phase2_threshold=global_q2_thresh)
     global_prop = Proposer(env, gp, network, all_ids, wall,
-        timeout=500.0, max_rounds=1, initiator_tier=3)
+        timeout=window.phase_timeout, max_rounds=1, initiator_tier=3)
 
     earth_ok, earth_n = 0, 0
     mars_ok, mars_n = 0, 0
     g_pre = ReconciliationStats()
     g_during = ReconciliationStats()
     g_post = ReconciliationStats()
+    g_transition = ReconciliationStats()
     first_recovery = None
     global_latencies = []
     earth_latencies = []
 
-    blackout_start = 600.0
+    blackout_start = window.pre_window
     blackout_end = blackout_start + blackout_dur
-    sim_end = 4000.0
+    sim_end = window.horizon
 
     def earth_local():
         nonlocal earth_ok, earth_n
@@ -111,12 +131,10 @@ def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
             started = env.now
             r = yield global_prop.propose(slot=slot, value=f"g{slot}")
             slot += 1
-            if started < blackout_start:
-                bucket = g_pre
-            elif started < blackout_end:
-                bucket = g_during
-            else:
-                bucket = g_post
+            ended = env.now
+            bucket = {"pre": g_pre, "during": g_during, "post": g_post,
+                      "transition": g_transition}[
+                classify_attempt(started, ended, blackout_start, blackout_end)]
             bucket.total += 1
             if r.success:
                 bucket.success += 1
@@ -126,17 +144,15 @@ def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
             yield env.timeout(120.0)
 
     def controller():
-        mars_locs = [f"mars-{i}" for i in range(3)]
+        pairs = mars_blackout_pairs(network)
         yield env.timeout(blackout_start)
 
         if with_repeater:
-            for s in ["na-west", "europe", "moon"]:
-                for d in mars_locs:
-                    network.update_link(s, d, latency=240.0, jitter=12.0)
+            for s, d in pairs:
+                network.update_link(s, d, latency=240.0, jitter=12.0)
         else:
-            for s in ["na-west", "europe", "moon"]:
-                for d in mars_locs:
-                    network.partition_locations(s, d)
+            for s, d in pairs:
+                network.partition_locations(s, d)
 
         crash_targets = ["africa", "sa-east", "asia", "europe", "na-west"][:crash_count]
         if crash_targets:
@@ -149,10 +165,9 @@ def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
         yield env.timeout(blackout_dur)
 
         if with_repeater:
-            for s in ["na-west", "europe", "moon"]:
-                for d in mars_locs:
-                    base = mars_latency + (1.28 if s == "moon" else 0)
-                    network.update_link(s, d, latency=base, jitter=5.0)
+            for s, d in pairs:
+                base = mars_latency + (1.28 if s == "moon" else 0)
+                network.update_link(s, d, latency=base, jitter=5.0)
         else:
             network.heal_all()
 
@@ -181,6 +196,12 @@ def run_single(seed, global_q2_thresh, earth_q1, earth_q2, crash_count,
         "global_pre_rate": g_pre_rate,
         "global_during_rate": g_d_rate,
         "global_post_rate": g_p_rate,
+        "global_transition_success": g_transition.success,
+        "global_transition_total": g_transition.total,
+        "phase_timeout_s": window.phase_timeout,
+        "pre_window_s": window.pre_window,
+        "post_window_s": window.post_window,
+        "temporally_scaled": int(temporally_scaled),
         "recovery_lag_s": first_recovery,
         "avg_global_latency_s": avg_glat,
         "avg_earth_latency_s": avg_elat,

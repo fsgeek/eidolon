@@ -1,0 +1,21 @@
+scenario,initiator_tier,phase2_threshold,reachable,r1,r2,r1_witness,r2_witness,requires_preexisting_authority,hazards,missing
+full_reachability_k5,mars,5,1;2;3;4;5;100;101;102;200;300,1,1,1;100;200;300,1;2;3;4;5,0,,
+full_reachability_k5,moon,5,1;2;3;4;5;100;101;102;200;300,1,1,1;200;300,1;2;3;4;5,0,,
+full_reachability_k5,leo,5,1;2;3;4;5;100;101;102;200;300,1,1,1;300,1;2;3;4;5,0,,
+full_reachability_k5,earth,5,1;2;3;4;5;100;101;102;200;300,1,1,1,1;2;3;4;5,0,,
+sparse_leo_k5,leo,5,1;2;3;300,1,0,1;300,,0,acquire-without-commit,"Phase 2 obligation at tier 3: require 5, reachable 3; unreachable candidates [4, 5]"
+full_reachability_k4,mars,4,1;2;3;4;5;100;101;102;200;300,1,1,1;2;100;200;300,1;2;3;4,0,,
+full_reachability_k4,moon,4,1;2;3;4;5;100;101;102;200;300,1,1,1;2;200;300,1;2;3;4,0,,
+full_reachability_k4,leo,4,1;2;3;4;5;100;101;102;200;300,1,1,1;2;300,1;2;3;4,0,,
+full_reachability_k4,earth,4,1;2;3;4;5;100;101;102;200;300,1,1,1;2,1;2;3;4,0,,
+sparse_leo_k4,leo,4,1;2;3;300,1,0,1;2;300,,0,acquire-without-commit,"Phase 2 obligation at tier 3: require 4, reachable 3; unreachable candidates [4, 5]"
+full_reachability_k3,mars,3,1;2;3;4;5;100;101;102;200;300,1,1,1;2;3;100;200;300,1;2;3,0,,
+full_reachability_k3,moon,3,1;2;3;4;5;100;101;102;200;300,1,1,1;2;3;200;300,1;2;3,0,,
+full_reachability_k3,leo,3,1;2;3;4;5;100;101;102;200;300,1,1,1;2;3;300,1;2;3,0,,
+full_reachability_k3,earth,3,1;2;3;4;5;100;101;102;200;300,1,1,1;2;3,1;2;3,0,,
+sparse_leo_k3,leo,3,1;2;3;300,1,1,1;2;3;300,1;2;3,0,,
+moon_row_broken_k5,moon,5,1;2;3;4;5;200,0,1,,1;2;3;4;5,1,incumbent-only,"Phase 1 obligation at tier 2: require 1, reachable 0; unreachable candidates [300]"
+mars_conjunction_k5,mars,5,100;101;102,0,0,,,0,,"Phase 1 obligation at tier 1: require 1, reachable 0; unreachable candidates [200] | Phase 1 obligation at tier 2: require 1, reachable 0; unreachable candidates [300] | Phase 1 obligation at tier 3: require 1, reachable 0; unreachable candidates [1, 2, 3, 4, 5] | Phase 2 obligation at tier 3: require 5, reachable 0; unreachable candidates [1, 2, 3, 4, 5]"
+mars_conjunction_k5,moon,5,1;2;3;4;5;200;300,1,1,1;200;300,1;2;3;4;5,0,,
+mars_conjunction_k5,leo,5,1;2;3;4;5;200;300,1,1,1;300,1;2;3;4;5,0,,
+mars_conjunction_k5,earth,5,1;2;3;4;5;200;300,1,1,1,1;2;3;4;5,0,,

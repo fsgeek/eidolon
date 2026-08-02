@@ -1,0 +1,14 @@
+commit 7eff628d83f011d06d0f29ed18abd5c72c3a0a9f
+tree 80818a7f4a5a5bb754d09dcfa0b44282be0d2997
+parent 703893f3a94f3ccd54d044cfac8a95d21af79f68
+author wamason.com research <research@wamason.com> 1785436172 -0700
+committer wamason.com research <research@wamason.com> 1785436172 -0700
+gpgsig -----BEGIN PGP SIGNATURE-----
+ 
+ iHUEABYIAB0WIQQdfEpoJS9uwazS/I6TR3ig616rsQUCamuYDAAKCRCTR3ig616r
+ sdZmAP9Zygk3XJx7aywm/AVT68wS4CGKmJoH5P2t9q60If3AywEAweHiCluZ5ehU
+ Eb6qVz1BwSVmxGqNSGDzwtLWoP+pegw=
+ =YyMq
+ -----END PGP SIGNATURE-----
+
+    docs: reframe NINeS paper around capability gaps

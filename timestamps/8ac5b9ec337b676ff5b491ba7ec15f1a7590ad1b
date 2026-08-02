@@ -1,0 +1,14 @@
+commit 8ac5b9ec337b676ff5b491ba7ec15f1a7590ad1b
+tree f3f52446b8dcb61571b899f5e457612c486c9026
+parent bf6e8615fbe389072c63a9991908e99ebbe0ed95
+author wamason.com research <research@wamason.com> 1785435132 -0700
+committer wamason.com research <research@wamason.com> 1785435132 -0700
+gpgsig -----BEGIN PGP SIGNATURE-----
+ 
+ iHUEABYIAB0WIQQdfEpoJS9uwazS/I6TR3ig616rsQUCamuT/QAKCRCTR3ig616r
+ saMTAQC/A3bP+4HXUggy6COgQJiROhidDsgdJe+FN/WRv79FqAD+I9J6nl7D9t93
+ uTTHMKRMoVsN3up2EqoNFMDADrg+Aw8=
+ =JTPQ
+ -----END PGP SIGNATURE-----
+
+    feat: audit pinned connectivity domains exhaustively

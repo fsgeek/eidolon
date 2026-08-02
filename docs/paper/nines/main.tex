@@ -1,0 +1,703 @@
+\frenchspacing
+\documentclass[letterpaper,twocolumn,10pt]{article}
+\usepackage[twoside=true, head=13pt,
+     paperwidth=8.5in, paperheight=11in,
+     includeheadfoot=false, columnsep=2pc,
+     top=1in, bottom=1in, inner=0.75in, outer=0.75in,
+     marginparwidth=2pc,heightrounded]{geometry}
+
+\usepackage{graphicx}
+\usepackage[tt=false, type1=true]{libertine}
+\usepackage{mathptmx}
+\usepackage{amssymb}
+\usepackage[varqu]{zi4}
+\usepackage[T1]{fontenc}
+\usepackage{enumitem}
+\usepackage[font={footnotesize},labelfont={footnotesize,bf},textfont={footnotesize,it}]{caption}
+\interfootnotelinepenalty=10000
+
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{positioning,calc,arrows.meta,patterns,decorations.pathreplacing}
+\usepackage[hidelinks]{hyperref}
+
+% Numbered results. Plain counters rather than \newtheorem: the run-in
+% \textbf{...} rendering is preserved byte-for-byte, while numbering and
+% cross-references follow document order automatically. Hand-numbering
+% these silently mis-ordered them once when a section was moved.
+\newcounter{prop}
+\newcounter{cor}
+
+% Tighten list and float-adjacent whitespace. Two-column body is length-bound;
+% these recover vertical space without cutting text.
+\setlist[itemize]{topsep=2pt,itemsep=1pt,parsep=0pt,partopsep=0pt}
+\setlist[enumerate]{topsep=2pt,itemsep=1pt,parsep=0pt,partopsep=0pt}
+
+\title{Legible Consensus: Capability Gaps in Flexible Quorums}
+\author{Paper \#98}
+\date{}
+
+\begin{document}
+\pagestyle{plain}
+\maketitle
+
+\begin{abstract}
+Node-health monitoring does not say whether a quorum-based service can acquire proposal authority or complete a commit. In familiar majority-based Paxos configurations, phase symmetry makes these capabilities coincide, and the threshold structure lets one reachable-replica count answer both questions from a specified vantage. Flexible Paxos preserves the cross-phase intersection required for safety while allowing the two predicates to separate. We characterize the resulting capability gaps exactly. The acquisition-without-commit state is impossible if and only if every Phase~1 quorum contains a Phase~2 quorum; the dual state is impossible under the mirrored containment. Ordered predicates admit one gap direction, while incomparable predicates admit both. In a pre-registered single-decree experiment, an acquisition-only incumbent matched a healthy contender on every recorded metric and injected an accepted value that subsequent acquisition had to preserve. With both proposers limited to eight rounds, a commit-capable but acquisition-incapable incumbent prevented a healthy proposer from deciding in all 50 seeds under the modeled retry policy. We then apply the characterization to a wall-shaped quorum construction over a 5/1/1/3 Earth/LEO/Moon/Mars topology. We evaluate an unconstrained connectivity reading and a self-reachable reading that requires the initiator's colocated acceptor to be reachable. At Phase~2 threshold $k=3$, the $(1,0)$ gap is absent at every tier. Both gaps are absent for Earth under both readings and for LEO under the self-reachable reading; Moon and Mars retain $(0,1)$ exposure. The wall keeps Phase~2 on Earth and yields an $O(\text{tiers})$ readout of phase capability and failed obligations from a supplied connectivity summary. The readout interprets known connectivity; it does not detect failures, establish current authority, or choose a recovery policy. Mars provides the evaluated topology. The same structural diagnostic applies to edge-shaped systems, but that mapping is not terrestrial evaluation. Quorum properties are verified exhaustively in TLA+; all results are design-level.
+\end{abstract}
+
+\section{Introduction}
+
+Every acceptor can be running while a quorum service lacks a capability that its green dashboard appears to promise. The 5/1/1/3 Earth/LEO/Moon/Mars topology studied here makes this easy to see: a scheduled conjunction changes which phase obligations can be met without making the affected machines unhealthy. The same possibility exists whenever effective participation changes faster than configured membership. We make no claim about how often it occurs in deployed systems.
+
+An operator needs answers to two questions. Can some proposer \emph{acquire proposal authority}, the Phase~1 step used for leader election under Multi-Paxos? Can that proposer \emph{complete a commit} by forming Phase~2? A node-health dashboard answers neither. It also does not say whether a process already holds current authority.
+
+For familiar majority-based configurations, asking two questions can seem unnecessarily fussy. Classic Paxos commonly uses the same threshold quorum family in both phases. Phase symmetry then makes the two answers identical for every reachable set, while the majority threshold makes their shared value readable from one replica count. One count can answer both questions because two properties coincide. Majority supplies the familiar arithmetic; phase symmetry supplies the coincidence.
+
+Flexible Paxos~\cite{howard2016} keeps the cross-phase intersection needed for safety and permits the phase families to differ. A designer can use that freedom to keep the Phase~2 hot path small or local, while paying more for the less frequent Phase~1. Let $C$ be the reachable set from the network vantage being evaluated, and write $R_1(C)$ and $R_2(C)$ when $C$ contains the corresponding phase quorum. The two predicates may then diverge. We call $(R_1,R_2)=(1,0)$ and $(0,1)$ \emph{capability gaps}. We prove an exact characterization: $(1,0)$ is impossible precisely when every Phase~1 quorum contains a Phase~2 quorum, and $(0,1)$ is impossible under the mirrored containment. Strictly ordered predicates admit one gap direction; incomparable predicates admit both.
+
+We use a crumbling-wall geometry inspired by Peleg and Wool~\cite{peleg1995} to ask where a designer can restore the coincidence without returning inter-tier latency to the commit path. The tiers form rows: Phase~1 reads downward toward Earth, while Phase~2 remains on Earth. We report two connectivity readings. The unconstrained reading allows any reachable set; the self-reachable reading requires the initiator's colocated acceptor to be reachable. At threshold $k=3$, the $(1,0)$ gap is absent at every tier. Both gaps are absent for Earth under both readings and for LEO under the self-reachable reading. Moon and Mars still admit $(0,1)$ because their Phase~1 families carry additional participation obligations. These witnesses express deployment policy; the Earth anchor supplies the Paxos intersection.
+
+We call a quorum construction \emph{legible with respect to a supplied connectivity summary} when its phase capabilities and failed obligations can be read from a compact structural representation, without enumerating candidate quorum subsets or attempting protocol execution. The wall supplies such a representation in $O(\text{tiers})$ time. The readout interprets the configuration and connectivity it is given. It does not detect connectivity. It cannot establish current authority or select recovery policy, and it cannot guarantee that an operator consults the result. Those remain separate operational problems.
+
+The paper contributes the containment characterization and a construction-independent auditor, a pre-registered experiment that measures both mixed states under a stated single-decree retry policy, and the wall case study with its exact positive results and boundary. Every empirical claim maps to an executable artifact (\autoref{app:traceability}). The mapping to edge and control-plane systems is a structural applicability argument, not an evaluated result. We begin by asking what, precisely, makes one count answer both phase questions in the familiar case.
+
+
+\section{Why One Count Once Worked}
+\label{sec:background}
+
+For one replica count to answer both operational questions, two facts must line up. Classic Paxos~\cite{lamport1998} commonly uses one majority-quorum family for Phase~1 (prepare/promise) and Phase~2 (accept/accepted). Because the families are the same, a reachable set that can form one phase can form the other. Phase symmetry makes the two formability predicates equal.
+
+Majority supplies the second fact. A majority is a threshold family, so its formability can be decided by counting reachable replicas from the network vantage under consideration. The count is useful because the threshold makes the predicate readable. It answers both questions because phase symmetry has already made the predicates equal.
+
+Flexible Paxos~\cite{howard2016} separates the safety requirement from this convenient symmetry. Safety requires \emph{cross-phase} intersection: every Phase~1 quorum must intersect every Phase~2 quorum. Quorums within one phase need not intersect one another. For uniform thresholds, $q_1+q_2 > |N|$ is sufficient. A designer may therefore enlarge the less frequent Phase~1 family so that Phase~2, the commit hot path, remains small or local. Once the two families differ, the two operational questions can receive different answers.
+
+The uniform case shows the smallest cost of retaining the coincidence. Subject to $q_1+q_2 \ge n+1$, a cost-minimal split can be symmetric when $n$ is odd. When $n$ is even, symmetry adds one additional participant across the two phase thresholds. This is a post-hoc structural observation, not an explanation for deployment practice or for the odd-cluster convention.
+
+
+\section{Capability Gaps}
+\label{sec:capability}
+
+The operator's two questions have a common form, and nothing in this section depends on the construction that follows: the definitions and results below hold for any pair of quorum families over a finite universe.
+
+For a finite fixed universe $N_e$ and a nonempty quorum family $\mathcal{Q}$, define its formability predicate by
+\[
+\operatorname{Form}(\mathcal{Q}) = \{C \subseteq N_e \mid \exists Q \in \mathcal{Q}: Q \subseteq C\}.
+\]
+Given phase families $\mathcal{Q}_1$ and $\mathcal{Q}_2$, write $R_1(C)$ when $C \in \operatorname{Form}(\mathcal{Q}_1)$ and $R_2(C)$ when $C \in \operatorname{Form}(\mathcal{Q}_2)$. We say a proposer can \emph{acquire} when $R_1$ holds and is structurally commit-capable when $R_2$ holds. Actual commitment also requires valid runtime authority and ordinary protocol execution. Under Multi-Paxos, acquisition is leader election and amortizes over many commands; under single-decree Paxos it is per-decree ballot acquisition and every decree pays for it. Our measurements are single-decree throughout (Section~\ref{sec:valence}), so ``acquisition'' carries the general sense everywhere except the design-time leadership reading in Section~\ref{sec:leadership}.
+
+The pair $(R_1,R_2)$ has four joint states. Two are familiar: $(1,1)$ makes both phases formable, and $(0,0)$ makes neither formable. We call the mixed states \emph{capability gaps}: $(1,0)$ permits acquisition but not commit formation, while $(0,1)$ permits commit formation but not acquisition. A single family used for both phases makes both gaps empty. Syntactically different families can also induce equal predicates; semantic equality of $\operatorname{Form}(\mathcal{Q}_1)$ and $\operatorname{Form}(\mathcal{Q}_2)$ is what matters. Once the predicates differ, we need to know whether one or both mixed states can occur.
+
+\refstepcounter{prop}\label{prop:gap}\textbf{Proposition \theprop\ (gap emptiness).} The $(1,0)$ gap is empty if and only if every $Q_1 \in \mathcal{Q}_1$ contains some $Q_2 \in \mathcal{Q}_2$. Dually, the $(0,1)$ gap is empty if and only if every $Q_2 \in \mathcal{Q}_2$ contains some $Q_1 \in \mathcal{Q}_1$.
+
+\textit{Proof.} Both predicates are monotone in $C$: adding a reachable node never revokes formability. If some $Q_1$ contains no $Q_2$, take $C=Q_1$; then $R_1(C)$ holds and $R_2(C)$ fails. Conversely, if every $Q_1$ contains a $Q_2$, every $C$ admitting a $Q_1$ admits that contained $Q_2$. The dual argument is symmetric. \hfill $\square$
+
+\refstepcounter{cor}\label{cor:correspondence}\textbf{Corollary \thecor\ (exact correspondence).} The reachable gap profile is a complete invariant of the ordering between the two formability predicates: equal predicates admit neither gap; $R_1$ strictly implying $R_2$ admits only $(0,1)$; $R_2$ strictly implying $R_1$ admits only $(1,0)$; and incomparable predicates admit both. This follows by applying Proposition~\ref{prop:gap} in both directions and distinguishing equality from the two strict implications.
+
+The proof is short because formability is monotone. While both phases used the same family, the question had nothing to distinguish: both gaps were empty by inspection. Flexible quorums made the question useful by allowing the phase predicates to differ. Proposition~\ref{prop:gap} then says exactly how they differ.
+
+Our construction-independent auditor implements this test over explicit finite families. It validates the universe and families, removes duplicate and nonminimal quorums, checks every cross-phase pair for safety, classifies the four predicate relations, and emits deterministic minimum-cardinality gap witnesses. An optional pinned set restricts the analyzed domain to connectivity states containing those nodes without changing the configured families or their safety result. Writing $\min(\mathcal{Q})$ for the canonical minimal antichain, classification takes $O(|\min(\mathcal{Q}_1)|\,|\min(\mathcal{Q}_2)|\,|N_e|)$ time, excluding input parsing, deterministic sorting, and the separate quadratic-in-family-size minimization passes. An independent mode enumerates every connectivity set rather than reusing the containment classifier. It rejects a deliberately mutated report and agrees with the optimized classifier over all 129{,}032 combinations of nonempty family pair and pinned domain on a three-node universe. The proof above remains primary; the auditor makes the criterion executable and checks the registered wall instances against the existing connectivity enumeration with zero disagreements.
+
+
+\section{Putting the Gaps on a Wall}
+\label{sec:construction}
+
+Peleg and Wool~\cite{peleg1995} arrange nodes in rows of potentially different widths. A crumbling-wall quorum takes one complete row and one representative from every row below it. Two such quorums intersect: if their complete rows differ, the higher quorum carries a representative in the lower quorum's complete row; if the complete rows match, they share that row.
+
+We split this geometry across the two Paxos phases. Each tier's Phase~1 family reads downward from that tier, while Phase~2 stays on the bottom row. The Earth anchor supplies the Paxos intersection. The non-anchor witnesses encode participation policy. Removing one of those witnesses changes that policy; it does not weaken the anchor-based safety argument.
+
+\subsection{System Model}
+For each configuration epoch~$e$, let $N_e$ be the fixed logical acceptor universe and let $C_t \subseteq N_e$ be the acceptors effectively reachable at time~$t$. A \emph{decision window} is the interval over which we evaluate phase formability against one such connectivity state; $N_e$ remains fixed within that window even when $C_t$ changes between windows. Our results apply epoch by epoch. Changing $N_e$ is a reconfiguration and state-transfer decision that requires its own protocol; it is outside this paper's scope and is not modeled as ordinary reachability churn. For the evaluated epoch below, we write $N$ for $N_e$.
+
+Let the acceptor universe be
+\[
+N = E \cup L \cup U \cup M,
+\]
+where the tiers are pairwise disjoint and represent Earth, LEO, Moon, and Mars respectively. In the evaluated topology,
+\[
+|E| = 5,\quad |L| = 1,\quad |U| = 1,\quad |M| = 3,\quad |N| = 10.
+\]
+We call this the 5/1/1/3 topology. Tiers are ordered by latency: Earth is the fastest (bottom of the wall), Mars is the slowest (top). The network is asynchronous with configurable per-link delay and jitter. Acceptors are crash-stop and non-Byzantine. Links may be removed during scheduled blackout windows.
+
+The simulator uses three logical consensus scopes:
+\begin{itemize}
+\item \textbf{Earth-local}: Flexible Paxos over the five Earth nodes ($q_1 = 4$, $q_2 = 2$).
+\item \textbf{Mars-local}: majority quorum over the three Mars nodes ($q = 2$).
+\item \textbf{Global}: the crumbling-wall construction defined below, over all ten nodes.
+\end{itemize}
+
+\subsection{Per-Tier Phase~1 Families}
+
+The wall maps tiers to rows, ordered bottom (Earth, fast) to top (Mars, slow), as shown in Figure~\ref{fig:wall}. We index tiers from the bottom: $T_0 = E$ (Earth), $T_1 = L$ (LEO), $T_2 = U$ (Moon), $T_3 = M$ (Mars). A proposer at tier~$i$ forms its Phase~1 quorum by reading \emph{downward} from row~$i$: it needs at least one respondent from its own tier and every tier below.
+
+\begin{center}
+\small
+\begin{tabular}{llll}
+\toprule
+Initiating tier & Phase~1 scope & Tiers & Min size \\
+\midrule
+Earth (tier 0) & Earth only & 1 & 1 \\
+LEO (tier 1) & LEO $+$ Earth & 2 & 2 \\
+Moon (tier 2) & Moon $+$ LEO $+$ Earth & 3 & 3 \\
+Mars (tier 3) & all four tiers & 4 & 4 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    node/.style={draw, minimum width=0.7cm, minimum height=0.7cm, font=\footnotesize},
+    tierlab/.style={font=\footnotesize\bfseries, anchor=east},
+    arrow/.style={-{Stealth[length=3pt]}, thick},
+    phase2box/.style={draw, fill=black!8, minimum width=0.7cm, minimum height=0.7cm, font=\footnotesize},
+]
+% Earth row (tier 0) - 5 nodes
+\node[phase2box] (e1) at (0, 0) {$e_1$};
+\node[phase2box] (e2) at (0.9, 0) {$e_2$};
+\node[phase2box] (e3) at (1.8, 0) {$e_3$};
+\node[phase2box] (e4) at (2.7, 0) {$e_4$};
+\node[phase2box] (e5) at (3.6, 0) {$e_5$};
+\node[tierlab] at (-0.6, 0) {$T_0$: Earth};
+
+% LEO row (tier 1) - 1 node
+\node[node] (l1) at (1.8, 1.1) {$\ell_1$};
+\node[tierlab] at (-0.6, 1.1) {$T_1$: LEO};
+
+% Moon row (tier 2) - 1 node
+\node[node] (u1) at (1.8, 2.2) {$u_1$};
+\node[tierlab] at (-0.6, 2.2) {$T_2$: Moon};
+
+% Mars row (tier 3) - 3 nodes
+\node[node] (m1) at (0.9, 3.3) {$m_1$};
+\node[node] (m2) at (1.8, 3.3) {$m_2$};
+\node[node] (m3) at (2.7, 3.3) {$m_3$};
+\node[tierlab] at (-0.6, 3.3) {$T_3$: Mars};
+
+% Phase 1 arrows showing "read downward"
+% Mars proposer reads all 4 tiers
+\draw[arrow, color=red!70!black, densely dashed] (4.1, 3.3) -- node[right, font=\tiny, pos=0.5] {} (4.1, -0.15);
+\node[font=\tiny, color=red!70!black, anchor=west] at (4.1, 3.0) {$\mathcal{Q}_1^{(3)}$: all tiers};
+
+% Moon proposer reads 3 tiers
+\draw[arrow, color=blue!70!black, densely dashed] (4.5, 2.4) -- (4.5, -0.15);
+\node[font=\tiny, color=blue!70!black, anchor=west] at (4.5, 2) {$\mathcal{Q}_1^{(2)}$};
+
+% LEO proposer reads 2 tiers
+\draw[arrow, color=green!50!black, densely dashed] (4.9, 1.5) -- (4.9, -0.15);
+\node[font=\tiny, color=green!50!black, anchor=west] at (4.9, 1) {$\mathcal{Q}_1^{(1)}$};
+
+% Earth proposer reads 1 tier
+\draw[arrow, color=black!60, densely dashed] (5.3, 0.3) -- (5.3, -0.15);
+\node[font=\tiny, color=black!60, anchor=west] at (5.3, 0.2) {$\mathcal{Q}_1^{(0)}$};
+
+% Phase 2 brace
+\draw[decorate, decoration={brace, amplitude=4pt, mirror}] (-0.15, -0.5) -- (3.75, -0.5)
+    node[midway, below=4pt, font=\footnotesize] {$\mathcal{Q}_2 = \{E\}$ (Phase~2: hot path)};
+\end{tikzpicture}
+\caption{The crumbling-wall construction over the 5/1/1/3 topology. Each tier's Phase~1 quorum reads downward through the wall (dashed arrows). Phase~2 uses only the Earth row (shaded). The wall narrows from bottom to top: wider rows offer more quorum choices.}
+\label{fig:wall}
+\end{figure}
+
+Let $\mathcal{Q}_1^{(i)}$ denote the Phase~1 family for a proposer at tier~$i$:
+\[
+\mathcal{Q}_1^{(i)} = \bigl\{Q \subseteq N \;\big|\; \forall\, j \le i:\; Q \cap T_j \neq \emptyset\bigr\}.
+\]
+A proposer at tier~$i$ needs at least one node from every tier at or below it ($j \le i$). For example, $\mathcal{Q}_1^{(2)}$ (Moon) requires intersection with $T_0$ (Earth), $T_1$ (LEO), and $T_2$ (Moon), which is every tier from Moon down to Earth. For relaxed Phase~2 (Section~\ref{sec:relaxed}), Phase~1 additionally requires enough Earth nodes to satisfy a pigeonhole intersection constraint.
+
+Only the Earth floor is required for Paxos safety. Each additional downward-path witness represents a deployment policy that requires a tier to participate in acquisition, such as local representation, administrative control, sovereignty, or fencing before authority crosses a boundary. If no such policy applies, the extra witness is not justified by consensus itself; in that setting the wall should be read as an analytical construction rather than a recommended deployment geometry.
+
+\subsection{Phase~2 Family}
+
+The Phase~2 family places the hot commit path entirely on the fast tier:
+\[
+\mathcal{Q}_2 = \{E\}.
+\]
+That is, Phase~2 requires all five Earth nodes (the strict construction). Section~\ref{sec:relaxed} relaxes this to $k$-of-$|E|$.
+
+\subsection{Safety: Quorum Intersection}
+
+\refstepcounter{prop}\label{prop:intersection}\textbf{Proposition \theprop.} For every tier $i$ and every $Q_1 \in \mathcal{Q}_1^{(i)}$, $Q_2 \in \mathcal{Q}_2$: $Q_1 \cap Q_2 \neq \emptyset$.
+
+\textit{Proof.} Every $\mathcal{Q}_1^{(i)}$ requires $Q_1 \cap T_0 \neq \emptyset$ (since $0 \le i$ for all $i$, i.e., Earth is at or below every tier). $Q_2 = E = T_0$. Therefore $Q_1 \cap Q_2 \supseteq Q_1 \cap T_0 \neq \emptyset$. \hfill $\square$
+
+The intersection follows from the wall's structure: every path through the wall reaches the bottom row, and Phase~2 is the bottom row.
+
+We verified this mechanically in TLA+. For readers who have not used it: TLA+ is a specification language whose model checker, TLC, enumerates \emph{every} state reachable from the initial conditions of a finite model and checks the stated invariant in each one. A run is \emph{complete} when that enumeration reaches a fixed point and no reachable state remains unexamined. Such a run proves the invariant for that finite model; it is not a statistical sample of behaviors. The \texttt{QuorumIntersection} specification enumerates every (construction $\times$ initiating tier $\times$ $Q_1$ $\times$ $Q_2$) combination for the strict, $k{=}4$, and $k{=}3$ families over the full 10-node topology (27{,}921 states, complete); \texttt{ExhaustiveIntersection} re-checks the strict and $k{=}4$ families as parse-time assumptions. No intersection failure was found.
+
+For the full Paxos protocol (not just quorum intersection), we verify safety over a reduced 6-node topology ($3E + 1L + 1U + 1M$) that preserves the quorum-intersection structure. The invariant the reduction preserves is the pigeonhole inequality, not tier membership alone: in the reduced model both quorum families guarantee at least two of the three Earth nodes ($2 + 2 > 3$), and in the full modeled family $Q_1$ carries at least two Earth nodes against a 4-of-5 $Q_2$ ($2 + 4 > 5$). Both instantiate $|Q_1 \cap E| \ge |E| - k + 1$ with the margin $|E| - k = 1$ held fixed. (Tier membership alone suffices only under strict $\mathcal{Q}_2 = \{E\}$, where any Earth node in $Q_1$ intersects it.) Liveness properties (crash tolerance, progress under partial failure) are topology-size-dependent and are evaluated only at full scale. Over the reduced topology, single-decree Paxos agreement was model-checked completely (67M~states, no violation).
+
+\textbf{Verification scope.} The protocol-level specification models a single all-tier Phase~1 family rather than the per-tier families of Section~\ref{sec:construction}: it exercises the protocol machinery under wall-shaped quorums, but safety of the per-tier construction itself rests on Proposition~\ref{prop:intersection} and the standard Flexible Paxos argument, with the intersection premise checked exhaustively above. The proof is primary; the model checking is corroboration. Specifications are in \texttt{tla/} (see \autoref{app:traceability}).
+
+\subsection{What ``Global'' Means}
+
+When an Earth-based proposer completes both phases using only Earth nodes, the decision is \emph{global} in the Paxos sense: any future proposer at any tier, upon completing Phase~1, will discover this value in the Earth acceptors' state and cannot contradict it. Global consensus does not require that all tiers participated, only that no future quorum can produce a conflicting result.
+
+
+\section{Where the Wall Works, and Where It Stops}
+
+At $k=3$, the $(1,0)$ gap is absent at every tier. At the same threshold, both gaps are absent for Earth under both connectivity readings, and both gaps are absent for LEO under the self-reachable reading. The commit path remains on Earth. The construction therefore restores the old coincidence at named tiers without returning inter-tier latency to Phase~2. The result has a boundary: $(0,1)$ remains reachable for Moon and Mars because their Phase~1 families retain downward participation obligations.
+
+\subsection{The Exact Boundary}
+\label{sec:capability-wall}
+
+Section~\ref{sec:capability} defines the two formability predicates for an arbitrary pair of quorum families. The wall instantiates them per tier: write $R_1(i,C)$ when $C \in \operatorname{Form}(\mathcal{Q}_1^{(i)})$ and $R_2(i,C)$ when $C \in \operatorname{Form}(\mathcal{Q}_2)$, so every tier carries its own acquisition predicate against one shared commit predicate. Which gaps are reachable is therefore a per-tier question, and the answer is not uniform across tiers.
+
+\refstepcounter{prop}\label{prop:boundary}\textbf{Proposition \theprop\ (boundary).} For the construction of Section~\ref{sec:construction} under relaxed $\mathcal{Q}_2 = k$-of-$|E|$ (Section~\ref{sec:relaxed}), $(1,0)$ is unreachable at \emph{every} tier if and only if $|E| - k + 1 \ge k$, that is $k \le \lceil |E|/2 \rceil$. Sufficiency is unconditional: it does not depend on the number of tiers, their sizes, or the initiating tier. The converse additionally requires non-degeneracy: no empty wall row.
+
+The arithmetic is the same hitting-set bound that carries safety. A $Q_1$ holds at least $|E|-k+1$ Earth nodes and a $Q_2$ holds $k$; when $|E|-k+1 \ge k$, every $Q_1$ already contains a full $Q_2$ and Proposition~\ref{prop:gap} applies.
+
+\textbf{The gradient.} Proposition~\ref{prop:boundary} governs $(1,0)$ through the Earth floor. The $(0,1)$ direction follows a different mechanism: the downward chain. A proposer at $T_2$ (Moon) needs one witness from $T_1$ (LEO), and this topology has exactly one LEO node. Sever it while all five Earth nodes remain reachable and $\mathcal{Q}_2$ is formable while $\mathcal{Q}_1^{(2)}$ is not. Exhaustive enumeration over all $2^{10}$ connectivity states, for every tier and every $k$, gives the following compact table under the self-reachable reading:
+
+\begin{center}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & $T_0$ (E) & $T_1$ (L) & $T_2$ (U) & $T_3$ (M) \\
+\midrule
+$(1,0)$ reachable & $k \ge 4$ & $k \ge 4$ & $k \ge 4$ & $k \ge 4$ \\
+$(0,1)$ reachable & $k \le 2$ & $k \le 2$ & all $k$ & all $k$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+For $k \le 3$, $(1,0)$ is absent at every tier. For $k \ge 3$, $(0,1)$ is absent for Earth under both readings and for LEO under the self-reachable reading. The LEO result depends on its initiator being able to reach its colocated acceptor. Under the unconstrained reading, LEO retains $(0,1)$ for every $k$: its single node can be severed while Earth remains whole. We state that sensitivity because it determines whether the coincidence extends to one tier or two.
+
+Moon and Mars retain $(0,1)$ under both readings for every $k$. Each has an intervening witness row between itself and the Earth anchor, and changing the Earth threshold cannot remove that obligation. At the other endpoint, $k \ge 4$ violates Proposition~\ref{prop:boundary}'s bound and opens $(1,0)$ everywhere. The useful design point is $k=3$: it closes $(1,0)$ everywhere, closes both gaps at Earth under both readings and at self-reachable LEO, and keeps Phase~2 on Earth. No tested threshold closes both gaps at every tier.
+
+The witnesses implement participation policy; legibility makes the resulting obligation readable. When a capability gap remains possible, state-aware mitigation first requires distinguishing the state. The readout supplies that predicate for connectivity data supplied to it. Enumeration and auditor artifacts are in \texttt{results/capability/} (see \autoref{app:traceability}).
+
+The structural state itself has no intrinsic valence. We therefore tested what happens when a proposer occupies each mixed state under one stated topology, retry policy, and budget.
+
+
+\section{What Happens Inside the Gaps}
+\label{sec:valence}
+
+The wall tells us which mixed states a connectivity summary permits. It cannot tell us how a proposer in one of those states will interact with another proposer. Before the experiment code existed, we registered four predictions, their falsification criteria, and the consequence of a null result. The primary prediction was that a $(1,0)$ incumbent would delay a healthy proposer more than an incumbent that fails Phase~1. Overlapping Wilson intervals would falsify that prediction; a higher completion rate for the $(1,0)$ arm with disjoint intervals would reverse it. The remaining predictions concerned whether disruption was transient, whether repeated attempts created the expected cost, and whether the timing of the Phase~1 failure mattered.
+
+The resulting single-decree Paxos experiment has five arms: a mid-round flip from $(1,1)$ to $(1,0)$, no incumbent, an incumbent fixed in $(0,1)$, a healthy $(1,1)$ incumbent, and a mid-round flip to $(0,1)$. A healthy Earth proposer competes with a Moon incumbent at Phase~2 threshold $k=5$. The incumbent's maximum round count is swept over $\{1,2,4,8\}$, with 50 seeds per cell; the healthy proposer has a fixed eight-round budget. The harness records completion only when the healthy proposer returns success backed by a decision certificate. ``Prevented decision'' means that it did not do so before the run ended after the healthy proposer's fixed eight-round budget. The phrase is not evidence of livelock.
+
+\begin{center}
+\setlength{\tabcolsep}{4pt}
+\footnotesize
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Incumbent condition & $P(\text{ok})$ & med.\ ttfc & rounds & NACKs \\
+\midrule
+$(1,0)$ flip, budgets 1--8 & 1.000 & 3.420~s & 2 & 7 \\
+$(1,1)$ healthy, budgets 1--8 & 1.000 & 3.420~s & 2 & 7 \\
+$(0,1)$ early/late, budget 8 & 0.000 & --- & 8 & 48--49 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The prediction failed. It failed in reverse. At every incumbent budget, the $(1,0)$ arm matched the healthy $(1,1)$ contender on every recorded metric: completion probability 1.000, median time to first commit 3.420~s, two healthy rounds, and seven NACKs. The incumbent completed from one to eight Phase~1 quorums as its budget increased, while the healthy outcome stayed flat. This is an experimental equivalence on the recorded metrics under these conditions, not a universal claim about $(1,0)$.
+
+The $(1,0)$ incumbent also supplied the value that was decided. Its partial Phase~2 reached four of five Earth acceptors. The healthy proposer's next Phase~1 found that accepted value, and ordinary Paxos value adoption carried it to commitment. The result therefore demonstrates the recovery mechanism described for Flexible Paxos: acquisition can preserve and finish work begun by a proposer that lost commit capability.
+
+The $(0,1)$ arms produced the other direction. With incumbent budgets one, two, and four, the healthy proposer completed in all 50 seeds, while median time to first commit rose from 3.420 to 6.665 to 13.186~s in the early arm. At incumbent budget eight, the healthy proposer exhausted its eight rounds in all 50 seeds; early and late placement both produced zero completions, with 48--49 NACKs. These are bounded failures under one topology, one severed link, and the modeled backoff policy. They establish neither intrinsic harm nor livelock.
+
+The traces expose the mechanism. A proposer that fails Phase~1 receives NACKs and returns to its short backoff. A proposer that completes Phase~1 but cannot form Phase~2 waits for the phase timeout before trying again. In this harness, success in the first phase slows the rate at which the incumbent can raise ballots. The timeout supplies a structural floor because it must exceed the round trip; the backoff policy determines how fast the floor-free cycle runs.
+
+Under Multi-Paxos, a still-authorized $(0,1)$ leader can continue committing and encounter the missing Phase~1 capability only when authority must be reacquired. Single-decree Paxos pays Phase~1 for every decree, so this experiment exposes the state immediately. The operational response can therefore reverse with the state: restarting an authorized $(0,1)$ leader can discard the only currently usable authority, while acquisition through a $(1,0)$ state can recover an accepted value. A node-health summary distinguishes neither case. How can a designer or operator read which state the topology permits?
+
+Five deviations remain recorded with their reasons in the artifact: the flip occurs before Phase~2 fan-out; the intended $(0,0)$ control is realized as $(0,1)$; the incumbent is Moon-tier; the late-$(0,1)$ arm was added to test the timing prediction; and the experiment exists only at $k=5$. The theorem and wall enumeration stand independently of this experiment. These runs measure behavior inside constructed mixed states; they do not validate either structural result.
+
+
+\section{Related Work}
+
+Paxos established the standard safety argument for replicated state machines under asynchronous messaging and crash failures~\cite{lamport1998}. Flexible Paxos showed that safety requires only Phase~1/Phase~2 cross-intersection, not universal majority~\cite{howard2016}. Our characterization builds on that result but does not claim containment itself as a new mathematical tool. The contribution is the exact correspondence between phase-formability ordering and its complete gap profile, the operational interpretation of those gaps, and their application to phase-asymmetric Paxos.
+
+The $(1,0)$ state is also present in Flexible Paxos: its $|Q_1|{=}1$, $|Q_2|{=}N$ construction permits acquisition before commit is formable, and its row-failure discussion uses Phase~1 to recover past decisions before reconfiguration. That work identifies the state and a constructive use for it. We ask the design-time question of whether a given construction admits the state at all, examine the dual state, and supply a readout for known connectivity. The readout matters because a recovery prescription must first know which predicate holds.
+
+Containment has important prior uses. Refined Quorum Systems~\cite{guerraoui2010rqs} nests quorum classes $QC_1 \subseteq QC_2 \subseteq RQS$ to connect resilience with optimistic complexity, subject to adversary-aware intersection properties. That class inclusion is a design and correctness condition, not an ordering of two phase-formability predicates over connectivity states. Li, Chan, and Lesani's quorum subsumption~\cite{li2023} is a member-indexed containment condition: for every process $p$ in a quorum $q$, some quorum in $p$'s personal family is contained in $q$. It supports progress in a heterogeneous Byzantine trust model. We instead compare two phase predicates over one fixed crash-stop acceptor universe. The quantifiers and the questions differ even though both results use containment.
+
+Grid and crumbling-wall quorum constructions~\cite{cheung1992,peleg1995} demonstrate that quorum geometry can be engineered around combinatorial structure. Howard et al.\ note explicitly that Flexible Paxos can use such constructions; we take up that suggestion. Peleg and Wool analyzed crumbling-wall availability under random, independent node failures. Our wall case study maps rows to physical latency tiers and examines per-tier liveness under scheduled, topology-correlated disconnection. Li, Chan, and Lesani's Satrapy system~\cite{li2026satrapy} carries heterogeneous quorum theory into practical consensus. Hierarchical quorum structures have a longer history in database replication~\cite{daudjee2004} and coordination services; our wall differs in that the hierarchy reflects physical latency tiers rather than organizational or logical grouping.
+
+Geo-distributed consensus provides the closest practical analog. WPaxos~\cite{ailijiang2019wpaxos} uses Flexible Paxos with grid quorum layouts and per-object multi-leader coordination to keep commits local; it is the nearest point of comparison. WPaxos's grid quorums are symmetric: $Q_1$ spans $Z - f_z$ zones and $Q_2$ spans $f_z + 1$ zones, with the same structure regardless of which node initiates. Our per-tier $\mathcal{Q}_1^{(i)}$ families are asymmetric as the initiating tier determines the quorum scope, which produces a leadership cost gradient that symmetric grids structurally cannot express (Section~\ref{sec:leadership}). EPaxos~\cite{moraru2013} removes the leader bottleneck for non-conflicting commands. Mencius~\cite{mao2008} distributes leader responsibility across WAN sites. MDCC~\cite{kraska2013} achieves single-round cross-datacenter commits. All four optimize for tens-to-hundreds of milliseconds WAN latency and assume all replicas are usually reachable. Our setting differs in two respects: the asymmetry spans three orders of magnitude (sub-second to 1342~s), and the target phenomenon is scheduled total disconnection rather than heterogeneous latency.
+
+Delay-tolerant networking~\cite{cerf2007,fall2003} motivates the operating regime but addresses routing and custody transfer, not consensus. CRDTs have been studied in DTN-like settings~\cite{guidec2023}. SwarmDAG~\cite{tran2019swarmdag} uses extended virtual synchrony for partition-tolerant robot swarms; Tran et al.~\cite{tran2019milcom} measure consensus latency under partitioning. Protocol Labs' IPC~\cite{delarocha2022} uses hierarchical subnets for blockchain scaling. NASA's DSN study~\cite{connell2011} evaluates database replication for ground stations. Our work occupies a gap: Paxos safety under topology-shaped quorum geometry and scheduled disconnection, with per-tier liveness characterization.
+
+
+\section{Reading the Wall}
+\label{sec:reading}
+\label{sec:expdesign}
+\label{sec:results}
+
+\subsection{Readout Interface}
+\label{sec:liveness-wall}
+
+The wall-specific readout takes named tiers, a Phase~2 threshold, an initiating tier, a reachable-node summary, and the provenance of configuration and connectivity. It returns $(R_1,R_2)$, quorum witnesses, and typed failed obligations in one pass over the tiers. It reports runtime authority as unknown and service policy as not inferred. Connectivity is an input to the interface; the readout does not detect failures, identify a current leader, choose a client contract, or ensure that anyone acts on its output.
+
+For tier~$i$, the pass checks whether at least one node is reachable in every required row $T_j$ with $j \le i$, then checks the Earth threshold for Phase~2. During the modeled Mars conjunction blackout, Earth, LEO, and Moon retain the rows they require. Mars cannot reach the inner rows, so its Phase~1 obligation fails (Figure~\ref{fig:blackout}). This is the promised $O(\text{tiers})$ check. It establishes structural formability for a sole, timely proposer; concurrent promises, current authority, and protocol execution remain separate.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    node/.style={draw, minimum width=0.65cm, minimum height=0.65cm, font=\footnotesize},
+    dead/.style={draw, minimum width=0.65cm, minimum height=0.65cm, font=\footnotesize, fill=black!20, text=black!40},
+    ok/.style={draw, minimum width=0.65cm, minimum height=0.65cm, font=\footnotesize, fill=green!12},
+    tierlab/.style={font=\footnotesize\bfseries, anchor=east},
+    arrow/.style={-{Stealth[length=3pt]}, thick},
+]
+\node[ok] (e1) at (0, 0) {$e_1$};
+\node[ok] (e2) at (0.85, 0) {$e_2$};
+\node[ok] (e3) at (1.7, 0) {$e_3$};
+\node[ok] (e4) at (2.55, 0) {$e_4$};
+\node[ok] (e5) at (3.4, 0) {$e_5$};
+\node[tierlab] at (-0.5, 0) {$T_0$};
+\node[ok] (l1) at (1.7, 1.0) {$\ell_1$};
+\node[tierlab] at (-0.5, 1.0) {$T_1$};
+\node[ok] (u1) at (1.7, 2.0) {$u_1$};
+\node[tierlab] at (-0.5, 2.0) {$T_2$};
+\node[dead] (m1) at (0.85, 3.0) {$m_1$};
+\node[dead] (m2) at (1.7, 3.0) {$m_2$};
+\node[dead] (m3) at (2.55, 3.0) {$m_3$};
+\node[tierlab, text=black!40] at (-0.5, 3.0) {$T_3$};
+\draw[thick, red, densely dashed] (-2.0, 2.5) -- (3.5, 2.5);
+\node[font=\tiny\bfseries, color=red, anchor=west] at (3.6, 2.5) {blackout};
+\draw[arrow, color=green!50!black] (4.1, 0.5) --  (4.1, -0.3);
+\node[font=\tiny, color=green!50!black] at (3.9, 0.1) {$\checkmark$};
+\draw[arrow, color=green!50!black] (4.4, 1.3) -- (4.4, -0.3);
+\node[font=\tiny, color=green!50!black] at (4.2, 1) {$\checkmark$};
+\draw[arrow, color=green!50!black] (4.7, 2.1) -- (4.7, -0.3);
+\node[font=\tiny, color=green!50!black] at (4.5, 1.7) {$\checkmark$};
+\draw[arrow, color=red!70!black] (3.4, 3.4) -- (3.4, 2.7);
+\node[font=\large, color=red] at (3.7, 3) {$\times$};
+\end{tikzpicture}
+\caption{Structural readout under the supplied hard-blackout connectivity state in the 5/1/1/3 wall; no latency, timeout, or stochastic trial is involved. Earth, LEO, and Moon retain their required rows. Mars does not.}
+\label{fig:blackout}
+\end{figure}
+
+The repository supplies planetary and edge JSON inputs to the same deterministic interface. They are a demonstration artifact, not empirical evidence. The edge input is a structural mapping and not an evaluated result: it supports no claim about terrestrial latency, availability, or prevalence. The executable interface is \texttt{experiments/\allowbreak capability\_readout.py}; input and output examples are listed in \autoref{app:traceability}.
+
+\textbf{Design-time gradient.}\label{sec:leadership} The wall also makes the number of valid Phase~1 quorums readable by tier. If $f_i$ nodes lie above tier~$i$, then
+\[
+N_i=2^{f_i}\prod_{j\le i}(2^{|T_j|}-1).
+\]
+Each required row contributes a nonempty subset; nodes above the initiator are unconstrained. Moving up one tier changes exactly one factor from $2^{|T_{i+1}|}$ to $2^{|T_{i+1}|}-1$, so $N_{i+1}<N_i$ for every wall. The 5/1/1/3 construction gives $992,496,248,217$ from Earth through Mars (Figure~\ref{fig:gradient}). These are structural counts, confirmed by exhaustive enumeration; they are not availability estimates. An initiator-independent majority family assigns every tier the same 386 valid quorums and cannot express this gradient.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    bar/.style={fill=black!25, draw=black!50},
+    barlab/.style={font=\footnotesize, anchor=south},
+    ticklab/.style={font=\footnotesize},
+]
+\def\scale{0.0035}
+\fill[bar] (0, 0) rectangle (0.8, 992*\scale);
+\fill[bar] (1.2, 0) rectangle (2.0, 496*\scale);
+\fill[bar] (2.4, 0) rectangle (3.2, 248*\scale);
+\fill[bar] (3.6, 0) rectangle (4.4, 217*\scale);
+\node[barlab] at (0.4, 992*\scale) {992};
+\node[barlab] at (1.6, 496*\scale) {496};
+\node[barlab] at (2.8, 248*\scale) {248};
+\node[barlab] at (4.0, 217*\scale) {217};
+\node[ticklab, anchor=north] at (0.4, -0.1) {Earth};
+\node[ticklab, anchor=north] at (1.6, -0.1) {LEO};
+\node[ticklab, anchor=north] at (2.8, -0.1) {Moon};
+\node[ticklab, anchor=north] at (4.0, -0.1) {Mars};
+\node[font=\footnotesize, anchor=north] at (0.4, -0.45) {(tier 0)};
+\node[font=\footnotesize, anchor=north] at (1.6, -0.45) {(tier 1)};
+\node[font=\footnotesize, anchor=north] at (2.8, -0.45) {(tier 2)};
+\node[font=\footnotesize, anchor=north] at (4.0, -0.45) {(tier 3)};
+\draw[->] (-0.1, 0) -- (-0.1, 3.8);
+\node[font=\footnotesize, rotate=90, anchor=south] at (-0.5, 1.8) {$|\mathcal{Q}_1^{(i)}|$ (strict)};
+\draw (-0.1, 0) -- (4.6, 0);
+\draw[<->, thick, densely dotted] (5.0, 217*\scale) -- node[right, font=\footnotesize] {4.6$\times$} (5.0, 992*\scale);
+\end{tikzpicture}
+\caption{Phase~1 quorum count by initiating tier under the strict wall. The values are exhaustive structural counts over the fixed 5/1/1/3 configuration; no connectivity distribution, timeout, or stochastic trial is assumed.}
+\label{fig:gradient}
+\end{figure}
+
+\subsection{Evaluation Method}
+
+Eidolon is a discrete-event simulator built on SimPy. Acceptors process Prepare and Accept messages with configurable processing delay. Proposers fan out messages to all acceptors and collect responses with a per-phase timeout. The network model assigns entities to named locations with per-link latency, jitter, and optional loss. Blackout is modeled as deterministic link removal; the repeater model substitutes a degraded alternate path. Event ordering is by simulation timestamp; the simulator is deterministic given a seed.
+
+\textbf{Topology.}
+
+Five Earth ground stations (NA-West, Europe, Asia, SA-East, Africa) with cross-continental latencies of 30--120~ms. One LEO satellite with 20--45~ms links to ground stations. One Moon node at 1.28~s one-way. Three Mars nodes at configurable one-way delay (186--1342~s, representing closest approach to opposition). Mars-local links are 5~ms.
+
+We evaluate two network variants:
+\begin{itemize}
+\item \textbf{Sparse}: LEO has links to 3 of 5 Earth stations (NA-West, Europe, Asia). Mars has links to 2 of 5 (NA-West, Europe). This models a single LEO satellite with limited ground coverage and a Mars relay with two tracking stations.
+\item \textbf{Full coverage}: LEO and Mars have links to all 5 Earth stations. This models a LEO constellation with global coverage and a deep-space network with worldwide antenna placement.
+\end{itemize}
+
+\textbf{Experiments.}
+
+Three experiment families probe the construction. The separate registered experiment in Section~\ref{sec:valence} measures proposer behavior inside the two mixed states.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Experimental design.}
+\label{tab:design}
+\footnotesize
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.30\linewidth}>{\raggedright\arraybackslash}p{0.34\linewidth}}
+\toprule
+Experiment & Purpose & Key parameters \\
+\midrule
+Parameter sweep & Confirm structural invariance of Earth-initiated global consensus across Mars delay and blackout duration & Mars delay $\in \{186, 750, 1342\}$~s; blackout $\in \{300, 900, 1800\}$~s; 50 seeds per point \\
+Per-tier sweep & Measure which tiers retain global liveness; compare sparse vs.\ full-coverage topologies & Initiating tier $\in \{$Mars, Moon, LEO, Earth$\}$; both topologies; 186~s Mars delay; 900 and 1800~s blackouts as stated; 50 seeds \\
+Crash tolerance & Characterize the tradeoff between Phase~2 relaxation ($k$-of-$|E|$) and crash tolerance & $k \in \{3, 4, 5\}$; 0--2 Earth crashes; 186~s; 900~s blackout; 50 seeds \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Fixed parameters across all experiments are listed in Table~\ref{tab:params} (\autoref{app:params}). All seeds are 40--89 (50 runs per point). Results are reported as means with 95\% confidence intervals.
+
+
+\subsection{Geometry and Competitive Majority Baseline}
+
+To calibrate the effect of quorum geometry, we compare three constructions over the identical topology, blackout model, and parameter sweep. The \emph{flat} construction uses a single Phase~1 family requiring all four tiers:
+\[
+\mathcal{Q}_1^{\text{flat}} = \bigl\{Q \subseteq N \;\big|\; \forall\, j \in \{0,1,2,3\}:\; Q \cap T_j \neq \emptyset\bigr\}.
+\]
+Any blackout that removes a tier makes this quorum unformable. The \emph{majority} baseline is a competitive shape-free Flexible Paxos configuration: $\mathcal{Q}_1^{\text{maj}} = \{Q \mid |Q| \ge 6\}$, any majority of the ten nodes, with no tier structure. The \emph{crumbling wall} construction uses the per-tier Phase~1 families defined in Section~\ref{sec:construction}, with an Earth-based global proposer. All three satisfy cross-intersection with $\mathcal{Q}_2 = \{E\}$: the tiered families require $Q_1 \cap T_0 \neq \emptyset$ directly, and any 6 of 10 nodes must include an Earth node because only five non-Earth nodes exist.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Effect of quorum geometry over the same 5/1/1/3 sparse topology. Earth-initiated proposer, hard blackout, timeouts as in Table~\ref{tab:params}, 50 seeds per point; rates are identical at all 9 parameter points (3 Mars delays $\times$ 3 blackout durations). Latency is a full two-phase single attempt.}
+\label{tab:flat-vs-wall}
+\begin{tabular}{p{0.40\linewidth}rrr}
+\toprule
+Construction & During & Post & Latency \\
+\midrule
+Flat Phase~1 (all tiers required) & 0.0\% & varies & varies \\
+Majority Phase~1 (any 6 of 10) & 100.0\% & 100.0\% & 0.361~s \\
+Crumbling wall (Earth reads Earth only) & 100.0\% & 100.0\% & 0.183~s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The flat construction yields 0\% during-blackout success at every sweep point because it requires all tiers, including disconnected Mars. The crumbling wall yields 100\% because the Earth-based proposer's Phase~1 reads only Earth. Zero variance across 50 seeds confirms that outcomes here are structural consequences of quorum geometry and link state, not scheduler artifacts. We therefore treat this as calibration, not discovery.
+
+The majority baseline separates geometry from quorum slack. It also sustains 100\% during-blackout success for the Earth-initiated proposer: the blackout removes three nodes and a 6-of-10 quorum tolerates four. Its two-phase decision latency is 0.361~s instead of 0.183~s. The sixth-fastest respondent lies outside Earth, so majority Phase~1 leaves the fast tier even when nothing has failed. Both constructions use the same all-Earth Phase~2; the difference appears in authority acquisition, recovery, and single-decree decisions. A LEO proposer in the sparse topology reaches only five acceptors during blackout, leaving majority Phase~1 unformable while the wall's LEO Phase~1 family remains formable. The majority family is insensitive to the initiating tier; Figure~\ref{fig:gradient} shows the distinction.
+
+\subsection{Per-Tier Liveness under Full Coverage}
+
+Table~\ref{tab:pertier} reports the central result under one observed condition. Each tier runs its own global proposer with full network coverage, 186~s one-way Mars latency, an 1800~s blackout, the hard-blackout model, and 50 seeds.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Per-tier global consensus during Mars conjunction blackout (5/1/1/3 full-coverage topology, hard blackout, 186~s Mars delay, 1800~s blackout, 500~s phase timeout, 50 seeds). Rates are identical across seeds; latency and recovery are means, with 95\% CIs reported in the text.}
+\label{tab:pertier}
+\begin{tabular}{llrrr}
+\toprule
+Tier & Position & During & Latency & Rec.\ lag \\
+\midrule
+Earth & bottom (0) & 100.0\% & 0.183~s & 9.4~s \\
+LEO & tier 1 & 100.0\% & 0.131~s & 8.1~s \\
+Moon & tier 2 & 100.0\% & 5.131~s & 3.0~s \\
+Mars & top (3) & 0.0\% & 753.2~s & 1351.4~s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Earth, LEO, and Moon completed every during-blackout attempt in all 50 seeds. Mars completed none. The liveness failure crumbles from the disconnected top tier. The 95\% CIs are below $\pm 0.001$~s for inner-tier latency and $\pm 0.02$~s for inner-tier recovery; the Mars intervals are $\pm 0.82$~s and $\pm 1.64$~s, respectively.
+
+The latency column maps directly to physics. Moon's 5.131~s is two Paxos phases at the 1.28~s one-way Moon--Earth light delay ($\approx 4 \times 1.28$~s). Earth's 183~ms reflects cross-continental round-trips within the Earth tier. LEO's 131~ms is \emph{faster} than Earth, which is a counterintuitive result explained by the network topology: LEO-to-ground links (20--45~ms) are shorter than cross-continental Earth links (50--120~ms). Wall position determines quorum \emph{obligations}; the speed of light determines their \emph{cost}. These are correlated but not identical, and LEO is the proof.
+
+Mars fails during blackout for the structural reason predicted by the wall: it cannot reach the inner-tier witnesses required for Phase~1. The 1800~s window contains complete failed attempts, so the measured during-blackout rate is 0\% in all 50 seeds. Outside blackout, every post-blackout attempt completes, at a mean latency of 753.2~s. That is approximately two Paxos phases at the 186~s one-way Mars--Earth delay. Success requires a per-phase timeout budget sized to the initiating tier's physics: the worst-case request--response path from Mars is $2 \times 186 \approx 372$~s, within the 500~s per-phase budget of Table~\ref{tab:params}. Mars-initiated global consensus is possible outside blackout, but it pays the interplanetary path on both phases.
+
+Recovery lag is 3.0~s for Moon, 8.1~s for LEO, 9.4~s for Earth, and 1351.4~s for Mars under this condition. These point values are cadence-alignment artifacts, not protocol guarantees. Recovery lag measures the gap from blackout end to the next successful cadence-aligned attempt, so it is bounded by one 120~s reconciliation interval plus the tier's round time. Where the value falls within that bound depends on where blackout end lands in the attempt cadence.\footnote{Each tier's per-round time shifts its cadence phase relative to blackout end, which is why the values differ across tiers and move when the experiment window shifts. The effect is deterministic and independent of the consensus protocol; the bound, not the value, is the protocol property.}
+
+
+\subsection{Wall Obligations versus Sparse Reachability}
+\label{sec:reachability}
+
+Table~\ref{tab:sparse} repeats the per-tier experiment under the sparse network topology.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Per-tier global consensus under the 5/1/1/3 sparse topology (hard blackout, 186~s Mars delay, 900~s blackout, 500~s phase timeout, 50 seeds). All rates are identical across seeds; structural outcomes are reported without CIs.}
+\label{tab:sparse}
+\begin{tabular}{llr}
+\toprule
+Initiating tier & Wall prediction & Sparse result \\
+\midrule
+Earth & works & 100.0\% \\
+LEO & works & 0.0\% \\
+Moon & works & 100.0\% \\
+Mars & blocked & 0.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table*}[t]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{0.94}
+\setlength{\tabcolsep}{4pt}
+\captionsetup{width=0.92\textwidth}
+\caption{Coordinated relaxation under Earth crashes (5/1/1/3; Earth initiator; repeater-assisted hard blackout; Mars-delay/blackout/timeout 186/900/500~s; 50 seeds; mean $\pm$ 95\% CI). Earth-local Flexible Paxos: ``std'' is $q_1{=}4,q_2{=}2$; ``maj'' is $q_1{=}q_2{=}3$. Recovery is quantized by the 120~s reconciliation cadence.}
+\label{tab:relaxed}
+\begin{tabular}{llrrrrr}
+\toprule
+Global $\mathcal{Q}_2$ & Local & Crashes & Earth-local & Global during & Global post & Recovery (s) \\
+\midrule
+strict & std & 0 & 100.0\% & 100.0\% & 100.0\% & 93.11$\pm$0.01 \\
+strict & std & 1 & 100.0\% & 0.0\% & 0.0\% & n/a \\
+4-of-5 & std & 0 & 100.0\% & 100.0\% & 100.0\% & 94.27$\pm$0.01 \\
+4-of-5 & std & 1 & 100.0\% & 100.0\% & 100.0\% & 94.26$\pm$0.01 \\
+3-of-5 & std & 2 & 60.5\% & 100.0\% & 100.0\% & 94.64$\pm$0.01 \\
+3-of-5 & maj & 2 & 100.0\% & 100.0\% & 100.0\% & 94.63$\pm$0.01 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+LEO drops from 100\% (full coverage) to 0\% (sparse). The wall says LEO needs LEO $+$ Earth; that obligation is satisfiable. But strict Phase~2 requires all five Earth nodes, and LEO has links to only three ground stations. The wall determines what a tier \emph{needs}; the network determines what it \emph{can reach}. Liveness requires both.
+
+The readout therefore needs both supplied inputs. Configuration determines the obligations; connectivity determines whether the initiator can satisfy them. Full wall structure is insufficient when sparse reachability removes a required path.
+
+Moon succeeds in both topologies because it has links to all five Earth ground stations. The sparse topology models a single LEO satellite with limited ground coverage; the three missing ground-station links are the difference between 0\% and 100\% for LEO-initiated consensus.
+
+
+\subsection{Crash Tolerance and Coordinated Relaxation}
+\label{sec:relaxed}
+
+The strict Phase~2 choice $\mathcal{Q}_2 = \{E\}$ introduces a fragility: a single crashed Earth acceptor blocks all global Phase~2 progress. This section relaxes that choice.
+
+\textbf{Relaxed construction.}
+Let the relaxed Phase~2 family require $k$ of $|E|$ Earth nodes. We evaluate $k = 4$ (tolerates one crash) and $k = 3$ (tolerates two). Phase~1 requires correspondingly more Earth nodes to maintain intersection: a $k$-of-$|E|$ Phase~2 quorum omits at most $|E| - k$ Earth nodes, so any set of $|E| - k + 1$ Earth nodes intersects every Phase~2 quorum (pigeonhole). Phase~1 must therefore contain at least $|E| - k + 1$ Earth nodes. For $k = 4$ out of 5 Earth nodes, this means at least 2 Earth nodes in every $Q_1$; for $k = 3$, at least 3. Both relaxed constructions are verified exhaustively in TLA+ alongside the strict one (Section~\ref{sec:construction}).
+
+The relaxed Phase~1 family for tier~$i$ is:
+\[
+\mathcal{Q}_{1,k}^{(i)} = \bigl\{Q \subseteq N \;\big|\; \forall\, j \le i:\; Q \cap T_j \neq \emptyset,\; |Q \cap E| \ge |E| - k + 1\bigr\}.
+\]
+
+Table~\ref{tab:relaxed} reports the crash-tolerance sweep (Earth-initiated, repeater-assisted, 186~s Mars delay, 900~s blackout, 50 seeds).
+
+With strict Phase~2, one Earth crash prevents every subsequent global commit (row~2). At $k=3$ with two crashes, the global construction maintains 100\% during-blackout success, while the standard Earth-local family cannot form its four-node Phase~1 quorum. Its 60.5\% aggregate rate counts attempts completed before the crashes landed (rows~5--6). The weakest link migrates. For this Earth initiator, both relaxed global phases need the three surviving Earth nodes; the local family still requires four. Relaxing that local family to majority, $q_1=q_2=3$, restores 100\% local success while global success remains 100\% (row~6). The tradeoff curve shows the corresponding Phase~1 minima for Earth and Mars initiators:
+
+\begin{center}
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lrrrl}
+\toprule
+Regime & P1 min E/M & P2 & Tol. & E-local $\mathcal{Q}_2$ \\
+\midrule
+Strict ($k = 5$) & 1 / 4 & 5-of-5 & 0 & 2-node E \\
+Relaxed ($k = 4$) & 2 / 5 & 4-of-5 & 1 & 2-node E \\
+Relaxed ($k = 3$) + maj & 3 / 6 & 3-of-5 & 2 & 3-node E \\
+\bottomrule
+\end{tabular}
+\end{center}
+An Earth-initiated $Q_1$ needs only the $|E|-k+1$ Earth nodes; a Mars-initiated $Q_1$ adds one witness from each of the three upper tiers. Relaxation buys crash tolerance by growing the cold path, never the hot one: Phase~2 shrinks as Phase~1's Earth requirement grows.
+
+The construction separates an inter-tier witness from intra-tier replication. Any one of the three Mars nodes satisfies the wall's Mars-row obligation; a Mars-local majority would require two. Earth is different because the Phase~2 anchor must act as one logical entity, whether by a local replicated state machine or another internal protocol. The reduced TLA+ model preserves this separation: shrinking Earth from five nodes to three and rescaling its threshold keeps the same intersection margin. Redundancy within a non-anchor tier therefore need not add another consensus step to the wall.
+
+
+\section{What Remains Unsolved}
+\label{sec:open}
+
+The wall gives designers a usable partial answer. At $k=3$, it removes $(1,0)$ at every tier, removes both gaps for Earth under both readings and for self-reachable LEO, and keeps Phase~2 on Earth. Moon and Mars still admit $(0,1)$ because their acquisition families retain downward participation obligations. The remaining question is precise: can a structured quorum design extend acquisition/commit coincidence farther up the topology without returning inter-tier latency to the Phase~2 hot path?
+
+Three candidates follow from the boundary, and none is a result of this paper: scoped authority could let an upper tier continue over an explicitly bounded slot or time range; gap-aware proposer behavior could use the two-bit readout to choose retry and failover behavior suited to the observed state; and multi-anchor families could reduce dependence on one anchor tier. Each changes a different part of the system and requires separate work on safety, performance, and operational behavior. The terrestrial edge mapping supplies a concrete next experiment, not evidence that any candidate works.
+
+
+\section{Threats to Validity and Limitations}
+
+All results are design-level. The simulator evaluates one 5/1/1/3 crash-stop topology. Blackout is deterministic link removal; orbital motion, antenna schedules, contention, coding, variable link quality, Byzantine behavior, reconfiguration, and storage failure are absent. The fixed 120~s reconciliation cadence affects recovery point estimates, as stated beside those results. The crash sweep uses an Earth initiator and does not measure how wall position changes crash tolerance.
+
+The behavioral experiment uses single-decree Paxos, one severed link, and one backoff policy. Multi-Paxos can defer exposure to a missing Phase~1 capability while existing authority remains valid. The experiment therefore measures one severe and deliberately bounded setting. Its results do not assign intrinsic valence to either mixed state.
+
+The readout assumes supplied connectivity. It detects no failure and establishes neither fresh runtime authority nor a chosen value. It supplies no chosen client contract; service policy and operator action remain outside the interface. The wall's linear readout also depends on one anchor tier; multi-anchor families may change both resilience and legibility.
+
+We make no deployment prevalence claim and have no terrestrial evaluation. The edge input is a structural demonstration. A ``tier'' also bundles latency, failure domain, and administrative domain in the planetary case; those properties may separate elsewhere. Generalizing the structure is a mathematical possibility. Generalizing the measurements requires new experiments.
+
+
+\section{Conclusion}
+
+A single reachable-node count once worked because phase symmetry made the two quorum families equal and a threshold family made their shared predicate count-readable. Flexible Paxos preserves cross-phase safety after the predicates separate. Containment then gives the exact consequence: ordered predicates admit one gap direction; incomparable predicates admit both.
+
+The wall turns that characterization into a design tool. At $k=3$, $(1,0)$ is absent at every tier. Both gaps are absent for Earth under both connectivity readings and for LEO under the self-reachable reading. Moon and Mars retain $(0,1)$ because of their downward participation obligations. No tested threshold closes both gaps everywhere, but the readout makes each remaining obligation explicit without moving Phase~2 off Earth.
+
+The portable diagnostic is two questions: Can this system acquire authority? Can it commit? Node health and one replica count may answer neither. Once the answers are visible, designers can combine structural capability with current authority and an explicit service contract. The open problem is how far those answers can be made to coincide without returning inter-tier latency to Phase~2.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\appendix
+\section{Simulator Parameters}
+\label{app:params}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Simulator parameters.}
+\label{tab:params}
+\begin{tabular}{llp{0.32\linewidth}}
+\toprule
+Parameter & Value & Notes \\
+\midrule
+Earth cross-cont.\ delay & 30--120~ms & per link pair \\
+LEO--ground delay & 20--45~ms & per ground station \\
+Moon one-way delay & 1.28~s & fixed \\
+Mars one-way delay & 186--1342~s & swept \\
+Mars-local delay & 5~ms & fixed \\
+Processing delay & 1~ms & per acceptor \\
+Jitter & $\pm$10\% & of link delay, uniform \\
+Per-phase timeout & 500~s / 1~s & global / tier-local; global budget raised to $1.25\times$ the worst-case request--response path when that exceeds the base (above ${\approx}200$~s Mars delay) \\
+Max Paxos rounds & 1 & per attempt \\
+Blackout start & 600~s base & pre-window scaled to fit one full global round plus margin (930~s at 186~s Mars delay) \\
+Simulation end & 4000~s base & horizon extends when pre/post windows scale \\
+Reconciliation interval & 120~s & between global attempts \\
+Loss model & none & deterministic link removal for blackout \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Claim-to-Artifact Traceability}
+\label{app:traceability}
+Table~\ref{tab:traceability} maps the paper's main claims to executable artifacts. Paths are relative to the repository root of the (anonymized) artifact accompanying this submission. Results were generated with Python~$\ge$3.14 and SimPy~$\ge$4.1.1.
+
+\begin{table*}[t]
+\centering
+\small
+\caption{Claim-to-artifact traceability.}
+\label{tab:traceability}
+\begin{tabular}{p{0.28\linewidth}p{0.30\linewidth}p{0.34\linewidth}}
+\toprule
+Claim & Evidence & Artifact(s) \\
+\midrule
+Flat construction: 0\% during blackout at every hard-blackout sweep point. & Flat-mode sweep under the validated harness (\texttt{--global-quorum flat}). & \texttt{results/step9\_flat/\allowbreak step9\_sweep.csv}; \texttt{experiments/\allowbreak step9\_sweep.py}. \\
+Majority baseline: 100\% during blackout, 361~ms two-phase decision latency at every hard-blackout sweep point. & Majority-mode sweep under the validated harness (\texttt{--global-quorum majority}). & \texttt{results/step9\_maj/\allowbreak step9\_sweep.csv}; \texttt{experiments/\allowbreak step9\_sweep.py}. \\
+Crumbling wall: 100\% during blackout at every hard-blackout sweep point, 183~ms two-phase decision latency. & All rows show 100\% during-blackout. & \texttt{results/step9/\allowbreak step9\_sweep.csv}; \texttt{experiments/\allowbreak step9\_sweep.py}. \\
+Per-tier liveness: Earth, LEO, and Moon succeed; Mars fails under the common 1800~s condition. & Full coverage, hard blackout, 186~s Mars delay, 1800~s blackout, 50 seeds. & \texttt{results/tier\_liveness/\allowbreak tier\_sweep\_full\_ci.csv}; \texttt{experiments/\allowbreak tier\_liveness\_sweep.py}. \\
+Sparse topology: LEO drops from 100\% to 0\%. & Sparse 5/1/1/3; all tier initiators; hard blackout; 186/900/500~s Mars-delay/blackout/timeout; 50 seeds. & Same as above. \\
+Weakest-link migration and coordinated relaxation. & Sparse 5/1/1/3; Earth initiator; repeater; hard blackout; 186/900/500~s Mars-delay/blackout/timeout; 50 seeds. & \texttt{results/step10/\allowbreak step10\_sweep\_ci.csv}; \texttt{experiments/\allowbreak step10\_sweep.py}. \\
+TLA+ verification of quorum intersection. & Exhaustive enumeration, all four tiers $\times$ \{strict, $k{=}4$, $k{=}3$\} (27{,}921 states, complete). & \texttt{tla/\allowbreak QuorumIntersection.tla}; \texttt{tla/\allowbreak ExhaustiveIntersection.tla}. \\
+Paxos agreement model-checked. & 67M states (reduced topology, all-tier Phase~1 family, complete). & \texttt{tla/\allowbreak PaxosSmall.tla}. \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{table*}[t]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{0.94}
+\setlength{\tabcolsep}{4pt}
+\caption{Claim-to-artifact traceability (continued).}
+\begin{tabular}{p{0.28\linewidth}p{0.30\linewidth}p{0.34\linewidth}}
+\toprule
+Claim & Evidence & Artifact(s) \\
+\midrule
+Per-tier capability map: which (Phase~1, Phase~2) capability states each tier holds under each connectivity regime. & Exhaustive per-scenario classification, including the degraded partial-capability states. & \texttt{results/capability/\allowbreak capability\_map.csv}; \texttt{experiments/\allowbreak capability\_map.py}. \\
+Containment characterization (Prop.~2) and the $k \le \lceil |E|/2 \rceil$ boundary (Prop.~3). & Exhaustive enumeration, 5~$k$ $\times$ 4~tiers; containment evaluated as set containment over minimal $Q_2$, not as the reachability restatement; 0 disagreements. Predicate monotonicity verified, not assumed. & \texttt{results/capability/\allowbreak dual\_containment.csv}; \texttt{experiments/\allowbreak capability\_dual\_sweep.py}. \\
+Exact four-way gap correspondence and construction-independent audit. & Proposition~\ref{prop:gap} and Corollary~\ref{cor:correspondence} are primary. Independent state enumeration rejects a mutated report; all 129{,}032 three-node family-pair/pinned-domain cases pass; 16 registered wall cases reconcile with 0 CSV disagreements. & \texttt{quorum\_audit.py}; \texttt{experiments/\allowbreak quorum\_audit.py}; \texttt{results/capability/\allowbreak quorum\_audit\_registered.json}. \\
+Wall-specific capability readout. & Deterministic operational demonstration over one planetary and one structurally analogous edge input; not evaluation. Runtime authority remains unknown and service policy is not inferred. & \texttt{experiments/\allowbreak capability\_readout.py}; \texttt{examples/capability/\allowbreak planetary\_moon\_01.json}; \texttt{examples/capability/\allowbreak edge\_remote\_01.json}. \\
+Uniform threshold corollary: $(1,0)$ reachable iff $q_1 < q_2$; $(0,1)$ iff $q_2 < q_1$. & 80 threshold configurations ($n = 3..7$, all valid $q_1/q_2$), 0 violations. & \texttt{results/capability/\allowbreak dual\_uniform.csv}; \texttt{experiments/\allowbreak capability\_dual\_sweep.py}. \\
+Behavior inside the two capability gaps: $(1,0)$ matched a healthy contender on recorded metrics and supplied the decided value; $(0,1)$ prevented decision in 50 of 50 seeds when both proposers had an eight-round budget. & Pre-registered single-decree experiment, 5 arms $\times$ 4 incumbent budgets $\times$ 50 seeds; the healthy proposer always had 8 rounds. Predictions, falsification criteria, and the declared consequence of a null were committed before the experiment code existed; two registered predictions were falsified and kept. Output was byte-identical across two runs. & \texttt{results/flip/\allowbreak flip\_map.csv}; \texttt{results/flip/\allowbreak flip\_sweep.csv}; \texttt{flip.py}; \texttt{experiments/\allowbreak flip\_sweep.py}; \texttt{experiments/\allowbreak flip\_verdict.py}. \\
+Price of coincidence: 0 at odd $n$, 1 at even $n$; cost-minimal configurations cannot be phase-symmetric at even $n$. & Re-analysis of the threshold enumeration; post-hoc, not pre-registered, and labelled as such. & \texttt{results/capability/\allowbreak dual\_uniform.csv}; \texttt{experiments/\allowbreak capability\_dual\_sweep.py}. \\
+Tier-gradient: at $k=3$, $(1,0)$ is absent at every tier; both gaps are absent for Earth under both readings and for self-reachable LEO. Moon and Mars retain $(0,1)$ at every $k$; no $k$ closes both gaps everywhere. & Exhaustive enumeration over all $2^{10}$ connectivity states, every tier and $k$, under both colocated-acceptor readings. Output byte-identical across two runs. & \texttt{results/capability/\allowbreak dual\_gradient\_map.csv}; \texttt{experiments/\allowbreak capability\_dual\_sweep.py}. \\
+Performance-preserving closure beyond the named wall cases remains open. & Scoped authority, gap-aware behavior, and multi-anchor families are unevaluated candidates, not results. & No artifact; future work. \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\end{document}

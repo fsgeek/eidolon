@@ -65,11 +65,11 @@ uv run pytest        # Run tests
 - Global reconciliation: CrumblingWallQuorum spanning all tiers
 
 **Quorum families**:
-- Phase 2 (hot path): Q2 = {E} (full Earth tier only)
-- Phase 1 (elections): Must span all 4 tiers AND have |Q| >= 6
-- Intersection guaranteed because Q1 contains an Earth node and Q2 = E
+- Phase 2 (hot path): Q2 = k-of-|E| Earth nodes (k = `phase2_threshold`; default all of Earth)
+- Phase 1 (elections): per-tier "read down the wall" — a tier-i proposer needs one node from its own tier and each tier below it, plus >= |E|-k+1 Earth nodes
+- Intersection guaranteed by pigeonhole: (|E|-k+1) + k > |E|, so every Q1 shares an Earth node with every Q2
 
-**CrumblingWallQuorum** (`quorums.py`): `is_phase1_quorum` enforces tier-spanning + minimum size. `is_phase2_quorum` checks that the full fast tier (Earth) is present. During blackout, Phase 1 fails because Mars nodes are unreachable — this is a liveness failure, not a safety violation.
+**CrumblingWallQuorum** (`quorums.py`): `is_phase1_quorum` takes an `initiator_tier` and enforces one respondent per tier from the initiator down, plus the |E|-k+1 Earth minimum (comment near line 229). `is_phase2_quorum` checks >= k fast-tier (Earth) nodes. During blackout, only Mars-initiated Phase 1 is blocked — Moon/LEO/Earth never needed Mars — a liveness failure scoped to the unreachable tier, not a safety violation.
 
 ## Building the Paper
 

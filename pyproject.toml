@@ -1,9 +1,20 @@
 [project]
-name = "vmtp"
+name = "eidolon"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "matplotlib>=3.11.1",
+    "opentimestamps-client>=0.7.2",
     "simpy>=4.1.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
 ]

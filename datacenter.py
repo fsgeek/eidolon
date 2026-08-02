@@ -48,6 +48,28 @@ class DatacenterNetwork(Network):
         self._partitioned_locations: set[tuple[str, str]] = set()
         self._partition_drops = 0
 
+        # Opt-in per-link RNG isolation (pre-mortem contract A3).
+        # None = legacy behavior: all draws come from the module-global
+        # `random` in packet-send order. Enabled: each ordered (src, dst)
+        # entity pair gets its own stream seeded from (config seed, pair),
+        # so one seed defines a reproducible noise field independent of
+        # event interleaving.
+        self._per_link_rng: dict[tuple[int | None, int], random.Random] | None = None
+
+    def enable_per_link_rng(self):
+        """Give each ordered (src, dst) entity pair an independent RNG stream."""
+        self._per_link_rng = {}
+
+    def _rng_for(self, src_id, dst_id):
+        if self._per_link_rng is None:
+            return random  # legacy: module-global, byte-identical call order
+        key = (src_id, dst_id)
+        rng = self._per_link_rng.get(key)
+        if rng is None:
+            rng = random.Random(f"{self.config.seed}|{src_id}->{dst_id}")
+            self._per_link_rng[key] = rng
+        return rng
+
     def add_location(self, name: str):
         """Add a named location (datacenter, orbit point, etc)."""
         if name not in self._locations:
@@ -99,6 +121,30 @@ class DatacenterNetwork(Network):
             return self._default_local_link
 
         return self._links.get((src_loc, dst_loc))
+
+    def has_link(self, a: str, b: str) -> bool:
+        """True if a direct link exists between locations a and b."""
+        return (a, b) in self._links or (b, a) in self._links
+
+    def is_reachable(self, src_id: int, dst_id: int) -> bool:
+        """True if a packet sent now from src_id could reach dst_id.
+
+        Composes exactly the two conditions ``send`` applies, in the same
+        order: location-level partition first, then link existence.
+
+        Use this — NOT ``get_link`` — whenever deriving the reachable set
+        that a quorum predicate will be evaluated against.  ``get_link``
+        answers a topology question and is deliberately partition-blind,
+        so a reachability set built from it silently keeps certifying
+        nodes that are currently unreachable.
+        """
+        src_loc = self._entity_location.get(src_id)
+        dst_loc = self._entity_location.get(dst_id)
+        if src_loc is None or dst_loc is None:
+            return False
+        if (src_loc, dst_loc) in self._partitioned_locations:
+            return False
+        return self.get_link(src_id, dst_id) is not None
 
     def partition_locations(self, loc_a: str, loc_b: str):
         """Partition two locations (bidirectional)."""
@@ -165,7 +211,7 @@ class DatacenterNetwork(Network):
             return
 
         # Check link-level loss
-        if link and link.loss > 0 and random.random() < link.loss:
+        if link and link.loss > 0 and self._rng_for(source_id, destination_id).random() < link.loss:
             self._stats["dropped"] += 1
             self._packet_log.append({
                 "time": self.env.now,
@@ -179,13 +225,14 @@ class DatacenterNetwork(Network):
         if link:
             delay = link.latency
             if link.jitter > 0:
-                delay += random.uniform(-link.jitter, link.jitter)
+                delay += self._rng_for(source_id, destination_id).uniform(-link.jitter, link.jitter)
             delay = max(0.0001, delay)  # Minimum 0.1ms
         else:
             # Fallback to base config for unlocated entities
             delay = self.config.base_delay
             if self.config.delay_jitter > 0:
-                delay += random.uniform(-self.config.delay_jitter, self.config.delay_jitter)
+                delay += self._rng_for(source_id, destination_id).uniform(
+                    -self.config.delay_jitter, self.config.delay_jitter)
             delay = max(0.001, delay)
 
         yield self.env.timeout(delay)

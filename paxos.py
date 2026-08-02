@@ -288,6 +288,13 @@ class ConsensusResult:
     rounds: int = 0  # How many proposal rounds needed
     total_time: float = 0.0
     packets_sent: int = 0
+    # Duel instrumentation (premortem A8/A9). Additive; defaults keep
+    # every existing constructor and CSV writer unchanged.
+    phase1_nacks: int = 0
+    phase2_nacks: int = 0
+    phase1_quorums: int = 0
+    phase2_failures: int = 0
+    round_log: list = field(default_factory=list)
 
 
 class Proposer:
@@ -338,6 +345,8 @@ class Proposer:
             "phase1_rounds": 0,
             "phase2_rounds": 0,
             "total_packets_sent": 0,
+            "late_responses": 0,
+            "late_nacks": 0,
         }
 
         # Start receiver
@@ -352,6 +361,14 @@ class Proposer:
                 if txn_id in self._pending:
                     self._responses[txn_id] = packet
                     self._pending[txn_id].succeed()
+                else:
+                    # Response arrived after its round was cleaned up
+                    # (e.g. a preemption NACK landing post-quorum). Count
+                    # it so contention evidence is not silently dropped.
+                    self._stats["late_responses"] += 1
+                    if (isinstance(packet.payload, PaxosPayload)
+                            and packet.payload.phase == PaxosPhase.NACK):
+                        self._stats["late_nacks"] += 1
 
     def _next_proposal_number(self) -> int:
         self._proposal_counter += 1
@@ -450,9 +467,24 @@ class Proposer:
         total_phase2 = 0
         total_nacks = 0
         packets = 0
+        total_p1_nacks = 0
+        total_p2_nacks = 0
+        phase1_quorums = 0
+        phase2_failures = 0
+        round_log = []
 
         for round_num in range(self.max_rounds):
             proposal_number = self._next_proposal_number()
+
+            entry = {
+                "round": round_num,
+                "proposal_number": proposal_number,
+                "p1_start": self.env.now, "p1_end": None,
+                "p1_quorum": False, "p1_nacks": 0,
+                "p2_start": None, "p2_end": None,
+                "p2_quorum": None, "p2_nacks": None,
+            }
+            round_log.append(entry)
 
             # --- Phase 1: Prepare ---
             self._stats["phase1_rounds"] += 1
@@ -488,11 +520,18 @@ class Proposer:
 
             total_phase1 += len(promises)
             total_nacks += phase1_nacks
+            total_p1_nacks += phase1_nacks
+            entry["p1_end"] = self.env.now
+            entry["p1_nacks"] = phase1_nacks
 
             if not self.quorum.is_phase1_quorum(phase1_respondents, self.initiator_tier):
                 # Didn't get quorum - retry with higher proposal
+                entry["p1_quorum"] = False
                 yield self.env.timeout(0.010 * (round_num + 1))  # Backoff
                 continue
+
+            entry["p1_quorum"] = True
+            phase1_quorums += 1
 
             # Check if any acceptor already accepted a value
             # Must use the highest-numbered accepted value
@@ -506,6 +545,7 @@ class Proposer:
 
             # --- Phase 2: Accept ---
             self._stats["phase2_rounds"] += 1
+            entry["p2_start"] = self.env.now
             accept = Accept(
                 proposal_number=proposal_number,
                 slot=slot,
@@ -542,9 +582,13 @@ class Proposer:
 
             total_phase2 += len(accepteds)
             total_nacks += phase2_nacks
+            total_p2_nacks += phase2_nacks
+            entry["p2_end"] = self.env.now
+            entry["p2_nacks"] = phase2_nacks
 
             if self.quorum.is_phase2_quorum(phase2_respondents):
                 # Consensus achieved!
+                entry["p2_quorum"] = True
                 self._stats["proposals_succeeded"] += 1
                 return ConsensusResult(
                     success=True,
@@ -557,9 +601,16 @@ class Proposer:
                     rounds=round_num + 1,
                     total_time=self.env.now - start_time,
                     packets_sent=packets,
+                    phase1_nacks=total_p1_nacks,
+                    phase2_nacks=total_p2_nacks,
+                    phase1_quorums=phase1_quorums,
+                    phase2_failures=phase2_failures,
+                    round_log=round_log,
                 )
 
             # Phase 2 failed - retry
+            entry["p2_quorum"] = False
+            phase2_failures += 1
             yield self.env.timeout(0.010 * (round_num + 1))
 
         # Exhausted rounds
@@ -575,6 +626,11 @@ class Proposer:
             rounds=self.max_rounds,
             total_time=self.env.now - start_time,
             packets_sent=packets,
+            phase1_nacks=total_p1_nacks,
+            phase2_nacks=total_p2_nacks,
+            phase1_quorums=phase1_quorums,
+            phase2_failures=phase2_failures,
+            round_log=round_log,
         )
 
     @property
