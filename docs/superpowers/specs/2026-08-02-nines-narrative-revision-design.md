@@ -35,6 +35,11 @@ design can prevent selected divergences, how an auditor and structural readout
 can expose those that remain, and where runtime authority and service policy lie
 beyond the model.
 
+Call equality of acquisition and commit formability **phase-capability
+coincidence**. Formally, it is equality of the two formability predicates. Use
+this as the single citable name for the phenomenon; use "the smaller question"
+as its narrative shadow rather than as a competing technical term.
+
 ## The Story in One Page
 
 ### 1. An expected failure produces unexpected behavior
@@ -53,6 +58,12 @@ decision did not provide.
 
 This incident motivates the method; the paper does not claim its theorem caused
 or fully explains the GitHub incident.
+
+The two production anchors perform different evidentiary work: GitHub shows a
+correct control answer failing to establish service-level capability, including
+authority and policy consequences; LogDevice shows the acquisition/commit
+capability split itself. The marquee incident and the theorem must not be asked
+to serve as the same evidence.
 
 ### 2. A production system exhibits the specific distinction
 
@@ -121,6 +132,13 @@ These are bounded behavioral observations, not intrinsic labels for the two
 states. They establish that detecting "a gap" is insufficient: its direction,
 runtime authority, retry policy, and intended response matter.
 
+LogDevice makes the context dependence concrete: retaining incumbent writes in
+the commit-capable/acquisition-incapable state was an availability feature,
+while the modeled contention experiment found the same structural direction to
+exhaust the healthy proposer's progress budget. The contrast does not make one
+system evidence for the other; it demonstrates why the structural state has no
+policy-independent valence.
+
 ### 6. Now look through the instrument
 
 After teaching the reader to distinguish the two capabilities, make them
@@ -176,6 +194,8 @@ The paper should leave the reader with a different diagnostic question:
 - Open with the 43-second GitHub event.
 - Explain the failure-backwards method: what did recovery need to know?
 - Introduce LogDevice as the exact phase-asymmetric production case.
+- State in one sentence that GitHub supplies the service-level conundrum while
+  LogDevice supplies the phase-capability instance analyzed by the theorem.
 - State the scalar-health/vector-capability hypothesis.
 - Narrow explicitly to the paper's fixed-configuration contribution.
 - State the prevention--detection--action hierarchy.
@@ -185,6 +205,8 @@ The paper should leave the reader with a different diagnostic question:
 
 - Preserve most of the current section.
 - Separate phase symmetry from threshold count-readability.
+- Define phase-capability coincidence once as equality of acquisition and commit
+  formability; retain "the smaller question" as the narrative refrain.
 - Replace historical universals with bounded language such as "familiar" and
   "commonly."
 - Use a small intuitive example before formal notation.
@@ -207,6 +229,9 @@ The paper should leave the reader with a different diagnostic question:
 - Do not generalize contention behavior to Multi-Paxos or production systems.
 - Pay off the reader's prediction immediately; the authors' lost bet is evidence
   of honest surprise, not a rhetorical reconstruction.
+- Contrast LogDevice's use of retained incumbent writes as availability with the
+  modeled progress exhaustion in the same structural gap direction; use the
+  contrast to establish context-dependent valence, not causal equivalence.
 
 ### 5. Look Through the Instrument: The Wall Readout
 
@@ -342,6 +367,17 @@ The revision is feasible only if it remains narrative surgery:
 - preserve registered results and their bounds;
 - cut rather than expand secondary wall results when page pressure appears.
 
+Draft the new introduction first. Before restructuring the remainder, give that
+introduction to a technically literate reader outside the paper's immediate
+author/model loop and ask two questions without explanation:
+
+1. What does this paper claim?
+2. What would you inspect or do differently during the next incident?
+
+Run this test early enough that a failed answer can change the story rather than
+be recorded as a late-stage limitation. Do not let unrelated mid-week work move
+the cold-reader test behind full-manuscript migration.
+
 ## Go/No-Go Gates
 
 Proceed toward NINeS submission only if all gates pass after migration:
@@ -356,6 +392,11 @@ Proceed toward NINeS submission only if all gates pass after migration:
 6. The revised paper does not imply a solution to continuous reconfiguration.
 7. The resulting narrative is more than a clearer version of a mediocre claim:
    it changes how the reader distinguishes health, capability, and authority.
+8. The central phenomenon has one citable name---phase-capability
+   coincidence---used consistently, with "the smaller question" serving only as
+   its narrative refrain.
+9. A cold reader can answer both introduction tests: what the paper claims and
+   what evidence or action they would seek differently during an incident.
 
 If any gate requires substantial new theory or evidence, do not submit to
 NINeS '27. Preserve the outline as the starting point for the larger work.
