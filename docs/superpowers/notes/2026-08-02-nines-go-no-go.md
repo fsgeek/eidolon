@@ -50,3 +50,33 @@ membership question is explicitly future work rather than a missing premise of
 the fixed-epoch result.
 
 **Recommendation: submit this revision to NINeS 2027.**
+
+## 2026-08-03 Readability-Polish Addendum
+
+The recommendation remains **GO** after a bounded three-pass polish:
+
+- **Conceptual access:** the abstract now opens with the operator's smaller
+  question; the introduction foregrounds the policy-dependent valence result;
+  and the formal section states its plain-language question before notation.
+- **Continuity and decoding:** mixed-state tuple meanings are glossed where the
+  experiment and boundary tables use them; unconstrained and self-reachable
+  connectivity domains are defined before the boundary result; the
+  single-decree/Multi-Paxos contrast is explicit; and repeated rhetorical
+  transitions were replaced with forward pointers.
+- **Prose and cadence:** dense model and verification passages were divided
+  without expanding scope. The pass added two words net relative to its
+  immediate baseline.
+
+Scientific-boundary audit against commit `53f8da1` found unchanged section and
+subsection order, unchanged citation keys and counts, and no result, theorem,
+topology, threshold, timing, or artifact change. Numeric-token differences are
+editorial and confined to the abstract/bridging prose: the abstract no longer
+repeats the 50-seed result or a phase number already stated in the body, while
+the new operator-facing opening introduces no new measured value.
+
+Fresh final verification and the administrative audit are recorded in
+`2026-08-03-nines-administrative-readiness.md`. The submission recommendation
+remains conditional only on author attestations that the repository cannot
+verify: no overlapping review of substantially similar work, institutional
+ethical compliance, and the deliberate decision to retain or remove the
+searchable `Eidolon` system name.
