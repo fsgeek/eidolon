@@ -44,7 +44,7 @@ Introduction replacement:
 > health summaries do not identify which capability remains. We ask which
 > mixed states a quorum design permits, how an operator can recognize the
 > current state from the configured quorums and observed connectivity, and what
-> that state does---and does not---say about recovery. The GitHub incident did
+> that state does (and does not) say about recovery. The GitHub incident did
 > not necessarily involve this specific mechanism; it illustrates the broader
 > danger of treating a correct control-plane answer as evidence of every
 > capability the service requires.
