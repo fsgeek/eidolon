@@ -75,6 +75,7 @@ The problem we study is that a single health or quorum answer can conceal two di
 
 Meta's LogDevice supplies the narrower technical instance. LogDevice uses flexible Multi-Paxos: an incumbent leader can retain the ability to write after failures remove the larger quorum needed to elect and recover a replacement. Meta reports that the resulting stuck recoveries recurred at fleet scale, violated read-availability objectives, and required manual intervention until LogDevice's design was augmented~\cite{meta2022logdevice}. Meta understood and engineered around this tradeoff. GitHub shows a correct control answer failing to establish service-level capability; LogDevice shows the acquisition/commit capability split that we analyze.
 
+These are not exotic configurations. Phase asymmetry is exactly what buys local commit latency in WAN and edge deployments, so the same pressure that spreads flexible quorums also dismantles, quietly and deliberately, the coincidence that made a replica count a health answer.
 
 Why had that split been so easy to overlook? Familiar majority-based Paxos configurations commonly use the same threshold quorum family for both phases. Phase symmetry makes two questions---can a proposer acquire proposal authority, and can it exercise that authority to complete a commit?---receive the same answer for every reachable set. A node-health dashboard answers neither. The threshold, however, makes their shared answer readable from one replica count at the network vantage under consideration. We call this equality of formability predicates \emph{phase-capability coincidence}. The smaller question, ``how many replicas are reachable?'', appeared to answer both larger ones because the answers happened to coincide. Flexible Paxos~\cite{howard2016} preserves the cross-phase intersection required for safety while allowing that coincidence to dissolve. The health or count answer did not become false; the larger inference from it stopped following.
 
@@ -249,7 +250,7 @@ Five deviations remain recorded with their reasons in the artifact: the flip occ
 \end{tikzpicture}
 \caption{Pre-registered single-decree contention experiment (50 seeds per cell). The prediction that an
 acquire-only $(1,0)$ incumbent would be more disruptive was reversed: it matched the healthy baseline on every recorded metric,
-while a commit-only $(0,1)$ incumbent with a round budget of 8---equal to the healthy proposer's own fixed budget---exhausted the healthy proposer's progress budget (0/50 completions, drawn as a minimal stub for visibility).}\label{fig:experimental-reversal}
+while a commit-only $(0,1)$ incumbent with a round budget of 8, which is equal to the healthy proposer's own fixed budget, exhausted the healthy proposer's progress budget (0/50 completions, drawn as a minimal stub for visibility).}\label{fig:experimental-reversal}
 \end{figure}
 
 \section{Look Through the Instrument}
@@ -456,7 +457,7 @@ The witnesses implement participation policy; legibility makes the resulting obl
 \section{Prevention Has a Cost}
 \label{sec:results}
 
-Containment can prevent a capability gap, but it moves participation cost between phases. The exact boundary above identifies which mixed states disappear; the crash-relaxation experiment below shows the price of changing that boundary. Secondary calibration---the quorum-count gradient, competitive-majority baseline, full per-tier latency results, and sparse-topology sweep---appears in Appendix~\ref{app:wall-calibration}.
+Containment can prevent a capability gap, but it moves participation cost between phases. The exact boundary above identifies which mixed states disappear; the crash-relaxation experiment below shows the price of changing that boundary. Secondary calibration: the quorum-count gradient, competitive-majority baseline, full per-tier latency results, and sparse-topology sweep, which appears in Appendix~\ref{app:wall-calibration}.
 
 The calibration also separates wall position from convergence cost: in the modeled full-coverage topology, LEO completed faster than the cross-continental Earth path because its configured links were shorter. This is a fixture-specific result, not a claim about a realistic LEO deployment.
 
