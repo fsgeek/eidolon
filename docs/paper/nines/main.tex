@@ -22,6 +22,13 @@
 \usepackage{tikz}
 \usetikzlibrary{positioning,calc,arrows.meta,patterns,decorations.pathreplacing}
 \usepackage[hidelinks]{hyperref}
+\usepackage{balance}
+
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\definecolor{OkabeGreen}{RGB}{0,158,115}
+\definecolor{OkabeBlue}{RGB}{0,114,178}
+\definecolor{OkabeVermillion}{RGB}{213,94,0}
 
 % Numbered results. Plain counters rather than \newtheorem: the run-in
 % \textbf{...} rendering is preserved byte-for-byte, while numbering and
@@ -44,16 +51,30 @@
 \maketitle
 
 \begin{abstract}
-Operators often use the number of reachable replicas to decide whether a consensus system can make progress. In conventional Paxos configurations, this shortcut worked because the same majority rule commonly governed two different actions: acquiring authority and committing a value. Flexible quorum systems may use different rules for those actions. A reachable set can therefore support one while being unable to support the other, even though the protocol remains safe. We show that containment characterizes the separation exactly: acquisition without commit is impossible precisely when every Phase~1 quorum contains a Phase~2 quorum, with the mirrored condition excluding commit without acquisition. In a pre-registered single-decree contention experiment under the modeled retry policy and fixed round budgets, the results reversed our prediction: the acquisition-only arm matched the healthy arm on every recorded metric, while a commit-capable but acquisition-incapable incumbent exhausted the healthy proposer's budget. A wall-shaped quorum fixture demonstrates both prevention and detection: containment excludes selected mixed states, and an $O(\text{tiers})$ readout names residual capability and failed obligations from supplied connectivity while leaving runtime authority and service policy unknown. Mars and LEO make prolonged and time-varying reachability visible; changing membership remains outside this fixed-epoch result.
+A correct quorum answer can still leave a service unable to do what operators and customers need. Classic majority Paxos hid this possibility: the same threshold governed both acquiring authority and committing a value, so one reachable-replica count answered both questions. Flexible quorum systems keep the required cross-phase intersection for safety while allowing the two thresholds to diverge. The same reachable set can therefore support acquisition but not commit—or commit but not acquisition—even though the protocol remains safe.
+
+We show that containment characterizes the separation exactly: acquisition without commit is impossible if and only if every Phase~1 quorum contains a Phase~2 quorum (and symmetrically the other way). A pre-registered single-decree contention experiment under a modeled retry policy then reverses the predicted severity ordering. An acquisition-only incumbent matched a healthy contender on every recorded metric; a commit-capable but acquisition-incapable incumbent exhausted the healthy proposer's budget. A crumbling-wall construction demonstrates both prevention and detection: containment excludes selected mixed states, and an $O(\text{tiers})$ readout names residual capability and the failed obligations from supplied connectivity while remaining silent on runtime authority and service policy.
+
+Mars and LEO make prolonged and time-varying reachability impossible to ignore; changing membership itself remains outside this fixed-epoch result.
 \end{abstract}
+
+\begin{figure}[h]
+    \centering
+    \begin{tabular}{c}
+        \includegraphics[width=0.45\textwidth]{../figures/control-ok-service-broken.jpg}
+    \end{tabular}
+    \caption{The same reachable set can produce a healthy control-plane answer while the service remains unable to deliver the expected capabilities. Conventional majority Paxos made the two questions coincide; flexible quorums dissolve that coincidence while remaining safe.}\label{fig:control-ok-service-broken}
+\end{figure}
+
 
 \section{Introduction}
 
 At 22:52 UTC on October 21, 2018, routine work to replace failing 100G optical equipment interrupted connectivity between two parts of GitHub's US East Coast infrastructure. Connectivity returned 43 seconds later. During that interval, a surviving quorum of Orchestrator's Raft group initiated database failover, exactly as configured. The old primary site retained writes that had not reached the new one; after connectivity returned, the new primaries accepted further writes; and the application tier could not tolerate the latency of the resulting cross-country topology. Recovery and degraded service lasted 24 hours and 11 minutes~\cite{warner2018github}. Consensus answered its control question. The service needed a larger answer.
 
-The problem we study is that a single health or quorum answer can conceal two different consensus capabilities. Given the replicas currently reachable, can a proposer acquire authority? Can an authorized proposer commit? Flexible quorum systems can answer these questions differently, yet conventional health summaries do not identify which capability remains. We ask which mixed states a quorum design permits, how an operator can recognize the current state from the configured quorums and observed connectivity, and what that state does (and does not) say about recovery. The GitHub incident did not necessarily involve this specific mechanism; it illustrates the broader danger of treating a correct control-plane answer as evidence of every capability the service requires.
+The problem we study is that a single health or quorum answer can conceal two different consensus capabilities. Given the replicas currently reachable, can a proposer acquire authority? Can an authorized proposer commit? Flexible quorum systems can answer these questions differently, yet conventional health summaries do not identify which capability remains. We ask which mixed states a quorum design permits, how an operator can recognize the current state from the configured quorums and observed connectivity, and what that state does (and does not) say about recovery. The GitHub incident did not necessarily involve this specific mechanism; it illustrates the broader danger of treating a correct control-plane answer as evidence of every capability the service requires (Figure~\ref{fig:control-ok-service-broken}).
 
 Meta's LogDevice supplies the narrower technical instance. LogDevice uses flexible Multi-Paxos: an incumbent leader can retain the ability to write after failures remove the larger quorum needed to elect and recover a replacement. Meta reports that the resulting stuck recoveries recurred at fleet scale, violated read-availability objectives, and required manual intervention until LogDevice's design was augmented~\cite{meta2022logdevice}. Meta understood and engineered around this tradeoff. GitHub shows a correct control answer failing to establish service-level capability; LogDevice shows the acquisition/commit capability split that we analyze.
+
 
 Why had that split been so easy to overlook? Familiar majority-based Paxos configurations commonly use the same threshold quorum family for both phases. Phase symmetry makes two questions---can a proposer acquire proposal authority, and can it exercise that authority to complete a commit?---receive the same answer for every reachable set. A node-health dashboard answers neither. The threshold, however, makes their shared answer readable from one replica count at the network vantage under consideration. We call this equality of formability predicates \emph{phase-capability coincidence}. The smaller question, ``how many replicas are reachable?'', appeared to answer both larger ones because the answers happened to coincide. Flexible Paxos~\cite{howard2016} preserves the cross-phase intersection required for safety while allowing that coincidence to dissolve. The health or count answer did not become false; the larger inference from it stopped following.
 
@@ -96,6 +117,9 @@ Three Earth nodes, LEO, and Moon & 5 & yes & no \\
 Moon's Phase~1 family needs one Earth node, LEO, and Moon. Strict Phase~2 needs all five Earth nodes. The same count therefore describes either mixed state. Five is no longer informative by itself because it omits the phase structure that distinguished the cases. Once phase-capability coincidence is lost, the smaller question no longer settles the two larger ones.
 
 The uniform case shows the smallest cost of retaining the coincidence. Subject to $q_1+q_2 \ge n+1$, a cost-minimal split can be symmetric when $n$ is odd. When $n$ is even, symmetry adds one additional participant across the two phase thresholds. This is a post-hoc structural observation, not an explanation for deployment practice or for the odd-cluster convention. Once the families differ, the remaining task is to determine which mixed states must appear and which quorum design can exclude.
+
+\balance
+
 
 
 \section{Capability Gaps}
@@ -151,7 +175,7 @@ Commit-only $(0,1)$, b.~8 & 0.000 & --- & 8 & 48--49 \\
 \end{tabular}
 \end{center}
 
-The prediction posed at the end of the previous section failed. It failed in reverse, just as the dated preregistration permits us to say without reconstructing the surprise. At every incumbent budget, the $(1,0)$ arm matched the healthy $(1,1)$ contender on every recorded metric: completion probability 1.000, median time to first commit 3.420~s, two healthy rounds, and seven NACKs. The deterministic fixture produced the same recorded healthy-proposer trace in both arms, which explains the exact equality rather than merely similar medians. The incumbent completed from one to eight Phase~1 quorums as its budget increased, while the healthy outcome stayed flat. This is an experimental equivalence on the recorded metrics under these conditions, not a universal claim about $(1,0)$.
+The prediction posed at the end of the previous section failed (Figure~\ref{fig:experimental-reversal}). It failed in reverse, just as the dated preregistration permits us to say without reconstructing the surprise. At every incumbent budget, the $(1,0)$ arm matched the healthy $(1,1)$ contender on every recorded metric: completion probability 1.000, median time to first commit 3.420~s, two healthy rounds, and seven NACKs. The deterministic fixture produced the same recorded healthy-proposer trace in both arms, which explains the exact equality rather than merely similar medians. The incumbent completed from one to eight Phase~1 quorums as its budget increased, while the healthy outcome stayed flat. This is an experimental equivalence on the recorded metrics under these conditions, not a universal claim about $(1,0)$.
 
 The $(1,0)$ incumbent also supplied the value that was decided. Its partial Phase~2 reached four of five Earth acceptors. The healthy proposer's next Phase~1 found that accepted value, and ordinary Paxos value adoption carried it to commitment. The result therefore demonstrates the recovery mechanism described for Flexible Paxos: acquisition can preserve and finish work begun by a proposer that lost commit capability.
 
@@ -163,6 +187,70 @@ Under Multi-Paxos, incumbent authority can hide missing acquisition capability: 
 
 Five deviations remain recorded with their reasons in the artifact: the flip occurs before Phase~2 fan-out; the intended $(0,0)$ control is realized as $(0,1)$; the incumbent is Moon-tier; the late-$(0,1)$ arm was added to test the timing prediction; and the registered treatment exists only at $k=5$. At $k=3$, the boundary theorem makes $(1,0)$ unreachable at every tier, so there is no corresponding treatment state to rerun. The theorem and wall enumeration stand independently of this experiment. These runs measure behavior inside constructed mixed states; they do not validate either structural result. How can a designer or operator read which state the topology permits?
 
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    bar width=16pt,
+    width=\columnwidth,
+    height=5.4cm,
+    xmin=0.5, xmax=3.5,
+    ymin=0, ymax=1.18,
+    ytick={0,0.5,1.0},
+    yticklabels={0.0,0.5,1.0},
+    ylabel={Healthy-proposer completion prob.},
+    ylabel style={font=\footnotesize},
+    xtick={1,2,3},
+    xticklabels={
+      {Healthy\\(1{,}1)},
+      {Acquire-only\\(1{,}0)},
+      {Commit-only\\(0{,}1), b.~8}
+    },
+    xticklabel style={align=center, font=\footnotesize},
+    axis lines=left,
+    axis line style={-},
+    tick style={draw=none},
+    ymajorgrids,
+    grid style={dashed, gray!30},
+    clip=false,
+]
+% Okabe-Ito colourblind-safe palette + distinct hatching per bar
+\addplot[ybar, bar shift=0pt, point meta=explicit symbolic,
+    nodes near coords, nodes near coords style={font=\scriptsize},
+    fill=OkabeGreen, draw=OkabeGreen!60!black,
+    postaction={pattern=north east lines, pattern color=OkabeGreen!40!black}]
+    coordinates { (1, 1.0) [1.00] };
+\addplot[ybar, bar shift=0pt, point meta=explicit symbolic,
+    nodes near coords, nodes near coords style={font=\scriptsize},
+    fill=OkabeBlue, draw=OkabeBlue!60!black,
+    postaction={pattern=north west lines, pattern color=OkabeBlue!40!black}]
+    coordinates { (2, 1.0) [1.00] };
+% Zero value drawn as a marked minimal stub: crosshatched, explicit 0.00 label
+\addplot[ybar, bar shift=0pt,
+    fill=OkabeVermillion, draw=OkabeVermillion!60!black,
+    postaction={pattern=crosshatch, pattern color=OkabeVermillion!45!black}]
+    coordinates { (3, 0.025) };
+\node[font=\scriptsize, above=1pt] at (axis cs:3,0.025) {0.00};
+
+% "exact match" double arrow between the inner edges of bars 1 and 2
+\draw[<->, thick, gray!70]
+    ([xshift=10pt]axis cs:1,0.70) -- ([xshift=-10pt]axis cs:2,0.70)
+    node[midway, above=2pt, font=\scriptsize\itshape, gray!60!black, align=center]
+    {exact\\match};
+
+% Zero-completion callout above the stub
+\node[font=\scriptsize, align=center, text=OkabeVermillion!75!black]
+    (callout) at (axis cs:3,0.45)
+    {0/50 completions =\\budget exhausted};
+\draw[->, thick, OkabeVermillion!70!black]
+    ([yshift=-2pt]callout.south) -- (axis cs:3,0.17);
+\end{axis}
+\end{tikzpicture}
+\caption{Pre-registered single-decree contention experiment (50 seeds per cell). The prediction that an
+acquire-only $(1,0)$ incumbent would be more disruptive was reversed: it matched the healthy baseline on every recorded metric,
+while a commit-only $(0,1)$ incumbent with a round budget of 8---equal to the healthy proposer's own fixed budget---exhausted the healthy proposer's progress budget (0/50 completions, drawn as a minimal stub for visibility).}\label{fig:experimental-reversal}
+\end{figure}
 
 \section{Look Through the Instrument}
 \label{sec:reading}
@@ -481,6 +569,8 @@ The smaller question worked because familiar phase-symmetric threshold quorums s
 Containment gives designers a prevention boundary: it identifies exactly which mixed capability states a finite quorum-family pair excludes. The auditor and wall readout support detection by naming the capabilities and failed obligations that supplied connectivity permits. Action remains a third problem. It requires fresh runtime authority and an explicit service policy, neither of which structural formability can invent.
 
 The changed practice is therefore to ask more than whether the system or its replicas are healthy. Ask which actions the system can presently complete, what authority each action requires, and what evidence supports each answer. That diagnostic applies within a fixed configuration epoch. The next problem begins when the system must carry the evidence itself across changing visibility and changing membership.
+
+\clearpage
 
 \bibliographystyle{plain}
 \bibliography{references}
