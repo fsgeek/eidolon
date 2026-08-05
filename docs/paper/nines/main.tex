@@ -567,8 +567,6 @@ Containment gives designers a prevention boundary: it identifies exactly which m
 
 The changed practice is therefore to ask more than whether the system or its replicas are healthy. Ask which actions the system can presently complete, what authority each action requires, and what evidence supports each answer. That diagnostic applies within a fixed configuration epoch. The next problem begins when the system must carry the evidence itself across changing visibility and changing membership.
 
-\balance
-
 \bibliographystyle{plain}
 \bibliography{references}
 
@@ -576,7 +574,7 @@ The changed practice is therefore to ask more than whether the system or its rep
 \section{Simulator Parameters}
 \label{app:params}
 
-\begin{table}[h]
+\begin{table}[t]
 \centering
 \small
 \caption{Simulator parameters.}
@@ -775,6 +773,7 @@ Moon succeeds in both topologies because it has links to all five Earth ground s
 \section{Claim-to-Artifact Traceability}
 \label{app:traceability}
 Table~\ref{tab:traceability} maps the paper's main claims to executable artifacts. Paths are relative to the repository root of the (anonymized) artifact accompanying this submission. Results were generated with Python~$\ge$3.14 and SimPy~$\ge$4.1.1.
+\balance
 
 \begin{table*}[t]
 \centering
