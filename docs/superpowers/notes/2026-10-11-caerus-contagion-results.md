@@ -55,3 +55,28 @@ Does not show: that real Caerus behaves this way. Rates and item counts
 mechanism the paper does not describe (abort or timeout of incomplete
 vertices, batcher behaviour, partial recovery) could stop the spread. The
 next step is fault injection on github.com/josh-hildred/Caerus.
+
+## Addendum: what the public code does (read 2026-10-11, commit of Dec 2023)
+
+Read: `src/sequencer/caerus/{conflict_graph,partial_sequencer}.cc`,
+`src/scheduler/deterministic_scheduler.cc`, `src/common/internal_ids.cc`.
+
+- **No section 4.7 fault tolerance found.** No K parameter, no wait for K
+  acknowledgements, no failure detector, no recovery protocol. The only
+  command-line flags are workload, batch, locality and percent-multi-region.
+- **Merger matches our model's rules.** A vertex is complete when it has
+  `num_parts` parts (`hasAllParts_`); write-set conflicts add an out-edge to
+  the most recent writer, or to readers since it, if that vertex is still in
+  `incomplete_vertex_`. Nothing we found expires or aborts an incomplete vertex.
+- **The throttle is per-origin admission, not graph size.**
+  `partial_sequencer.cc:195` stops admitting a machine's new transactions
+  once it has more than 2000 active local transactions; the count falls only
+  when the scheduler receives a transaction from the merger
+  (`deterministic_scheduler.cc:579`). Stuck transactions never decrement it.
+  Consequence the model omits: once 2000 of an origin's transactions are
+  stuck, that origin admits nothing at all, including single-region work on
+  items no stuck transaction ever touched. Waiting transactions queue in an
+  unbounded `waiting_txns` deque. P1's "single-region work is unaffected"
+  therefore holds only for a workload with no multi-region transactions at
+  all; in a mixed workload the code turns graph contagion into a full
+  per-origin stop.
