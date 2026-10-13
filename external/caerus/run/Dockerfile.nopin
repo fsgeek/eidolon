@@ -1,0 +1,9 @@
+# Placement variant: caerus-run:aaf0eb6 with thread CPU pinning removed on the
+# Caerus code path (8 pthread_attr_setaffinity_np calls). Each process pins 23
+# threads to CPUs 0-22; six co-located regions would share 23 cores. No other change.
+FROM caerus-run:aaf0eb6
+RUN for f in src/machine/connection.cc src/sequencer/caerus/merger.cc \
+             src/sequencer/caerus/partial_sequencer.cc src/scheduler/deterministic_scheduler.cc; do \
+      sed -i 's|^\(\s*\)pthread_attr_setaffinity_np|\1/* NOPIN */ (void) 0; // pthread_attr_setaffinity_np|' $f; done \
+ && test "$(grep -c 'NOPIN' src/machine/connection.cc src/sequencer/caerus/merger.cc src/sequencer/caerus/partial_sequencer.cc src/scheduler/deterministic_scheduler.cc | awk -F: '{s+=$2} END {print s}')" = 8 \
+ && bash -o pipefail -c 'cd src && make -j32 2>&1 | tail -1'

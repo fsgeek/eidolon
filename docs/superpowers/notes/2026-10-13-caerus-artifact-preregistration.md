@@ -74,3 +74,25 @@ must be recorded in the results before results are looked at.
 - If the artifact cannot be made to run without changes to sequencing,
   merging or admission logic, the experiment is void, not a result; we report
   that instead.
+
+## Amendment 1 (2026-10-13, before any registered run; no kill observed)
+
+Plumbing runs (no kill) with the registered image showed the baseline was
+overloaded: ~600 committed txn/s per region against 2000 offered, scheduler
+`pending` growing ~2400/s without bound. Cause: each process pins 23 threads
+to CPUs 0-22 (8 `pthread_attr_setaffinity_np` calls on the Caerus path), so six
+co-located regions shared 23 cores. A saturated baseline invalidates the
+normalised metric (survivors would gain CPU after the kill).
+
+Change: image `caerus-run:aaf0eb6-nopin` (`external/caerus/run/Dockerfile.nopin`)
+removes those 8 affinity calls and nothing else; Linux places threads. Plumbing
+result: ~1900 committed txn/s per region, `pending` near zero, ~12 cores and
+~5.5 GiB per region. Synchronized throughput dips across all six regions
+(to ~0.13 of normal, a few seconds long) occur with and without pinning; they
+are artifact behaviour and are left in the baseline mean.
+
+Also added: `--memory=8g` per container to protect the shared host. A region
+that is OOM-killed is reported as such (`docker inspect .State.OOMKilled`), not
+read as a throughput result.
+
+Predictions, thresholds, workload and failure schedule are unchanged.
