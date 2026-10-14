@@ -1,0 +1,271 @@
+[New LWP 24]
+[New LWP 25]
+[New LWP 26]
+[New LWP 27]
+[New LWP 28]
+[New LWP 29]
+[New LWP 30]
+[New LWP 31]
+[New LWP 32]
+[New LWP 33]
+[New LWP 34]
+[New LWP 35]
+[New LWP 36]
+[New LWP 37]
+[New LWP 38]
+[New LWP 39]
+[New LWP 40]
+[New LWP 41]
+[New LWP 42]
+[New LWP 43]
+[New LWP 44]
+[New LWP 45]
+[New LWP 46]
+[New LWP 47]
+[New LWP 48]
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 26 (Thread 0x79056effd700 (LWP 48)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x000061099a0460da in PartialSequencer::RunWriter (this=<optimized out>) at sequencer/caerus/partial_sequencer.cc:216
+#4  0x000061099a046abd in PartialSequencer::RunSequencerWriter (arg=<optimized out>) at sequencer/caerus/partial_sequencer.cc:48
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 25 (Thread 0x79056f7fe700 (LWP 47)):
+#0  0x000061099a028469 in std::tr1::__detail::_Map_base<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, AtomicQueue<MessageProto>*>, std::_Select1st<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, AtomicQueue<MessageProto>*> >, true, std::tr1::_Hashtable<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, AtomicQueue<MessageProto>*>, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, AtomicQueue<MessageProto>*> >, std::_Select1st<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, AtomicQueue<MessageProto>*> >, std::equal_to<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::tr1::hash<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::tr1::__detail::_Mod_range_hashing, std::tr1::__detail::_Default_ranged_hash, std::tr1::__detail::_Prime_rehash_policy, false, false, true> >::operator[] (this=this@entry=0x6109d1c74ae0, __k="sequencer_0") at /usr/include/c++/9/tr1/hashtable_policy.h:670
+#1  0x000061099a024585 in AtomicMap<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, AtomicQueue<MessageProto>*>::Lookup (k="sequencer_0", this=<optimized out>) at ../src/common/mutex.h:92
+#2  ConnectionMultiplexer::GotMessage (this=0x6109d1c74a80, channel="sequencer_0", message=0x79056f7fdc50) at machine/connection.cc:88
+#3  0x000061099a047a4c in PartialSequencer::RunReader (this=0x610aa6ed0830, id=0) at sequencer/caerus/partial_sequencer.cc:288
+#4  0x000061099a049da3 in PartialSequencer::RunSequencerReader (arg=<optimized out>) at sequencer/caerus/partial_sequencer.cc:53
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 24 (Thread 0x79056ffff700 (LWP 46)):
+#0  0x000079062adbcb71 in pthread_rwlock_unlock () from /lib/x86_64-linux-gnu/libpthread.so.0
+#1  0x000061099a024556 in ReadLock::~ReadLock (this=<synthetic pointer>, __in_chrg=<optimized out>) at ../src/common/mutex.h:138
+#2  AtomicMap<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, AtomicQueue<MessageProto>*>::Count (k="scheduler2", this=<optimized out>) at ../src/common/utils.h:211
+#3  ConnectionMultiplexer::GotMessage (this=0x6109d1c74a80, channel="scheduler2", message=0x79056fffed70) at machine/connection.cc:86
+#4  0x000061099a02d3c4 in DeterministicScheduler::RunWorkerThread (this=<optimized out>, thread=<optimized out>) at scheduler/deterministic_scheduler.cc:104
+#5  0x000061099a02dcf6 in DeterministicScheduler::WorkerThread (arg=<optimized out>) at scheduler/deterministic_scheduler.cc:80
+#6  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#7  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 23 (Thread 0x790588b1a700 (LWP 45)):
+#0  0x000079062adbcb71 in pthread_rwlock_unlock () from /lib/x86_64-linux-gnu/libpthread.so.0
+#1  0x000061099a024556 in ReadLock::~ReadLock (this=<synthetic pointer>, __in_chrg=<optimized out>) at ../src/common/mutex.h:138
+#2  AtomicMap<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, AtomicQueue<MessageProto>*>::Count (k="scheduler1", this=<optimized out>) at ../src/common/utils.h:211
+#3  ConnectionMultiplexer::GotMessage (this=0x6109d1c74a80, channel="scheduler1", message=0x790588b19d70) at machine/connection.cc:86
+#4  0x000061099a02d3c4 in DeterministicScheduler::RunWorkerThread (this=<optimized out>, thread=<optimized out>) at scheduler/deterministic_scheduler.cc:104
+#5  0x000061099a02dcf6 in DeterministicScheduler::WorkerThread (arg=<optimized out>) at scheduler/deterministic_scheduler.cc:80
+#6  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#7  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 22 (Thread 0x79058931b700 (LWP 44)):
+#0  0x000079062adb8fc7 in pthread_mutex_lock () from /lib/x86_64-linux-gnu/libpthread.so.0
+#1  0x000061099a02d580 in Lock::Lock (mutex=0x610aa6ecf178, this=<synthetic pointer>) at ../src/common/mutex.h:48
+#2  AtomicQueue<TxnProto*>::Pop (result=0x79058931ac90, this=0x610aa6ecf150) at ../src/common/utils.h:128
+#3  DeterministicScheduler::RunWorkerThread (this=<optimized out>, thread=<optimized out>) at scheduler/deterministic_scheduler.cc:141
+#4  0x000061099a02dcf6 in DeterministicScheduler::WorkerThread (arg=<optimized out>) at scheduler/deterministic_scheduler.cc:80
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 21 (Thread 0x790589b1c700 (LWP 43)):
+#0  0x000079062adbb412 in pthread_rwlock_rdlock () from /lib/x86_64-linux-gnu/libpthread.so.0
+#1  0x000061099a024540 in ReadLock::ReadLock (debug=false, acquire_lock=true, mutex=<optimized out>, this=<synthetic pointer>) at ../src/common/mutex.h:91
+#2  AtomicMap<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, AtomicQueue<MessageProto>*>::Count (k="scheduler_", this=<optimized out>) at ../src/common/utils.h:211
+#3  ConnectionMultiplexer::GotMessage (this=0x6109d1c74a80, channel="scheduler_", message=0x790574000e60) at machine/connection.cc:86
+#4  0x000061099a02c7bf in DeterministicScheduler::GetBatch (this=0x7ffc8f84e150) at /usr/include/c++/9/bits/char_traits.h:300
+#5  0x000061099a0307a8 in DeterministicScheduler::RunLockManagerThread (this=<optimized out>) at scheduler/deterministic_scheduler.cc:504
+#6  0x000061099a0310ad in DeterministicScheduler::LockManagerThread (arg=<optimized out>) at scheduler/deterministic_scheduler.cc:75
+#7  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#8  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 20 (Thread 0x79059cb1a700 (LWP 42)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x000061099a0424ca in Merger::RunWorker (this=0x6109d1c78920) at sequencer/caerus/merger.cc:151
+#4  0x000061099a042c2d in Merger::RunLogWorkerThread (arg=<optimized out>) at sequencer/caerus/merger.cc:191
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 19 (Thread 0x79059d31b700 (LWP 41)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x000061099a0424ca in Merger::RunWorker (this=0x6109d1c78920) at sequencer/caerus/merger.cc:151
+#4  0x000061099a042c2d in Merger::RunLogWorkerThread (arg=<optimized out>) at sequencer/caerus/merger.cc:191
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 18 (Thread 0x79059db1c700 (LWP 40)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x000061099a0424ca in Merger::RunWorker (this=0x6109d1c78920) at sequencer/caerus/merger.cc:151
+#4  0x000061099a042c2d in Merger::RunLogWorkerThread (arg=<optimized out>) at sequencer/caerus/merger.cc:191
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 17 (Thread 0x7905b0b1a700 (LWP 39)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x000061099a0424ca in Merger::RunWorker (this=0x6109d1c78920) at sequencer/caerus/merger.cc:151
+#4  0x000061099a042c2d in Merger::RunLogWorkerThread (arg=<optimized out>) at sequencer/caerus/merger.cc:191
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 16 (Thread 0x7905b131b700 (LWP 38)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x000061099a0424ca in Merger::RunWorker (this=0x6109d1c78920) at sequencer/caerus/merger.cc:151
+#4  0x000061099a042c2d in Merger::RunLogWorkerThread (arg=<optimized out>) at sequencer/caerus/merger.cc:191
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 15 (Thread 0x7905b1b1c700 (LWP 37)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x000061099a0424ca in Merger::RunWorker (this=0x6109d1c78920) at sequencer/caerus/merger.cc:151
+#4  0x000061099a042c2d in Merger::RunLogWorkerThread (arg=<optimized out>) at sequencer/caerus/merger.cc:191
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 14 (Thread 0x7905c4b1a700 (LWP 36)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x000061099a0424ca in Merger::RunWorker (this=0x6109d1c78920) at sequencer/caerus/merger.cc:151
+#4  0x000061099a042c2d in Merger::RunLogWorkerThread (arg=<optimized out>) at sequencer/caerus/merger.cc:191
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 13 (Thread 0x7905c531b700 (LWP 35)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x000061099a0424ca in Merger::RunWorker (this=0x6109d1c78920) at sequencer/caerus/merger.cc:151
+#4  0x000061099a042c2d in Merger::RunLogWorkerThread (arg=<optimized out>) at sequencer/caerus/merger.cc:191
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 12 (Thread 0x7905c5b1c700 (LWP 34)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x000061099a044a3a in Merger::PartitionedInserter::Run (this=0x610a7e64dd20) at sequencer/caerus/merger.cc:317
+#4  0x000061099a044b8d in Merger::PartitionedInserter::RunThread (arg=<optimized out>) at sequencer/caerus/merger.cc:387
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 11 (Thread 0x7905d8b1a700 (LWP 33)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x000061099a044a3a in Merger::PartitionedInserter::Run (this=0x610a7e64d7e0) at sequencer/caerus/merger.cc:317
+#4  0x000061099a044b8d in Merger::PartitionedInserter::RunThread (arg=<optimized out>) at sequencer/caerus/merger.cc:387
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 10 (Thread 0x7905d931b700 (LWP 32)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x000061099a044a3a in Merger::PartitionedInserter::Run (this=0x610a7e64d2f0) at sequencer/caerus/merger.cc:317
+#4  0x000061099a044b8d in Merger::PartitionedInserter::RunThread (arg=<optimized out>) at sequencer/caerus/merger.cc:387
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 9 (Thread 0x7905d9b1c700 (LWP 31)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x000061099a044a3a in Merger::PartitionedInserter::Run (this=0x610a7e64cdd0) at sequencer/caerus/merger.cc:317
+#4  0x000061099a044b8d in Merger::PartitionedInserter::RunThread (arg=<optimized out>) at sequencer/caerus/merger.cc:387
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 8 (Thread 0x7905ecd53700 (LWP 30)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x000061099a044a3a in Merger::PartitionedInserter::Run (this=0x610a7e64c8c0) at sequencer/caerus/merger.cc:317
+#4  0x000061099a044b8d in Merger::PartitionedInserter::RunThread (arg=<optimized out>) at sequencer/caerus/merger.cc:387
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 7 (Thread 0x790620a36700 (LWP 29)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x000061099a044a3a in Merger::PartitionedInserter::Run (this=0x610a7e64c3b0) at sequencer/caerus/merger.cc:317
+#4  0x000061099a044b8d in Merger::PartitionedInserter::RunThread (arg=<optimized out>) at sequencer/caerus/merger.cc:387
+#5  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#6  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 6 (Thread 0x790621237700 (LWP 28)):
+#0  0x000079062a8051e4 in malloc () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062ab73b29 in operator new(unsigned long) () from /lib/x86_64-linux-gnu/libstdc++.so.6
+#2  0x000061099a03a604 in __gnu_cxx::new_allocator<unsigned long>::allocate (this=0x790621236db0, __n=64) at /usr/include/c++/9/ext/new_allocator.h:102
+#3  std::allocator_traits<std::allocator<unsigned long> >::allocate (__a=..., __n=64) at /usr/include/c++/9/bits/alloc_traits.h:443
+#4  std::_Deque_base<unsigned long, std::allocator<unsigned long> >::_M_allocate_node (this=0x790621236db0) at /usr/include/c++/9/bits/stl_deque.h:620
+#5  std::_Deque_base<unsigned long, std::allocator<unsigned long> >::_M_create_nodes (__nfinish=0x7905d4d25420, __nstart=0x7905d4d25418, this=0x790621236db0) at /usr/include/c++/9/bits/stl_deque.h:745
+#6  std::_Deque_base<unsigned long, std::allocator<unsigned long> >::_M_initialize_map (__num_elements=0, this=0x790621236db0) at /usr/include/c++/9/bits/stl_deque.h:719
+#7  std::_Deque_base<unsigned long, std::allocator<unsigned long> >::_Deque_base (this=0x790621236db0) at /usr/include/c++/9/bits/stl_deque.h:510
+#8  std::deque<unsigned long, std::allocator<unsigned long> >::deque (this=0x790621236db0) at /usr/include/c++/9/bits/stl_deque.h:915
+#9  std::stack<unsigned long, std::deque<unsigned long, std::allocator<unsigned long> > >::stack<std::deque<unsigned long, std::allocator<unsigned long> >, void> (this=0x790621236db0) at /usr/include/c++/9/bits/stl_stack.h:157
+#10 ConflictGraph::findSCCs (this=0x610a79a62b50) at sequencer/caerus/conflict_graph.cc:290
+#11 0x000061099a04228c in Merger::RunMerger (this=0x6109d1c78920) at sequencer/caerus/merger.cc:139
+
+Thread 5 (Thread 0x790628e32700 (LWP 27)):
+#0  0x000079062b0527c0 in ?? ()
+#1  0x000079062b0529f0 in gettimeofday ()
+#2  0x000061099a007386 in GetTime () at common/utils.cc:32
+#3  0x000061099a043c9f in Merger::sendBatch (this=0x6109d1c78920) at sequencer/caerus/merger.cc:204
+#4  0x000061099a044678 in Merger::RunBatchSender (this=0x6109d1c78920) at sequencer/caerus/merger.cc:303
+#5  Merger::RunBatchSenderThread (arg=0x6109d1c78920) at sequencer/caerus/merger.cc:197
+#6  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#7  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 4 (Thread 0x7906296f7700 (LWP 26)):
+#0  0x000079062a87dbbf in poll () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062acf8e9e in poll (__timeout=-1, __nfds=1, __fds=0x7906296f6aa0) at /usr/include/x86_64-linux-gnu/bits/poll2.h:46
+#2  zmq::signaler_t::wait (this=this@entry=0x6109d1c7d338, timeout_=-1) at src/signaler.cpp:219
+#3  0x000079062acdb21e in zmq::mailbox_t::recv (this=0x6109d1c7d2d0, cmd_=0x7906296f6b00, timeout_=<optimized out>) at src/mailbox.cpp:54
+#4  0x000079062acfaa9b in zmq::socket_base_t::process_commands (this=this@entry=0x6109d1cb2360, timeout_=timeout_@entry=-1, throttle_=throttle_@entry=false) at src/socket_base.cpp:1478
+#5  0x000079062acfaede in zmq::socket_base_t::send (this=this@entry=0x6109d1cb2360, msg_=msg_@entry=0x7906296f6d30, flags_=flags_@entry=0) at src/socket_base.cpp:1271
+#6  0x000079062ad1ae2d in s_sendmsg (flags_=0, msg_=0x7906296f6d30, s_=0x6109d1cb2360) at src/zmq.cpp:359
+#7  zmq_msg_send (msg_=msg_@entry=0x7906296f6d30, s_=<optimized out>, flags_=flags_@entry=0) at src/zmq.cpp:614
+#8  0x000061099a0251db in zmq::socket_t::send (flags_=0, this=<optimized out>, msg_=...) at ../src/machine/zmq.hpp:327
+#9  ConnectionMultiplexer::Run (this=0x6109d1c74a80) at machine/connection.cc:225
+#10 0x000061099a0261cd in ConnectionMultiplexer::RunMultiplexer (multiplexer=<optimized out>) at machine/connection.cc:255
+#11 0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+
+Thread 3 (Thread 0x790629ef8700 (LWP 25)):
+#0  0x000079062a88a68e in epoll_wait () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062acd5699 in zmq::epoll_t::loop (this=0x6109d1c79f40) at src/epoll.cpp:157
+#2  0x000079062ad0d05f in thread_routine (arg_=0x6109d1c79f98) at src/thread.cpp:373
+#3  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#4  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 2 (Thread 0x79062a6f9700 (LWP 24)):
+#0  0x000079062a88a68e in epoll_wait () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062acd5699 in zmq::epoll_t::loop (this=0x6109d1c7a570) at src/epoll.cpp:157
+#2  0x000079062ad0d05f in thread_routine (arg_=0x6109d1c7a5c8) at src/thread.cpp:373
+#3  0x000079062adb6609 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#4  0x000079062a88a353 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Thread 1 (Thread 0x79062a700440 (LWP 1)):
+#0  0x000079062a84823f in clock_nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x000079062a84dec7 in nanosleep () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x000079062a880a7f in usleep () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x0000610999fee83a in main (argc=<optimized out>, argv=<optimized out>) at scripts/caerus_server.cc:132
+[Inferior 1 (process 1) detached]

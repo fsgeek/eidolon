@@ -46,7 +46,7 @@ date +%s.%N > "$OUT/t_start"
 # Warm-up begins once every region has logged throughput at least once.
 for _ in $(seq 1 120); do
   ready=0
-  for i in 0 1 2 3 4 5; do docker logs r$i 2>&1 | grep -q "SEQUENCER THROUGHPUT" && ready=$((ready + 1)); done
+  for i in 0 1 2 3 4 5; do [ "$(docker logs r$i 2>&1 | grep -c "SEQUENCER THROUGHPUT" || true)" -gt 0 ] && ready=$((ready + 1)); done
   [ $ready -eq 6 ] && break
   sleep 1
 done
