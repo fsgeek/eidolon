@@ -1,0 +1,3 @@
+# Diagnostic only: rt1200 image plus gdb, for attaching to a stalled server.
+FROM caerus-run:aaf0eb6-nopin-rt1200
+RUN apt-get update && apt-get install -y --no-install-recommends gdb && rm -rf /var/lib/apt/lists/*

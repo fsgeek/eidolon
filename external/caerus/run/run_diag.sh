@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# DIAGNOSTIC run (not the registered campaign): as run_failure.sh, plus optional ZMQ send HWM.
+# DIAGNOSTIC run (not a registered campaign run): as run_failure.sh, plus ptrace and an optional ZMQ send HWM env.
 # Pre-registration: docs/superpowers/notes/2026-10-13-caerus-artifact-preregistration.md
 # Usage: run_failure.sh <percent_mr> <rep> <outdir> [warm_s=120] [after_s=600]
 set -euo pipefail
 PMR=$1; REP=$2; OUT=$3; WARM=${4:-120}; AFTER=${5:-600}
-IMG=${IMG:-caerus-run:aaf0eb6-hwm}
+IMG=${IMG:-caerus-run:aaf0eb6-nopin-rt1200-gdb}
 ENVARG=(); [ -n "${SNDHWM:-}" ] && ENVARG=(-e "CAERUS_SNDHWM=$SNDHWM")
 NET=caerus-net
 SUBNET=172.30.0.0/24
@@ -37,7 +37,7 @@ for i in 0 1 2 3 4 5; do
     TC="$TC && tc qdisc add dev eth0 parent 1:$c handle $c: netem delay $(one_way_ms $i $j)ms"
     TC="$TC && tc filter add dev eth0 parent 1: protocol ip u32 match ip dst $(ip_of $j)/32 flowid 1:$c"
   done
-  docker run -d --name r$i --hostname r$i --network $NET --ip "$(ip_of $i)" --cap-add NET_ADMIN --memory=8g \
+  docker run -d --name r$i --hostname r$i --network $NET --ip "$(ip_of $i)" --cap-add NET_ADMIN --cap-add SYS_PTRACE --memory=8g \
     "${ENVARG[@]}" -v "$(realpath "$CONF")":/caerus/six.conf:ro $IMG \
     bash -c "$TC && exec ./bin/scripts/caerus_server --machine_id=$i --experiment=MovR --config=six.conf \
       --max_batch_size=10 --percent_mr=$PMR --percent_mp=0 --hot_records=240" >/dev/null
