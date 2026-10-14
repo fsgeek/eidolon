@@ -1,0 +1,8 @@
+# Amendment 3 image: caerus-run:aaf0eb6-nopin with the compile-time run timer
+# RUNTIME raised 120 -> 1200 s (cluster_config.h:27). The artifact stops itself
+# RUNTIME s after the partial sequencer starts; the registered schedule needs
+# ~730 s. No other change.
+FROM caerus-run:aaf0eb6-nopin
+RUN sed -i 's/^#define RUNTIME 120$/#define RUNTIME 1200/' src/machine/cluster_config.h \
+ && grep -q '^#define RUNTIME 1200$' src/machine/cluster_config.h \
+ && bash -o pipefail -c 'cd src && make -j32 2>&1 | tail -1'

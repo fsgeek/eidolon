@@ -207,3 +207,18 @@ Status of claims:
 A rerun needs `RUNTIME` raised (a compile-time configuration constant, not
 sequencing, merging or admission logic). That would be Amendment 3, registered
 before any rerun, with predictions unchanged.
+
+## Amendment 3 (2026-10-14, before any rerun)
+
+Image `caerus-run:aaf0eb6-nopin-rt1200` (`external/caerus/run/Dockerfile.rt1200`):
+the nopin image with `RUNTIME` 120 -> 1200 s, nothing else. Workload,
+failure schedule, predictions A1-A5, statistic (Amendment 2) and falsifiers
+are unchanged. Output: `results/caerus/artifact-rt1200/`.
+
+**Gate: full-length no-kill controls first** (`NOKILL=1`, percent_mr 0 and 30,
+warm 120 s, observe 600 s, output `results/caerus/artifact-rt1200-control/`).
+The campaign starts only if, in both controls: every region is still running
+at t_end (no exit before the harness removes it), no `STARTING STOP PROCESS`
+line appears, and every 30 s window over [t_fail, t_end) at every region has
+normalised mean > 0.8 (the A1 statistic, applied with no failure). If either
+control fails the gate, nothing further runs and the failure is reported.

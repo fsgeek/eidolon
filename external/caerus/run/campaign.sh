@@ -15,7 +15,7 @@ for rep in 1 2 3; do
     d="$OUT/pmr${pmr}_rep${rep}"
     [ -f "$d/done" ] && { echo "skip $d"; continue; }
     echo "$(date -Is) start pmr=$pmr rep=$rep"
-    IMG=caerus-run:aaf0eb6-nopin "$HERE/run_failure.sh" "$pmr" "$rep" "$d" 120 600
+    IMG=${IMG:-caerus-run:aaf0eb6-nopin} "$HERE/run_failure.sh" "$pmr" "$rep" "$d" 120 600
   done
 done
 echo "$(date -Is) campaign done"
