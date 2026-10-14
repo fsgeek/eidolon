@@ -96,3 +96,35 @@ that is OOM-killed is reported as such (`docker inspect .State.OOMKilled`), not
 read as a throughput result.
 
 Predictions, thresholds, workload and failure schedule are unchanged.
+
+## Amendment 2 (2026-10-13, before any registered run; no kill observed)
+
+**Statistic.** Plumbing logs (no kill) show synchronized per-second dips to
+~0.13 of normal in every region while 30 s means stay at 0.99-1.04. A
+per-second reading of A1 ("> 0.8 for the full 600 s") would therefore fail on
+baseline behaviour alone. All thresholds are evaluated on non-overlapping 30 s
+window means of per-second merger throughput (`SEQUENCER THROUGHPUT -- Sent`),
+normalised to the region's mean over [t_fail - 60 s, t_fail), windows aligned
+to start at t_fail. Concretely:
+- A1: every post-failure window mean > 0.8, at every live region.
+- A2/A3: at every live region, some window starting at or before
+  t_fail + 90 s (A2) / t_fail + 30 s (A3) has mean < 0.05.
+- A4: every later window at that region also has mean < 0.05.
+- Falsifier for A2/A3: the window starting at t_fail + 300 s has mean > 0.2
+  at any live region.
+- A live process with no throughput line in a window scores 0 for that window
+  and the window is flagged in the output.
+Implemented in `experiments/caerus_artifact_analyze.py`, committed with this
+amendment.
+
+**A5 method.** The registered check (dump a record before the kill and after
+restart) needs a call to `SimpleStorage::DumpToFile`, which nothing in the
+artifact invokes. Code inspection decides A5 instead: the only file read
+anywhere in the source is the cluster config (`cluster_config.cc:131`), and
+startup populates storage with `Movr::InitializeStorage` (`movr.cc:187`), so a
+restarted cluster cannot hold any transaction committed before the restart.
+A5 is therefore reported as a code-derived result, not a measurement.
+
+**Run order.** Interleaved (percent_mr 0, 10, 30, then repeat) so host drift
+does not line up with a condition. A pre-flight check aborts the campaign if
+the host 1-minute load average is above 8 or available memory is below 60 GiB.
