@@ -128,3 +128,25 @@ A5 is therefore reported as a code-derived result, not a measurement.
 **Run order.** Interleaved (percent_mr 0, 10, 30, then repeat) so host drift
 does not line up with a condition. A pre-flight check aborts the campaign if
 the host 1-minute load average is above 8 or available memory is below 60 GiB.
+
+## Deviation log
+
+**2026-10-14 ~07:37 PDT, after run 1 of 9 (pmr0_rep1), campaign still running.**
+A plumbing check (container exit codes, intended to catch OOM) showed exit 139
+(SIGSEGV) at all four live regions; killed regions show 137 (SIGKILL). To rule
+out a harness fault I read run 1's logs around the kill, i.e. I saw run 1's
+outcome before the campaign finished. Observed in run 1 (percent_mr = 0): live
+regions committing ~1930 txn/s at t_fail; local `Completed` reached 0 within
+~2 s, merger `Sent` reached 0 within ~3 s, and every live process exited with
+SIGSEGV ~6 s after the kill. No error line precedes the crash.
+
+Consequences for analysis, decided now, before runs 2-9 complete:
+- Verdict thresholds are unchanged. The analysis script's rule "a live process
+  with no throughput line scores 0" will score post-crash windows as 0. Every
+  A-verdict will therefore be reported twice: as registered, and with crashes
+  separated out. A crash is not the stall mechanism A2-A4 predicted, so A2-A4
+  "holding" numerically after a crash will not be reported as support for the
+  admission-cap/contagion mechanism.
+- Exit codes and the time of each live region's last log line are reported per
+  run.
+- The campaign continues unchanged; nothing about runs 2-9 is altered.
