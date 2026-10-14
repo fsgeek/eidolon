@@ -150,3 +150,11 @@ Consequences for analysis, decided now, before runs 2-9 complete:
 - Exit codes and the time of each live region's last log line are reported per
   run.
 - The campaign continues unchanged; nothing about runs 2-9 is altered.
+
+**2026-10-14 ~07:55 PDT, during run 2.** While preparing a separate diagnostic,
+I edited `run_failure.sh` in place (adding an empty `-e CAERUS_SNDHWM=` to
+`docker run`) and reverted it with `git checkout` minutes later. Run 2 had
+started before the edit (bash keeps the old file open after `sed -i`), and the
+revert landed before run 3 started, so every registered run uses the committed
+harness. The diagnostic has its own script (`run_diag.sh`) and
+pre-registration (`2026-10-14-caerus-hwm-diagnostic-preregistration.md`).

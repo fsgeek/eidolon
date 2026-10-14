@@ -1,0 +1,10 @@
+# Diagnostic variant (NOT the registered campaign image): caerus-run:aaf0eb6-nopin
+# plus ZMQ_SNDHWM on each outbound PUSH socket, read from env CAERUS_SNDHWM at
+# startup (unset = ZMQ default 1000; 0 = unlimited). Tests whether the freeze after
+# a peer dies is the single I/O thread blocking in send() once the queue to the
+# dead peer reaches the high-water mark.
+FROM caerus-run:aaf0eb6-nopin
+RUN sed -i 's|^\(\s*\)remote_out_\[it->second.id()\]->connect(endpoint);|\1if (const char* h = getenv("CAERUS_SNDHWM")) { int hwm = atoi(h); remote_out_[it->second.id()]->setsockopt(ZMQ_SNDHWM, \&hwm, sizeof(hwm)); }\n\1remote_out_[it->second.id()]->connect(endpoint);|' src/machine/connection.cc \
+ && grep -q CAERUS_SNDHWM src/machine/connection.cc \
+ && (grep -q '#include <cstdlib>' src/machine/connection.cc || sed -i '1i #include <cstdlib>' src/machine/connection.cc) \
+ && bash -o pipefail -c 'cd src && make -j32 2>&1 | tail -1'
