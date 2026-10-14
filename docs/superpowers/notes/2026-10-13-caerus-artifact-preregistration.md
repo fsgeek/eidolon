@@ -158,3 +158,21 @@ started before the edit (bash keeps the old file open after `sed -i`), and the
 revert landed before run 3 started, so every registered run uses the committed
 harness. The diagnostic has its own script (`run_diag.sh`) and
 pre-registration (`2026-10-14-caerus-hwm-diagnostic-preregistration.md`).
+
+**2026-10-14 ~09:30 PDT, after all 9 runs.** Every live region in every run
+exited SIGSEGV. Live regions' last log line is 3-7 s after t_fail in 7 runs but
+3-5 s *before* t_fail in pmr30_rep1 and pmr30_rep3, where all six regions stop
+logging before any kill (the two killed regions still exit 137, so they were
+alive at the kill). Across all runs the crash falls ~118-130 s after t_ready.
+This is consistent with a spontaneous crash at ~2 min of runtime that the
+kill (at t_ready + 120 s) merely precedes. Design gap: no plumbing or
+registered run ever ran longer than ~2 min without a kill, so the
+pre-registration has no full-length no-failure control.
+
+Control, decided before running it: harness unchanged, `NOKILL=1`, registered
+image, warm 120 s, observe 600 s, percent_mr 0 then 30, one run each.
+- If the live crash is kill-induced: no region exits during the 720+ s.
+- If spontaneous: regions exit SIGSEGV near the same runtime as in the
+  campaign, with no kill. In that case the registered campaign does not test
+  failure behaviour at all, and A1-A4 verdicts are void (not falsified, not
+  supported).
