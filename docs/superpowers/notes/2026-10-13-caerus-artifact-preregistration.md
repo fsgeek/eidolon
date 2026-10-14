@@ -176,3 +176,34 @@ image, warm 120 s, observe 600 s, percent_mr 0 then 30, one run each.
   campaign, with no kill. In that case the registered campaign does not test
   failure behaviour at all, and A1-A4 verdicts are void (not falsified, not
   supported).
+
+**2026-10-14 ~10:20 PDT. Cause found; campaign void.** Both no-kill controls
+(`results/caerus/artifact-control/`) show all six regions exiting SIGSEGV
+~127 s after t_ready with no kill. The README's own two-replica example on the
+original pinned build does the same. gdb: the faulting thread is `main`, in
+`delete merger` (`caerus_server.cc:137`, `Merger::~Merger` joining a thread).
+`main` was already shutting down: `partial_sequencer.cc:142` calls
+`configuration_->Stop()` once `GetTime() - start > RUNTIME`, with
+`#define RUNTIME 120` (`cluster_config.h:27`), logging `STARTING STOP PROCESS`
+— present in every one of the 11 run logs, ~1 s after t_fail in run 1. The
+harness kill at t_ready + 120 s coincided with the artifact's own 120 s run
+timer. The observed "freeze then crash" is the artifact's programmed shutdown
+followed by a teardown segfault.
+
+Status of claims:
+- **Registered campaign (A1-A4): void.** It never observed failure behaviour.
+  A1 is not falsified; A2-A4 are not supported.
+- **A5** (restart loses state) stands as a code-derived result; it never
+  depended on the runs.
+- **Transport-freeze hypothesis** (blocking `send()` in the single multiplexer
+  thread): **withdrawn as an explanation of the observations.** The code facts
+  (one I/O thread, blocking PUSH sends) are true but untested. The HWM
+  diagnostic pre-registration (`2026-10-14-caerus-hwm-diagnostic-preregistration.md`)
+  rested on that explanation and is withdrawn unrun.
+- How I missed it: plumbing checks grepped for throughput and errors and never
+  read shutdown lines, and no run without a kill lasted past ~2 min. The
+  artifact's run-length logic was not read before durations were chosen.
+
+A rerun needs `RUNTIME` raised (a compile-time configuration constant, not
+sequencing, merging or admission logic). That would be Amendment 3, registered
+before any rerun, with predictions unchanged.

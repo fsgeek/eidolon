@@ -45,3 +45,9 @@ line at each live region (median over the four).
 - D2 fails (freeze within 600 s at percent_mr = 0 with unlimited HWM): the
   transport hypothesis is wrong or incomplete.
 - D1 T0 within 2x of default: HWM is not what sets the freeze time.
+
+## Withdrawn (2026-10-14 ~10:20 PDT, never run)
+
+The freeze this diagnostic was meant to explain was the artifact's programmed
+120 s shutdown (`RUNTIME`), not a transport block. See the deviation log in
+`2026-10-13-caerus-artifact-preregistration.md`. Image never built, no runs.
