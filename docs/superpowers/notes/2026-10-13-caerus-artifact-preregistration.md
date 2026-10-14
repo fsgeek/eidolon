@@ -222,3 +222,15 @@ at t_end (no exit before the harness removes it), no `STARTING STOP PROCESS`
 line appears, and every 30 s window over [t_fail, t_end) at every region has
 normalised mean > 0.8 (the A1 statistic, applied with no failure). If either
 control fails the gate, nothing further runs and the failure is reported.
+
+**2026-10-14 12:35 PDT, rt1200 campaign complete, before running the analysis.**
+Plumbing only (exit codes, readiness, line counts): all killed regions exit
+137, every live region is still running at t_end in all 9 runs. pmr30_rep3
+recorded `ready=0`: the harness readiness check (`docker logs | grep -q` under
+`set -o pipefail`) misfires when `grep -q` exits early and `docker logs` takes
+SIGPIPE. Logs show all six regions started and logged throughput normally;
+the readiness loop timed out, so that run's warm-up was ~340 s instead of
+~120 s (kill at ~340 s of sequencing; t_end ~940 s, inside RUNTIME 1200).
+Rule, fixed now: verdicts are reported with all 9 runs and with pmr30_rep3
+excluded; if they differ, both are reported and neither is preferred. The
+readiness check is a harness bug to fix before any further use.
