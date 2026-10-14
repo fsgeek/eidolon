@@ -61,9 +61,15 @@ next step is fault injection on github.com/josh-hildred/Caerus.
 Read: `src/sequencer/caerus/{conflict_graph,partial_sequencer}.cc`,
 `src/scheduler/deterministic_scheduler.cc`, `src/common/internal_ids.cc`.
 
-- **No section 4.7 fault tolerance found.** No K parameter, no wait for K
-  acknowledgements, no failure detector, no recovery protocol. The only
-  command-line flags are workload, batch, locality and percent-multi-region.
+- **No section 4.7 region-level fault tolerance found.** No K parameter, no
+  wait for acknowledgements from K other regions, no failure detector, no
+  recovery protocol. The only command-line flags are workload, batch,
+  locality and percent-multi-region. *Correction (2026-10-14):* the 2026-10-11
+  keyword search missed an acknowledgement quorum in `partial_sequencer.cc`
+  (lines 242-402): `quorum = nodes_per_replica/2 + 1`, i.e. a majority of the
+  machines **within one region** (the SLOG-like machine-level replication of
+  section 4.7). With one machine per region it is 1 and the ack path is
+  skipped. Cross-region K-replication and region recovery remain absent.
 - **Merger matches our model's rules.** A vertex is complete when it has
   `num_parts` parts (`hasAllParts_`); write-set conflicts add an out-edge to
   the most recent writer, or to readers since it, if that vertex is still in
