@@ -7,7 +7,7 @@ PMR=$1; REP=$2; OUT=$3; WARM=${4:-120}; AFTER=${5:-600}
 IMG=${IMG:-caerus-run:aaf0eb6}
 NET=caerus-net
 SUBNET=172.30.0.0/24
-DEAD=(2 5)  # france-c, east-asia
+read -r -a DEAD <<< "${DEAD_REGIONS:-2 5}"  # default france-c, east-asia
 CONT=(NA NA EU EU AP AP)
 ip_of() { echo "172.30.0.$((10 + $1))"; }
 one_way_ms() {

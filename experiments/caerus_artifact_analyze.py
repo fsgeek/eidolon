@@ -15,7 +15,7 @@ import statistics as st
 import sys
 from pathlib import Path
 
-LIVE = (0, 1, 3, 4)
+LIVE = tuple(int(x) for x in __import__("os").environ.get("LIVE_REGIONS", "0 1 3 4").split())
 WINDOW = 30.0
 _LINE = re.compile(r"^(\S+) .*SEQUENCER THROUGHPUT -- Sent ([0-9.]+)")
 
