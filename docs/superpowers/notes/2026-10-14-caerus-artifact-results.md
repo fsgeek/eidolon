@@ -63,3 +63,28 @@ there is no recovery, and the restart itself recovers nothing.
 
 The merger-contagion question the model raised is untested by this campaign:
 the transport stall masks it.
+
+## Single-region failure (f = 1 <= K = 1)
+
+Pre-registration: `2026-10-14-caerus-single-region-preregistration.md`. Data:
+`results/caerus/artifact-rt1200-single/` (percent_mr = 0, france-c killed,
+3 reps; all regions ready, no stop line, killed region exit 137, all five
+live regions alive at t_end).
+
+| rep | first window (5 live regions) | every later window |
+|---|---|---|
+| 1 | 0.115-0.148 | 0.0 |
+| 2 | 0.108-0.141 | 0.0 |
+| 3 | 0.113-0.115 | 0.0 |
+
+- **S1, as worded, is ambiguous and is reported both ways.** Strict reading
+  (window 0 itself < 0.05): fails, because window 0 contains the ~4 s before
+  the stall. Reading consistent with A3's definition (some window starting at
+  or before t_fail + 30 s < 0.05): holds. Substance either way: every survivor
+  stops within ~4 s and stays at 0 for the remaining 570 s.
+- **S2 holds:** conflict graph empty (`remaining size 0`).
+- **Falsifiers not triggered** in any rep.
+
+So the failure the paper says it tolerates stops every surviving region, at a
+workload with no multi-region transactions, and the only exit (restart)
+discards all state.

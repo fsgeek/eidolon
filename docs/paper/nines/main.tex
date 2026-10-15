@@ -43,7 +43,8 @@
 \setlist[enumerate]{topsep=2pt,itemsep=1pt,parsep=0pt,partopsep=0pt}
 
 \title{Legible Consensus: Capability Gaps in Flexible Quorums}
-\author{Paper \#98}
+\author{Tony Mason\\fsgeek@\{cs.ubc.ca,gatech.edu,wamason.com\}}
+%\email{fsgeek@{cs.ubc.ca,gatech.edu,wamason.com}}
 \date{}
 
 \begin{document}
@@ -61,7 +62,7 @@ Mars and LEO make prolonged and time-varying reachability impossible to ignore; 
 \begin{figure}[h]
     \centering
     \begin{tabular}{c}
-        \includegraphics[width=0.45\textwidth]{../figures/control-ok-service-broken.jpg}
+        \includegraphics[width=0.45\textwidth]{control-ok-service-broken.jpg}
     \end{tabular}
     \caption{The same reachable set can produce a healthy control-plane answer while the service remains unable to deliver the expected capabilities. Conventional majority Paxos made the two questions coincide; flexible quorums dissolve that coincidence while remaining safe.}\label{fig:control-ok-service-broken}
 \end{figure}
