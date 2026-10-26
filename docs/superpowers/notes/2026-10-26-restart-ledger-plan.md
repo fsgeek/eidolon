@@ -91,6 +91,32 @@ give the paper five systems: a production library, two research prototypes,
 and two others. Five is enough for a HotOS table and too few for a census.
 That is the right size.
 
+## Two strata, fixed before the next draw (2026-10-26)
+
+**Drawn stratum (what published systems look like).** I'll continue
+cloudflare's stamped generator exactly. `r = random.Random(20261016)`;
+`r.choice([4,7,8,10,11,14,18,19])` reproduces the fourth system (8, verified
+before writing this). Without reseeding, the fifth system is
+`r.choice([4,7,10,11,14,18,19])` and the sixth is `r.choice` over the
+remainder without the fifth. The unbuildable-redraw rule is cloudflare's,
+unchanged. One script, run once, in the commit after this one:
+`experiments/ledger_draw.py`.
+
+**Purposive stratum (what people run), labelled purposive in every table.**
+Criterion: the consensus store that a default Kubernetes control plane
+depends on. That is **etcd**. Chosen for deployment, not for any expected
+outcome. Its restart arm is directly comparable to the Raft row. HashiCorp Raft
+(cloudflare's row) already belongs to this stratum by the same reasoning
+(Consul, Nomad, Vault). Any further purposive pick needs its criterion
+written here before the system is named.
+
+Order: the Caerus row is done, then FDBKeeper (Codex builds), then the fifth
+and sixth draws, with etcd in parallel when the machine is free.
+
+**Before any public use of the Caerus row:** the author email
+(`docs/outbound/2026-10-14-caerus-authors-draft.md`) goes first, and their
+answer goes into the row.
+
 ## What this plan deliberately leaves out
 
 - **Authority loci, fence taxonomies, the layered statement.** Those belong
