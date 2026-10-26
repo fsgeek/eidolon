@@ -55,7 +55,7 @@ registration.
 | System | Recovery arm | Restart arm | Status |
 |---|---|---|---|
 | HashiCorp Raft | measured (cloudflare r1, r2) | measured: idealized 1.2 s beats recovery 1.95-2.45 s (Q10 falsified); restart pays stale `local` reads | **done** (cloudflare) |
-| Caerus | measured: no regain (T_regain = inf, 1 or 2 regions killed) | safety fails **from code** (A5: no durable state); T_regain not measured | half |
+| Caerus | measured: no regain (T_regain = inf, 1 or 2 regions killed) | measured 2026-10-26: idealized 32-36 s; five-region restart plateaus at 0.82 within about 30 s; no state kept (code) | **done at pmr 0**; pmr 30 recovery cell pending C1 (`2026-10-26-caerus-restart-arm-results.md`) |
 | FDBKeeper | F1-F3 test the race only | none | owed under the draw rule |
 | next draws | - | - | pool continued with the stamped generator |
 
