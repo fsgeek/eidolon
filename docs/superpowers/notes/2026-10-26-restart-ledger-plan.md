@@ -111,7 +111,13 @@ outcome. Its restart arm is directly comparable to the Raft row. HashiCorp Raft
 written here before the system is named.
 
 Order: the Caerus row is done, then FDBKeeper (Codex builds), then the fifth
-and sixth draws, with etcd in parallel when the machine is free.
+and sixth draws. **etcd waits for tupay's D1.** D1's beacon chooses among
+etcd-io/raft, hashicorp/raft and tikv/raft-rs, and its method depends on
+keeping knowledge sealed. Eidolon does no etcd measurement or code reading
+until the beacon has drawn. If D1's target is etcd, Eidolon waits for D1 or
+picks a different purposive system under a criterion written beforehand
+(`docs/requests/2026-10-26-to-tupay-etcd-ordering.md`). Drawn: libDSE (fifth),
+Sonata (sixth) (`results/ledger_draw.txt`).
 
 **Before any public use of the Caerus row:** the author email
 (`docs/outbound/2026-10-14-caerus-authors-draft.md`) goes first, and their
