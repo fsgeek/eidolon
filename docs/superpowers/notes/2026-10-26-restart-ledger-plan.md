@@ -1,0 +1,108 @@
+# The restart ledger: Eidolon's lane (plan, not a registration)
+
+**Written:** 2026-10-26 by the Eidolon steward (Claude Opus 5.5), on the first
+day of its tenure. This is a plan for Tony and the cloudflare instance to try to
+break. Nothing in it is a prediction; each row below gets its own
+pre-registration before any run.
+
+## Why this, and why here
+
+The HotOS question is a stopwatch question: *why don't these papers compare
+their recovery against a full restart?* The survey answers "they don't"
+(0/20 compare recovery to restart). One measured system does not make the
+argument, though. The paper needs a small table: several systems, each
+measured against the restart baseline on time and on safety, under a crash
+and under a false suspicion.
+
+Within the ayllu, tupay twins models and implementations, and cloudflare
+develops the authority theory. Nobody owns the table. In the last week the
+restart arm has been left out of two registrations that were supposed to
+include it:
+
+- The fourth-system rule (cloudflare `measure/FOURTH-SYSTEM-SELECTION.md`)
+  says the drawn system is measured for "safety against the idealized restart
+  spec, time against that system's empirical restart, crash **and** false
+  suspicion". FDBKeeper's registration (F1-F3) tests only the cleanup race. It
+  has no restart arm.
+- The Caerus isolation round (C1-C3, Q1-Q3) tests whether the repaired
+  recovery path works. It has no restart arm either.
+
+Both rounds are worth running as registered. Neither one fills a row of the
+table. **Eidolon's job: the table.**
+
+## The method (reused, not reinvented)
+
+I'll use cloudflare's round-1/round-2 measures unchanged, so the rows are
+comparable (`cloudflare/docs/hotos/measure/PREREG.md`, `PREREG-round2.md`):
+
+- **T_regain:** time from the fault to the start of the first 1 s window
+  whose committed-ack rate is at least 90% of the median pre-fault rate.
+- **Safety:** after quiescence, every acknowledged write is present (or
+  superseded by a later acked write) on every live node.
+- **Stale reads,** where the system has a read path.
+- **Arms:** CRASH; FALSE SUSPICION (the old holder is alive and reachable by
+  clients, healed after 30 s); RESTART-idealized (everything is restarted from
+  durable state at the fault instant), with a **break-even detection delay** D
+  reported rather than chosen; and RESTART-empirical, where the system's own
+  restart procedure differs from the idealized one.
+
+Each system needs an adapter: a workload that records acknowledgements, a
+fault injector, and an export of durable state. Each system gets its own
+registration.
+
+## Rows
+
+| System | Recovery arm | Restart arm | Status |
+|---|---|---|---|
+| HashiCorp Raft | measured (cloudflare r1, r2) | measured: idealized 1.2 s beats recovery 1.95-2.45 s (Q10 falsified); restart pays stale `local` reads | **done** (cloudflare) |
+| Caerus | measured: no regain (T_regain = inf, 1 or 2 regions killed) | safety fails **from code** (A5: no durable state); T_regain not measured | half |
+| FDBKeeper | F1-F3 test the race only | none | owed under the draw rule |
+| next draws | - | - | pool continued with the stamped generator |
+
+**The Caerus row** needs one cheap registered measurement. Restart all six
+regions at the fault instant with the existing harness (RUNTIME=1200, the
+no-CPU-pinning change, prefixed containers), then measure T_regain and confirm
+A5 by checking acked writes after restart. The likely verdict is "neither arm
+works: recovery never regains, restart regains with nothing". That is still a
+row, and a strong one: the system's fault-tolerance claim fails on both axes.
+
+**The FDBKeeper row:** register a restart arm alongside F1-F3 as an additive
+registration, as Q1-Q3 were added to C1-C3. Codex's predictions stay as they
+are.
+
+**More rows:** continue the fourth-system generator (`random.Random(20261016)`,
+pool without 8) for a fifth and sixth system, under the rule cloudflare already
+stamped: a documented, bounded build attempt before any redraw. Two more rows
+give the paper five systems: a production library, two research prototypes,
+and two others. Five is enough for a HotOS table and too few for a census.
+That is the right size.
+
+## What this plan deliberately leaves out
+
+- **Authority loci, fence taxonomies, the layered statement.** Those belong
+  to cloudflare and to the follow-on paper. A row can *mention* which locus
+  failed when it is obvious. No row is chosen or scored for authority.
+- **Repairing systems.** The Caerus isolation round is the one exception,
+  because it gives the frame's "two verdicts": the same system before and
+  after a repair, both measured against restart. Its restart arm comes from
+  the Caerus row above, which it shares.
+
+## Order of work
+
+1. Caerus restart arm: register, run, score. Cheap, and it reuses the harness.
+2. Caerus isolation round (C1-C3 + Q1-Q3), implemented by the Eidolon steward.
+   A fresh Codex instance audits the implementation against the registration
+   **before** any fault run, because Codex registered the predictions it tests.
+3. FDBKeeper: build, the race round (F1-F3), and the restart arm.
+4. Draw the fifth system.
+
+## How this plan could be wrong
+
+- If the HotOS paper ends up being only the survey plus the Raft row, the
+  table is follow-on-paper work and its urgency drops. That is Tony's and
+  cloudflare's framing call. The table is useful either way, so the order of
+  work does not depend on it.
+- If research prototypes routinely have no durable state (Caerus), every
+  restart arm fails safety trivially and the table reads as "prototypes are
+  prototypes". The honest answer is to report it and draw a production system
+  for balance. Do not drop the rows.
