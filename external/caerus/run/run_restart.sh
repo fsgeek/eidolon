@@ -49,7 +49,7 @@ dump_cluster() {
     docker inspect -f "$gen.r$i oom={{.State.OOMKilled}} exit={{.State.ExitCode}}" $P$gen-$i >> "$OUT/state" 2>&1 || true
   done
 }
-cleanup() { docker ps -a --format '{{.Names}}' | grep -E "^${P}[ab]-[0-9]$" | xargs -r docker rm -f >/dev/null; }
+cleanup() { docker ps -a --format '{{.Names}}' | { grep -E "^${P}[ab]-[0-9]$" || true; } | xargs -r docker rm -f >/dev/null; }
 
 mkdir -p "$OUT"
 docker network inspect $NET >/dev/null 2>&1 || docker network create --subnet $SUBNET $NET >/dev/null

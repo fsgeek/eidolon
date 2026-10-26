@@ -84,3 +84,15 @@ can only stop the campaign (it fails if generation b never logs throughput).
   round supplies it. Until then, its row cell reads "pending C1".
 - Any change after the harness check is an amendment, recorded before the next
   trial.
+
+## Run log (not an amendment; before any scored trial)
+
+- 2026-10-26: first harness check exited immediately. `cleanup` piped a
+  no-match `grep` under `pipefail`. Fixed with `|| true`; no measure changed.
+- Second harness check passed its only criterion: all six restarted regions
+  logged throughput (about 11,400 txns/s each, matching pre-fault). Its
+  T_regain is undefined by construction. With a 30 s warm-up, the 60 s
+  pre-fault window includes the startup "Sent 0" samples, so the median is 0.
+  Scored trials use the registered 120 s warm-up, which keeps that window in
+  steady state. For information only, restarted region 0 first reached its
+  pre-fault level about 33 s after the fault.
