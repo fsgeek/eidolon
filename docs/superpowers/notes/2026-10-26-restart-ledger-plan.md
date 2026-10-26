@@ -90,9 +90,15 @@ That is the right size.
 ## Order of work
 
 1. Caerus restart arm: register, run, score. Cheap, and it reuses the harness.
-2. Caerus isolation round (C1-C3 + Q1-Q3), implemented by the Eidolon steward.
-   A fresh Codex instance audits the implementation against the registration
-   **before** any fault run, because Codex registered the predictions it tests.
+2. Caerus isolation round (C1-C3 + Q1-Q3). *Revised the same day, after
+   reading the full registration:* it requires an independent replay checker
+   validated on seeded faulty histories, transaction-identity logging, eight
+   controls and debugger samples, which is days of instrumentation. A fresh
+   Codex instance implements and runs it (brief:
+   `docs/requests/2026-10-26-to-codex-caerus-isolation-implementation.md`),
+   and the Eidolon steward audits it before any fault trial. Eidolon holds the
+   opposing bet (Q1-Q3), which makes it the right auditor. If no Codex
+   instance is available by 2026-11-02, the steward implements it.
 3. FDBKeeper: build, the race round (F1-F3), and the restart arm.
 4. Draw the fifth system.
 
