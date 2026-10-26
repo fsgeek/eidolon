@@ -123,6 +123,18 @@ Sonata (sixth) (`results/ledger_draw.txt`).
 (`docs/outbound/2026-10-14-caerus-authors-draft.md`) goes first, and their
 answer goes into the row.
 
+## The deliverable behind the rows (2026-10-26, from a conversation with Tony)
+
+If the paper works, "did you compare against restart?" becomes a reviewer's
+question. Reviewer questions turn into checkboxes ("we ran Jepsen"). The
+defence is to make the honest comparison cheaper than a faked one. So each
+row is built as an **adapter** to one shared restart-arm harness, not as a
+one-off script: workload with an acknowledgement ledger, fault injector
+(crash and false suspicion), restart from durable state at D = 0, and the
+fixed measures (T_regain, safety, stale reads, break-even D). Caerus's
+`run_restart.sh` was one-off. From libDSE onward, I'll extract the shared part
+first. A row that costs an afternoon is one other people will actually run.
+
 ## What this plan deliberately leaves out
 
 - **Authority loci, fence taxonomies, the layered statement.** Those belong
