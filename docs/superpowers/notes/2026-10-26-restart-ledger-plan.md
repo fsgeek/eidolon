@@ -70,6 +70,20 @@ row, and a strong one: the system's fault-tolerance claim fails on both axes.
 registration, as Q1-Q3 were added to C1-C3. Codex's predictions stay as they
 are.
 
+*FDBKeeper feasibility (checked 2026-10-26):* the paper's artifact
+(`DASE-iDDS/FDBKeeper`, 58c2ff7) is a ClickHouse fork, a multi-hour build.
+The evaluation repo has no failure-injection scripts (survey coding 8-616).
+The authors have since moved the keeper to a standalone repo,
+`DASE-DASLab/fdbkeeper-service` (pushed 2026-03-06): CMake, C++20, `memory`
+and `fdb` backends. Building that one is far cheaper, but it is a
+**substitution**. Whoever builds first (F1-F3 or this arm) must record which
+code was used and diff the cleaner/session paths (KeeperCleaner.cpp:182-288,
+KeeperSession.cpp:42-143) against the paper's artifact before any trial. The
+restart arm's meaning differs from Raft's here: server state lives in FDB, so
+"restart" means restarting the keeper processes over durable FDB, and the
+recovery arm under test is FDBKeeper's own lease/cleaner path (client crash
+and slow client), not FDB's failover.
+
 **More rows:** continue the fourth-system generator (`random.Random(20261016)`,
 pool without 8) for a fifth and sixth system, under the rule cloudflare already
 stamped: a documented, bounded build attempt before any redraw. Two more rows
