@@ -54,6 +54,13 @@ recovery measurement at 30% yet; C1 in the isolation round supplies it.
 - Safety is from code, not measured: no acked-write ledger exists.
 - Containers on one host with emulated delays (Table-1 matrix); same image,
   RUNTIME=1200, no CPU pinning; 3 reps per cell.
+- Host clock (checked 2026-10-27, after Codex reported clock discontinuities on
+  this WSL2 host): in the restarted clusters' 1 s samples, gaps above 1.3 s
+  number 0-5 per 300 s, the largest 1.59 s (spot check of four trials). That
+  amounts to at most about 1.6 s of T_regain error, which is small next to
+  32-36 s. On 2026-10-27, a probe found much heavier stalls (about 1.4 s
+  about every 31 s, with the wall clock stepped by Hyper-V time sync). Those
+  conditions did not hold during these trials.
 - "Restart" here is a fresh cluster at the fault instant. A real operator
   adds detection time, D; the row reports D = 0 because recovery's T_regain
   is unbounded, so any finite D still favours restart on time.
